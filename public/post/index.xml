@@ -14,18 +14,18 @@
     <lastBuildDate>Sun, 09 Aug 2026 11:40:17 +0800</lastBuildDate>
     <atom:link href="http://localhost:1313/post/index.xml" rel="self" type="application/rss+xml" />
     <item>
+      <title>Catrix.net 创作者投稿与协作指南</title>
+      <link>http://localhost:1313/post/2026-08-09-how-to-begin/</link>
+      <pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
+      <guid>http://localhost:1313/post/2026-08-09-how-to-begin/</guid>
+      <description>面向 catrix.net 创作者的完整协作与提交流程指南，涵盖从拉取代码到文章发布的每一步</description>
+    </item>
+    <item>
       <title>Test</title>
       <link>http://localhost:1313/post/test-copy/</link>
       <pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
       <guid>http://localhost:1313/post/test-copy/</guid>
       <description>summary:qwfewviure34y5987b498v5yuihdfdhjvae</description>
-    </item>
-    <item>
-      <title>Test</title>
-      <link>http://localhost:1313/post/test/</link>
-      <pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
-      <guid>http://localhost:1313/post/test/</guid>
-      <description>wdqhouin3q4</description>
     </item>
   </channel>
 </rss>

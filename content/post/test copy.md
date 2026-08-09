@@ -3,6 +3,7 @@ date: '2026-08-09T11:40:17+08:00'
 draft: false
 title: 'Test'
 author: ["linearcat","longzimao"]
+tags: ["Maths"]
 summary: summary:qwfewviure34y5987b498v5yuihdfdhjvae
 comments: true
 #     image: "https://avatars.githubusercontent.com/u/104124634?v=4" # image path/url

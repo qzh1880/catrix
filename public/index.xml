@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Catrix</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content on Catrix</description>
+    <image>
+      <title>Catrix</title>
+      <url>http://localhost:1313/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</url>
+      <link>http://localhost:1313/%3Clink%20or%20path%20of%20image%20for%20opengraph,%20twitter-cards%3E</link>
+    </image>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 09 Aug 2026 11:40:17 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Test</title>
+      <link>http://localhost:1313/post/test-copy/</link>
+      <pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
+      <guid>http://localhost:1313/post/test-copy/</guid>
+      <description>summary:qwfewviure34y5987b498v5yuihdfdhjvae</description>
+    </item>
+    <item>
+      <title>Test</title>
+      <link>http://localhost:1313/post/test/</link>
+      <pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
+      <guid>http://localhost:1313/post/test/</guid>
+      <description>wdqhouin3q4</description>
+    </item>
+    <item>
+      <title>About</title>
+      <link>http://localhost:1313/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/about/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Contributors</title>
+      <link>http://localhost:1313/contributors/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/contributors/</guid>
+      <description>&lt;h2 id=&#34;authors&#34;&gt;Authors&lt;/h2&gt;
+&lt;h3 id=&#34;线性小猫&#34;&gt;线性小猫&lt;/h3&gt;
+&lt;h3 id=&#34;楼下笼子猫&#34;&gt;楼下笼子猫&lt;/h3&gt;
+&lt;h3 id=&#34;小肥羊&#34;&gt;小肥羊&lt;/h3&gt;
+&lt;h2 id=&#34;developers&#34;&gt;Developers&lt;/h2&gt;
+&lt;h2 id=&#34;sponsors&#34;&gt;Sponsors&lt;/h2&gt;</description>
+    </item>
+  </channel>
+</rss>

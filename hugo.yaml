@@ -32,6 +32,7 @@ params:
   ShowBreadCrumbs: true
   ShowCodeCopyButtons: false
   ShowWordCount: true
+  hasCJKLanguage: true
   ShowRssButtonInSectionTermList: true
   UseHugoToc: true
   disableSpecial1stPost: false
@@ -75,7 +76,7 @@ params:
   # home-info mode
   homeInfoParams:
     Title: "CATRIX 杂志 \U0001F44B"
-    Content: Catrix 是一个...
+    Content: Catrix 是一个诞生于上海某高中的学生（理科）杂志，是一个展示自我、分享知识的平台。加入 Catrix，共创未来！
 
 
   socialIcons:
@@ -84,7 +85,7 @@ params:
     - name: website
       url: "https://catrix.net"
     - name: github
-      url: "https://github.com/"
+      url: "https://github.com/qzh1880/catrix"
 
   analytics:
     google:

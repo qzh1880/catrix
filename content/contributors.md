@@ -8,11 +8,7 @@ author: ""
 ---
 ## Authors
 
-### 线性小猫
 
-### 楼下笼子猫
-
-### 小肥羊
 
 ## Developers
 

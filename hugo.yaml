@@ -1,6 +1,7 @@
 baseURL: "https://qzh1880.github.io/qzh1880.github.io-catrix"
 title: Catrix
-paginate: 5
+pagination:
+  pagerSize: 10
 theme: PaperMod
 
 enableRobotsTXT: true

@@ -53,7 +53,7 @@ params:
     safari_pinned_tab: "assets/favicon/web-app-manifest-512x512.png"
 
   label:
-    text: "[catirix]"
+    text: "[catrix]"
     icon: /apple-touch-icon.png
     iconHeight: 35
 
@@ -77,6 +77,9 @@ params:
   homeInfoParams:
     Title: "CATRIX 杂志 \U0001F44B"
     Content: Catrix 是一个诞生于上海某高中的学生（理科）杂志，是一个展示自我、分享知识的平台。加入 Catrix，共创未来！
+
+  mainSections:
+    - post
 
 
   socialIcons:
@@ -118,18 +121,26 @@ params:
     keys: ["title", "permalink", "summary", "content"]
 menu:
   main:
+    - identifier: news
+      name: News
+      url: /news/
+      weight: 1
+    - identifier: articles
+      name: Articles
+      url: /articles/
+      weight: 5
     - identifier: about
       name: About
       url: /about/
-      weight: 10
+      weight: 21
     - identifier: tags
-      name: tags
+      name: Tags
       url: /tags/
       weight: 20
-    - identifier: contributiors
-      name: Contributiors
-      url: /contributors/
-      weight: 25    
+    # - identifier: contributiors
+    #   name: Contributiors
+    #   url: /contributors/
+    #   weight: 25    
     - identifier: search
       name: Search
       url: /search/

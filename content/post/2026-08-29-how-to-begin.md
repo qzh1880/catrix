@@ -1,5 +1,5 @@
 ---
-date: '2026-08-09T11:40:17+08:00'
+date: '2026-08-29T11:40:17+08:00'
 draft: false
 title: "Catrix.net 创作者投稿与协作指南"
 author: "linearcat"

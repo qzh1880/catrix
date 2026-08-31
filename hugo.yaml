@@ -121,10 +121,14 @@ params:
     keys: ["title", "permalink", "summary", "content"]
 menu:
   main:
+    - identifier: joinus
+      name: Join Us 
+      url: /joinus/
+      weight: 1
     - identifier: news
       name: News
       url: /news/
-      weight: 1
+      weight: 2
     - identifier: articles
       name: Articles
       url: /articles/

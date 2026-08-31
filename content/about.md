@@ -1,7 +1,7 @@
 ---
 title: "About"
-
+layout: about
+ShowReadingTime: false
+ShowWordCount: false
 ---
 
-
-2131235

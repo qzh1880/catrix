@@ -76,7 +76,7 @@ params:
   # home-info mode
   homeInfoParams:
     Title: "CATRIX 杂志 \U0001F44B"
-    Content: Catrix 是一个诞生于上海某高中的学生（理科）杂志，是一个展示自我、分享知识的平台。加入 Catrix，共创未来！
+    Content: 立志成为全浦东最有影响力的高中生杂志。网站建设中……杂志社招募中，点击右上角Joinus查看招募信息。
 
   mainSections:
     - post
@@ -129,10 +129,10 @@ menu:
       name: Articles
       url: /articles/
       weight: 5
-    - identifier: about
-      name: About
-      url: /about/
-      weight: 21
+    # - identifier: about
+    #   name: About
+    #   url: /about/
+    #   weight: 21
     - identifier: tags
       name: Tags
       url: /tags/

@@ -39,5 +39,9 @@
     <loc>http://localhost:1313/category/</loc>
   </url><url>
     <loc>http://localhost:1313/contributors/</loc>
+  </url><url>
+    <loc>http://localhost:1313/joinus/</loc>
+  </url><url>
+    <loc>http://localhost:1313/author/xxdy/</loc>
   </url>
 </urlset>

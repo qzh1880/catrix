@@ -1,6 +1,6 @@
 ---
-title: "张三"
+title: "xxdy"
 bio: "你的个人简介/个性签名"
-avatar: "avatar.jpg"
+avatar: ""
 ---
 aaa

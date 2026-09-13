@@ -1,0 +1,19 @@
+name = "Blank Magazine"
+license = "MIT"
+licenselink = "https://github.com/codesign2020/blank-magazine/blob/main/LICENSE"
+description = "Blank Magazine is a minimal, editorial-style personal blog theme for Hugo. Pure white canvas, print-grade serif typography, a magazine cover style featured section, a self-hosted photo gallery that auto-scans local images, categories/tags taxonomy and a fully responsive layout."
+homepage = "https://github.com/codesign2020/blank-magazine"
+tags = ["blog", "minimal", "clean", "magazine", "personal", "typography", "gallery", "responsive"]
+features = [
+  "responsive layout",
+  "editorial serif typography",
+  "self-hosted photo gallery with local image auto-scan",
+  "categories and tags taxonomy",
+  "featured cover article",
+  "about page",
+  "RSS and JSON output",
+]
+
+[author]
+  name = "Sherlock Lau"
+  homepage = "https://github.com/codesign2020"

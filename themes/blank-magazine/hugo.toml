@@ -1,0 +1,6 @@
+# Hugo version compatibility declaration for the theme module.
+# The theme ships plain CSS/JS and does NOT require the extended binary.
+[module]
+  [module.hugoVersion]
+    extended = false
+    min = "0.120.0"

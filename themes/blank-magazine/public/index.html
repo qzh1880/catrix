@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta name="generator" content="Hugo 0.164.0"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title></title>
+<meta name="description" content="">
+<meta name="author" content="">
+
+
+<meta property="og:title" content="">
+<meta property="og:description" content="">
+<meta property="og:type" content="website">
+<meta property="og:url" content="//localhost:1313/">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="">
+<meta name="twitter:description" content="">
+
+<link rel="canonical" href="//localhost:1313/">
+<link rel="alternate" type="application/rss+xml" title="" href="//localhost:1313/index.xml">
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+
+<link rel="stylesheet" href="/css/style.css?v=1789211532">
+
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+
+</head>
+<body>
+  <header class="site-header">
+  <div class="header-inner">
+    <a class="site-logo" href="//localhost:1313/">.</a>
+
+    <nav class="header-nav">
+      
+      
+    </nav>
+
+    <div class="header-actions">
+      <button class="search-toggle icon-link" aria-label="搜索" onclick="openSearch()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+      <button class="menu-toggle" aria-label="打开菜单" aria-expanded="false" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+
+<div class="menu-overlay" id="menu-overlay">
+  <div class="menu-panel">
+    <button class="menu-close" aria-label="关闭菜单" onclick="toggleMenu()">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <nav class="menu-nav">
+      
+    </nav>
+    <div class="menu-footer">
+      <div class="menu-social">
+        
+        
+        
+      </div>
+      <p class="menu-copyright">&copy; 2026 </p>
+    </div>
+  </div>
+</div>
+
+
+<div class="search-overlay" id="search-overlay">
+  <div class="search-inner">
+    <button class="search-close" aria-label="关闭搜索" onclick="closeSearch()">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <input type="text" class="search-input" placeholder="搜索文章..." id="search-input" autocomplete="off">
+    <div class="search-results" id="search-results"></div>
+  </div>
+</div>
+
+<script>
+  function toggleMenu() {
+    const overlay = document.getElementById('menu-overlay');
+    const toggle = document.querySelector('.menu-toggle');
+    const isOpen = overlay.classList.toggle('open');
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    if (toggle) toggle.setAttribute('aria-expanded', isOpen);
+  }
+  function openSearch() {
+    document.getElementById('search-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { document.getElementById('search-input').focus(); }, 100);
+  }
+  function closeSearch() {
+    document.getElementById('search-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (document.getElementById('menu-overlay').classList.contains('open')) toggleMenu();
+      if (document.getElementById('search-overlay').classList.contains('open')) closeSearch();
+    }
+  });
+</script>
+
+  <main class="site-main">
+    
+
+
+
+
+
+
+
+
+<section class="home-latest">
+  <div class="container">
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">LATEST · 最新文章</span>
+      <span class="label-line"></span>
+    </div>
+    <div class="post-list">
+      
+      
+      
+    </div>
+    <div class="home-more">
+      <a href="/posts/" class="more-link">查看全部文章 →</a>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+<section class="home-about">
+  <div class="container">
+    <div class="home-about-inner">
+      <div class="home-about-text">
+        <p class="section-label-text">ABOUT</p>
+        <h2 class="home-about-title">关于</h2>
+        <p class="home-about-desc">。在这里记录生活、思考与创作，用文字和影像留存时间的痕迹。</p>
+        <div class="home-about-links">
+          <a href="/about/" class="more-link">了解更多 →</a>
+        </div>
+      </div>
+      <div class="home-subscribe">
+        <p class="section-label-text">SUBSCRIBE</p>
+        <h3 class="home-subscribe-title">订阅更新</h3>
+        <p class="home-subscribe-desc">第一时间收到新文章通知</p>
+        <form class="subscribe-form" onsubmit="event.preventDefault(); this.querySelector('input').value=''; alert('感谢订阅！');">
+          <input type="email" placeholder="输入你的邮箱" required>
+          <button type="submit">订阅</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  </main>
+  <footer class="site-footer">
+
+  <div class="footer-bottom">
+    <p>&copy; 2026 . All rights reserved.</p>
+    <p class="footer-credit">Crafted with <span style="color:#c9a96e">✦</span> · Blank Magazine Theme</p>
+  </div>
+</footer>
+
+  <script src="/js/main.js?v=1789211532"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{{/*
+  gallery-photos.html
+  统一收集一本相册的全部图片，返回字符串 URL 列表（slice）。
+  来源 1：Page Bundle 同目录下的本地图片资源（.Resources.ByType "image"），按文件名升序。
+          —— 把图片直接放进相册文件夹即可，无需在 md 里逐个列出。
+  来源 2：front matter 的 photos（外链 URL 或手动路径），追加在本地图片之后。
+  用法：{{ $photos := partial "gallery-photos.html" . }}
+*/}}
+{{ $photos := slice }}
+
+{{/* 1. 相册文件夹内的本地图片（仅 Page Bundle 具备 .Resources） */}}
+{{ with .Resources.ByType "image" }}
+  {{ range sort . "Name" "asc" }}
+    {{ $photos = $photos | append .RelPermalink }}
+  {{ end }}
+{{ end }}
+
+{{/* 2. front matter 中手动声明的 photos（外链 / static 路径），兼容旧写法 */}}
+{{ with .Params.photos }}
+  {{ range . }}
+    {{ $photos = $photos | append . }}
+  {{ end }}
+{{ end }}
+
+{{ return $photos }}

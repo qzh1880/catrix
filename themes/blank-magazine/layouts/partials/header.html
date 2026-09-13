@@ -1,0 +1,89 @@
+<header class="site-header">
+  <div class="header-inner">
+    <a class="site-logo" href="{{ .Site.BaseURL }}">{{ .Site.Title }}</a>
+
+    <nav class="header-nav">
+      {{ $currentURL := $.RelPermalink }}
+      {{ range .Site.Menus.main }}
+      {{ $isActive := false }}
+      {{ if and $.IsHome (eq .URL "/") }}{{ $isActive = true }}{{ end }}
+      {{ if and (not $.IsHome) (ne .URL "/") (hasPrefix $currentURL .URL) }}{{ $isActive = true }}{{ end }}
+      <a href="{{ .URL }}" class="header-nav-link{{ if $isActive }} active{{ end }}">
+        <span>{{ .Name }}</span>
+      </a>
+      {{ end }}
+    </nav>
+
+    <div class="header-actions">
+      <button class="search-toggle icon-link" aria-label="搜索" onclick="openSearch()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+      <button class="menu-toggle" aria-label="打开菜单" aria-expanded="false" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Fullscreen Menu Overlay -->
+<div class="menu-overlay" id="menu-overlay">
+  <div class="menu-panel">
+    <button class="menu-close" aria-label="关闭菜单" onclick="toggleMenu()">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <nav class="menu-nav">
+      {{ range .Site.Menus.main }}
+      <a href="{{ .URL }}" class="menu-link{{ if $.IsMenuCurrent "main" . }} active{{ end }}" onclick="toggleMenu()">
+        <span class="menu-link-num">{{ printf "%02d" .Weight }}</span>
+        <span class="menu-link-text">{{ .Name }}</span>
+      </a>
+      {{ end }}
+    </nav>
+    <div class="menu-footer">
+      <div class="menu-social">
+        {{ with .Site.Params.email }}<a href="mailto:{{ . }}">Email</a>{{ end }}
+        {{ with .Site.Params.instagram }}<a href="{{ . }}" target="_blank" rel="noopener">Instagram</a>{{ end }}
+        {{ with .Site.Params.twitter }}<a href="{{ . }}" target="_blank" rel="noopener">Twitter</a>{{ end }}
+      </div>
+      <p class="menu-copyright">&copy; {{ now.Format "2006" }} {{ .Site.Params.author }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- Search Overlay -->
+<div class="search-overlay" id="search-overlay">
+  <div class="search-inner">
+    <button class="search-close" aria-label="关闭搜索" onclick="closeSearch()">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <input type="text" class="search-input" placeholder="搜索文章..." id="search-input" autocomplete="off">
+    <div class="search-results" id="search-results"></div>
+  </div>
+</div>
+
+<script>
+  function toggleMenu() {
+    const overlay = document.getElementById('menu-overlay');
+    const toggle = document.querySelector('.menu-toggle');
+    const isOpen = overlay.classList.toggle('open');
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    if (toggle) toggle.setAttribute('aria-expanded', isOpen);
+  }
+  function openSearch() {
+    document.getElementById('search-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { document.getElementById('search-input').focus(); }, 100);
+  }
+  function closeSearch() {
+    document.getElementById('search-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (document.getElementById('menu-overlay').classList.contains('open')) toggleMenu();
+      if (document.getElementById('search-overlay').classList.contains('open')) closeSearch();
+    }
+  });
+</script>

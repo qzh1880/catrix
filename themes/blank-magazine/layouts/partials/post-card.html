@@ -1,0 +1,33 @@
+<article class="post-card{{ if .Params.cover }} has-cover{{ end }}">
+  {{ if .Params.cover }}
+  <a href="{{ .Permalink }}" class="post-card-cover">
+    <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+  </a>
+  {{ end }}
+  <div class="post-card-body">
+    <div class="post-card-meta-top">
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "January 2, 2006" }}</time>
+      {{ with .Params.categories }}
+      <span class="meta-sep">·</span>
+      {{ range first 1 . }}<a href="{{ "/categories/" | relURL }}{{ . | urlize }}/">{{ . }}</a>{{ end }}
+      {{ end }}
+    </div>
+    <h2 class="post-card-title">
+      <a href="{{ .Permalink }}">{{ .Title }}</a>
+    </h2>
+    {{ with .Description }}
+    <p class="post-card-excerpt">{{ . | plainify | truncate 140 }}</p>
+    {{ else }}
+    <p class="post-card-excerpt">{{ .Summary | plainify | truncate 140 }}</p>
+    {{ end }}
+    <div class="post-card-meta">
+      {{ if .Params.tags }}
+      <span class="post-card-tags">
+        {{ range first 3 .Params.tags }}
+        <a href="{{ "/tags/" | relURL }}{{ . | urlize }}/">#{{ . }}</a>
+        {{ end }}
+      </span>
+      {{ end }}
+    </div>
+  </div>
+</article>

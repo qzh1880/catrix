@@ -1,0 +1,159 @@
+{{ define "main" }}
+
+<!-- Hero Section
+<section class="home-hero">
+  <div class="container">
+    <div class="home-hero-inner">
+      <p class="home-hero-eyebrow">{{ .Site.Params.author | upper }}</p>
+      <h1 class="home-hero-title">{{ .Site.Params.slogan | default .Site.Title }}</h1>
+      <p class="home-hero-desc">{{ .Site.Params.description }}</p>
+      <div class="home-hero-meta">
+        <span>{{ len (where .Site.RegularPages "Section" "posts") }} 篇文章</span>
+        <span class="dot">·</span>
+        <span>{{ len .Site.Taxonomies.tags }} 个标签</span>
+        <span class="dot">·</span>
+        <span>{{ len (where .Site.RegularPages "Section" "gallery") }} 本相册</span>
+      </div>
+    </div>
+  </div>
+</section>-->
+
+<!-- Featured Post -->
+{{ $featured := where (where .Site.RegularPages "Section" "posts") "Params.featured" true }}
+{{ if $featured }}
+{{ with index $featured 0 }}
+<section class="home-featured">
+  <div class="container">
+      <!--<span class="featured-stamp">Editor's Pick · 封面精选</span>-->
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">FEATURED · 精选</span>
+      <span class="label-line"></span>
+    </div>
+    <a href="{{ .Permalink }}" class="featured-card feature-cover">
+      {{ if .Params.cover }}
+      <div class="featured-cover">
+        <img src="{{ .Params.cover }}" alt="{{ .Title }}">
+      </div>
+      {{ end }}
+      <div class="featured-info">
+
+        <div class="featured-meta">
+          <time>{{ .Date.Format "January 2, 2006" }}</time>
+          {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span>{{ . }}</span>{{ end }}{{ end }}
+        </div>
+        <h2 class="featured-title">{{ .Title }}</h2>
+        {{ with .Description }}
+        <p class="featured-excerpt">{{ . | plainify | truncate 160 }}</p>
+        {{ end }}
+        <span class="featured-read">阅读全文 →</span>
+      </div>
+    </a>
+  </div>
+</section>
+{{ end }}
+{{ end }}
+
+<!-- Latest Posts List -->
+<section class="home-latest">
+  <div class="container">
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">LATEST · 最新文章</span>
+      <span class="label-line"></span>
+    </div>
+    <div class="post-list">
+      {{ $posts := where .Site.RegularPages "Section" "posts" }}
+      {{ $posts = $posts | first 6 }}
+      {{ range $posts }}
+      <a href="{{ .Permalink }}" class="post-list-item">
+        {{ if .Params.cover }}
+        <div class="post-list-cover">
+          <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+        </div>
+        {{ end }}
+        <div class="post-list-content">
+          <div class="post-list-meta">
+            <time>{{ .Date.Format "January 2, 2006" }}</time>
+            {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
+          </div>
+          <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Description }}
+          <p class="post-list-excerpt">{{ . | plainify | truncate 100 }}</p>
+          {{ end }}
+          {{ if .Params.tags }}
+          <div class="post-list-tags">
+            {{ range first 3 .Params.tags }}
+            <span>#{{ . }}</span>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    <div class="home-more">
+      <a href="{{ "/posts/" | relURL }}" class="more-link">查看全部文章 →</a>
+    </div>
+  </div>
+</section>
+
+<!-- Gallery Preview -->
+{{ $gallery := where .Site.RegularPages "Section" "gallery" }}
+{{ if $gallery }}
+<section class="home-gallery">
+  <div class="container">
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">GALLERY · 相册</span>
+      <span class="label-line"></span>
+    </div>
+    <div class="home-gallery-grid">
+      {{ range first 4 $gallery }}
+      {{ $photos := partial "gallery-photos.html" . }}
+      <a href="{{ .Permalink }}" class="home-gallery-item">
+        {{ with .Params.cover }}
+        <img src="{{ . }}" alt="{{ $.Title }}" loading="lazy">
+        {{ else with $photos }}
+        <img src="{{ index . 0 }}" alt="{{ $.Title }}" loading="lazy">
+        {{ end }}
+        <div class="home-gallery-overlay">
+          <h3>{{ .Title }}</h3>
+          <p>{{ len $photos }} 张照片</p>
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    <div class="home-more">
+      <a href="{{ "/gallery/" | relURL }}" class="more-link">进入相册 →</a>
+    </div>
+  </div>
+</section>
+{{ end }}
+
+<!-- About / Subscribe -->
+<section class="home-about">
+  <div class="container">
+    <div class="home-about-inner">
+      <div class="home-about-text">
+        <p class="section-label-text">Submit</p>
+        <h2 class="home-about-title">投稿{{ .Site.Params.author }}</h2>
+        <p class="home-about-desc">投稿邮箱：contact@catrix.net</p>
+        <div class="home-about-links">
+          <a href="{{ "/submit/" | relURL }}" class="more-link">了解更多 →</a>
+        </div>
+      </div>
+      <!-- <div class="home-subscribe">
+        <p class="section-label-text">SUBSCRIBE</p>
+        <h3 class="home-subscribe-title">订阅更新</h3>
+        <p class="home-subscribe-desc">第一时间收到新文章通知</p>
+        <form class="subscribe-form" onsubmit="event.preventDefault(); this.querySelector('input').value=''; alert('感谢订阅！');">
+          <input type="email" placeholder="输入你的邮箱" required>
+          <button type="submit">订阅</button>
+        </form>
+      </div> -->
+    </div>
+  </div>
+</section>
+
+{{ end }}

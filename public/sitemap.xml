@@ -2,46 +2,65 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/author/</loc>
+    <loc>http://localhost:64675/</loc>
+    <lastmod>2026-09-03T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:64675/gallery/</loc>
+    <lastmod>2026-09-03T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:64675/gallery/by-the-window/</loc>
+    <lastmod>2026-09-03T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:64675/author/</loc>
     <lastmod>2026-08-29T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/</loc>
+    <loc>http://localhost:64675/posts/2026-08-29-how-to-begin/</loc>
     <lastmod>2026-08-29T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/post/2026-08-29-how-to-begin/</loc>
+    <loc>http://localhost:64675/posts/</loc>
     <lastmod>2026-08-29T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/post/</loc>
+    <loc>http://localhost:64675/author/linearcat/</loc>
     <lastmod>2026-08-29T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/author/linearcat/</loc>
-    <lastmod>2026-08-29T11:40:17+08:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/articles/</loc>
+    <loc>http://localhost:64675/articles/</loc>
     <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/maths/</loc>
+    <loc>http://localhost:64675/tags/maths/</loc>
     <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>http://localhost:64675/news/</loc>
     <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/articles/test-copy/</loc>
+    <loc>http://localhost:64675/tags/</loc>
     <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/author/longzimao/</loc>
+    <loc>http://localhost:64675/articles/test-copy/</loc>
     <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/search/</loc>
+    <loc>http://localhost:64675/news/test-copy/</loc>
+    <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/about/</loc>
+    <loc>http://localhost:64675/author/longzimao/</loc>
+    <lastmod>2026-08-09T11:40:17+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/category/</loc>
+    <loc>http://localhost:64675/gallery/kyoto-autumn/</loc>
+    <lastmod>2024-11-08T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/contributors/</loc>
+    <loc>http://localhost:64675/gallery/city-light-shadow/</loc>
+    <lastmod>2024-09-10T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/joinus/</loc>
+    <loc>http://localhost:64675/gallery/london-streets/</loc>
+    <lastmod>2024-06-20T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/author/xxdy/</loc>
+    <loc>http://localhost:64675/about/</loc>
+  </url><url>
+    <loc>http://localhost:64675/categories/</loc>
+  </url><url>
+    <loc>http://localhost:64675/submit/</loc>
+  </url><url>
+    <loc>http://localhost:64675/author/xxdy/</loc>
+  </url><url>
+    <loc>http://localhost:64675/joinus/</loc>
   </url>
 </urlset>

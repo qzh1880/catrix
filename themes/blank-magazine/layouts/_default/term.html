@@ -1,0 +1,49 @@
+{{ define "main" }}
+{{ $isCat := eq .Data.Plural "categories" }}
+<section class="page-header">
+  <div class="container">
+    <p class="page-eyebrow">{{ if $isCat }}CATEGORY{{ else }}TAG{{ end }}</p>
+    <h1 class="page-title">{{ if not $isCat }}#{{ end }}{{ .Title }}</h1>
+    <p class="page-desc">共 {{ len .Pages }} 篇文章</p>
+    <div class="page-divider"></div>
+    <p style="margin-top:16px;"><a href="{{ if $isCat }}{{ "/categories/" | relURL }}{{ else }}{{ "/tags/" | relURL }}{{ end }}" style="font-family:var(--font-sans);font-size:0.7rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--color-text-muted);">← {{ if $isCat }}所有分类{{ else }}所有标签{{ end }}</a></p>
+  </div>
+</section>
+
+<section class="post-list-section">
+  <div class="container">
+    {{ $paginator := .Paginate .Pages }}
+    <div class="post-list">
+      {{ range $paginator.Pages }}
+      <a href="{{ .Permalink }}" class="post-list-item">
+        {{ if .Params.cover }}
+        <div class="post-list-cover">
+          <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+        </div>
+        {{ end }}
+        <div class="post-list-content">
+          <div class="post-list-meta">
+            <time>{{ .Date.Format "January 2, 2006" }}</time>
+            {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
+          </div>
+          <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Description }}
+          <p class="post-list-excerpt">{{ . | plainify | truncate 120 }}</p>
+          {{ else }}
+          <p class="post-list-excerpt">{{ .Summary | plainify | truncate 120 }}</p>
+          {{ end }}
+          {{ if .Params.tags }}
+          <div class="post-list-tags">
+            {{ range first 3 .Params.tags }}
+            <span>#{{ . }}</span>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    {{ partial "pagination.html" . }}
+  </div>
+</section>
+{{ end }}

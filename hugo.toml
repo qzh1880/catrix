@@ -1,0 +1,58 @@
+# Example site configuration for the Blank Magazine theme.
+# Run it from the repository root with:
+#   hugo server --source exampleSite --themesDir ../..
+baseURL = "https://catrix.net/"
+languageCode = "zh-cn"
+defaultContentLanguage = "zh"
+title = "[catrix]"
+theme = "blank-magazine"
+enableRobotsTXT = true
+
+[pagination]
+  pagerSize = 9
+
+[params]
+  description = "立志成为全浦东最有影响力的高中生杂志。网站建设中……杂志社招募中，点击右上角Joinus查看招募信息。"
+  author = ""
+  authorBio = ""
+  slogan = ""
+  email = "contact@catrix.net"
+  instagram = "https://instagram.com/"
+  twitter = "https://twitter.com/"
+  facebook = "https://facebook.com/"
+  pinterest = "https://pinterest.com/"
+  mainSections = ["posts"]
+
+[menu]
+  [[menu.main]]
+    name = "首页"
+    url = "/"
+    weight = 1
+  [[menu.main]]
+    name = "文章"
+    url = "/posts/"
+    weight = 2
+  [[menu.main]]
+    name = "往期"
+    url = "/categories/"
+    weight = 3
+  [[menu.main]]
+    name = "相册"
+    url = "/gallery/"
+    weight = 4
+  [[menu.main]]
+    name = "标签"
+    url = "/tags/"
+    weight = 5
+
+  [[menu.main]]
+    name = "加入CATRIX"
+    url = "/joinus/"
+    weight = 6
+
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+  author = "author"
+[outputs]
+  home = ["HTML", "RSS", "JSON"]

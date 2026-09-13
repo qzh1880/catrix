@@ -1,0 +1,39 @@
+{{ define "main" }}
+<section class="page-header">
+  <div class="container">
+    <p class="page-eyebrow">GALLERY</p>
+    <h1 class="page-title">相册集</h1>
+    <p class="page-desc">用镜头记录生活中的光影与故事</p>
+    <div class="page-divider"></div>
+  </div>
+</section>
+
+<section class="gallery-section">
+  <div class="container">
+    <div class="gallery-grid">
+      {{ range .Pages }}
+      {{ $photos := partial "gallery-photos.html" . }}
+      <a href="{{ .Permalink }}" class="gallery-card">
+        <div class="gallery-card-cover">
+          {{ with .Params.cover }}
+          <img src="{{ . }}" alt="{{ $.Title }}" loading="lazy">
+          {{ else with $photos }}
+          <img src="{{ index . 0 }}" alt="{{ $.Title }}" loading="lazy">
+          {{ end }}
+          <div class="gallery-card-overlay">
+            <span class="gallery-count">{{ len $photos }} 张照片</span>
+          </div>
+        </div>
+        <div class="gallery-card-info">
+          <h3 class="gallery-card-title">{{ .Title }}</h3>
+          <p class="gallery-card-date">{{ .Date.Format "2006年01月" }}</p>
+          {{ with .Description }}
+          <p class="gallery-card-desc">{{ . | truncate 80 }}</p>
+          {{ end }}
+        </div>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }}

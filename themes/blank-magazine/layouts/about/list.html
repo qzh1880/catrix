@@ -1,0 +1,136 @@
+{{ define "main" }}
+<article class="about-page">
+
+  <!-- Hero -->
+  <section class="about-hero">
+    <div class="container">
+      <div class="about-hero-inner">
+        <div class="about-hero-avatar">
+          {{ with .Site.Params.authorAvatar }}
+          <img src="{{ . }}" alt="{{ $.Site.Params.author }}">
+          {{ else }}
+          <span class="about-avatar-fallback" aria-hidden="true">{{ substr ($.Site.Params.author | default "A") 0 1 }}</span>
+          {{ end }}
+        </div>
+        <div class="about-hero-text">
+          <p class="page-eyebrow">ABOUT</p>
+          <h1 class="about-title">{{ .Site.Params.author }}</h1>
+          <p class="about-subtitle">{{ .Site.Params.authorBio }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quote -->
+  <section class="about-quote">
+    <div class="container-narrow">
+      <blockquote class="about-quote-text">
+        "我们写作，是为了更好地理解生活；我们拍照，是为了不让美好溜走。"
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- Content -->
+  <section class="about-content">
+    {{ .Content }}
+  </section>
+
+  <!-- Skills -->
+  <section class="about-skills">
+    <div class="container">
+      <div class="section-label">
+        <span class="label-line"></span>
+        <span class="label-text">WHAT I DO · 兴趣与技能</span>
+        <span class="label-line"></span>
+      </div>
+      <div class="skills-grid">
+        <div class="skill-item">
+          <div class="skill-num">01</div>
+          <h3>写作</h3>
+          <p>记录生活感悟、读书笔记与旅行见闻，用文字留存思考的痕迹。</p>
+        </div>
+        <div class="skill-item">
+          <div class="skill-num">02</div>
+          <h3>摄影</h3>
+          <p>热爱街头摄影与自然风光，用镜头捕捉日常中被忽略的美好瞬间。</p>
+        </div>
+        <div class="skill-item">
+          <div class="skill-num">03</div>
+          <h3>阅读</h3>
+          <p>广泛涉猎文学、历史、哲学与科技类书籍，相信阅读是最好的自我投资。</p>
+        </div>
+        <div class="skill-item">
+          <div class="skill-num">04</div>
+          <h3>旅行</h3>
+          <p>喜欢探索不同城市的文化与风景，在旅途中遇见更广阔的世界和自己。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section class="about-timeline">
+    <div class="container-narrow">
+      <div class="section-label">
+        <span class="label-line"></span>
+        <span class="label-text">JOURNEY · 经历</span>
+        <span class="label-line"></span>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-year">2024</div>
+          <div class="timeline-content">
+            <h3>自由创作者</h3>
+            <p>专注于独立写作与摄影创作，开始运营个人博客，记录生活与思考。</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2020</div>
+          <div class="timeline-content">
+            <h3>产品经理</h3>
+            <p>在科技行业从事产品规划与设计，关注用户体验与数字产品的人文温度。</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2016</div>
+          <div class="timeline-content">
+            <h3>MBA 学习</h3>
+            <p>系统学习商业管理知识，期间开始对写作和摄影产生浓厚兴趣。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="about-contact">
+    <div class="container-narrow">
+      <div class="contact-inner">
+        <p class="section-label-text">GET IN TOUCH</p>
+        <h2 class="contact-title">联系我</h2>
+        <p class="contact-desc">欢迎交流合作、投稿或只是打个招呼</p>
+        <div class="contact-links">
+          {{ with .Site.Params.email }}
+          <a href="mailto:{{ . }}" class="contact-link">
+            <span class="contact-label">EMAIL</span>
+            <span class="contact-value">{{ . }}</span>
+          </a>
+          {{ end }}
+          {{ with .Site.Params.instagram }}
+          <a href="{{ . }}" target="_blank" rel="noopener" class="contact-link">
+            <span class="contact-label">INSTAGRAM</span>
+            <span class="contact-value">@yourhandle</span>
+          </a>
+          {{ end }}
+          {{ with .Site.Params.twitter }}
+          <a href="{{ . }}" target="_blank" rel="noopener" class="contact-link">
+            <span class="contact-label">TWITTER</span>
+            <span class="contact-value">@yourhandle</span>
+          </a>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+  </section>
+</article>
+{{ end }}

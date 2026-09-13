@@ -1,6 +1,6 @@
 ---
 title: "加入Catrix杂志社"
-layout: about
+layout: post
 ShowReadingTime: false
 ShowWordCount: false
 ---

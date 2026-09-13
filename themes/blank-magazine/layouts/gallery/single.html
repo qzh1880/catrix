@@ -1,0 +1,99 @@
+{{ define "main" }}
+{{/* 自动汇总相册图片：同目录本地图片 + front matter 的 photos */}}
+{{ $photos := partial "gallery-photos.html" . }}
+<article class="gallery-single">
+  <header class="gallery-header">
+    <div class="container">
+      <p class="page-eyebrow">GALLERY · {{ .Date.Format "2006.01" }}</p>
+      <h1 class="gallery-title">{{ .Title }}</h1>
+      {{ with .Description }}
+      <p class="gallery-desc">{{ . }}</p>
+      {{ end }}
+      <div class="gallery-meta">
+        <span>{{ len $photos }} 张照片</span>
+        <span class="meta-sep">·</span>
+        <time>{{ .Date.Format "2006年01月02日" }}</time>
+      </div>
+      <div class="page-divider"></div>
+    </div>
+  </header>
+
+  {{ with .Content }}
+  <div class="gallery-intro">
+    <div class="container">
+      {{ . }}
+    </div>
+  </div>
+  {{ end }}
+
+  <div class="gallery-photos">
+    <div class="container">
+      <div class="photo-masonry">
+        {{ range $index, $photo := $photos }}
+        <figure class="photo-item" data-index="{{ $index }}">
+          <img src="{{ $photo }}" alt="{{ $.Title }} - 照片 {{ add $index 1 }}" loading="lazy" onclick="openLightbox({{ $index }})">
+        </figure>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" aria-label="关闭">×</button>
+    <button class="lightbox-prev" onclick="event.stopPropagation(); prevPhoto()" aria-label="上一张">‹</button>
+    <img id="lightbox-img" src="" alt="">
+    <button class="lightbox-next" onclick="event.stopPropagation(); nextPhoto()" aria-label="下一张">›</button>
+    <div class="lightbox-counter" id="lightbox-counter"></div>
+  </div>
+
+  <script>
+    const photos = {{ $photos | jsonify | safeJS }};
+    let currentIndex = 0;
+    function openLightbox(index) {
+      currentIndex = index;
+      document.getElementById('lightbox-img').src = photos[index];
+      document.getElementById('lightbox-counter').textContent = (index + 1) + ' / ' + photos.length;
+      document.getElementById('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    function prevPhoto() {
+      currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+      document.getElementById('lightbox-img').src = photos[currentIndex];
+      document.getElementById('lightbox-counter').textContent = (currentIndex + 1) + ' / ' + photos.length;
+    }
+    function nextPhoto() {
+      currentIndex = (currentIndex + 1) % photos.length;
+      document.getElementById('lightbox-img').src = photos[currentIndex];
+      document.getElementById('lightbox-counter').textContent = (currentIndex + 1) + ' / ' + photos.length;
+    }
+    document.addEventListener('keydown', function(e) {
+      if (!document.getElementById('lightbox').classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevPhoto();
+      if (e.key === 'ArrowRight') nextPhoto();
+    });
+  </script>
+
+  <!-- Gallery Navigation -->
+  <nav class="gallery-nav">
+    <div class="container">
+      {{ with .PrevInSection }}
+      <a href="{{ .Permalink }}" class="gallery-nav-prev">← {{ .Title }}</a>
+      {{ else }}
+      <span></span>
+      {{ end }}
+      <a href="{{ "/gallery/" | relURL }}" class="gallery-nav-all">全部相册</a>
+      {{ with .NextInSection }}
+      <a href="{{ .Permalink }}" class="gallery-nav-next">{{ .Title }} →</a>
+      {{ else }}
+      <span></span>
+      {{ end }}
+    </div>
+  </nav>
+</article>
+{{ end }}

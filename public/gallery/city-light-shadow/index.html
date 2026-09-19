@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 
-<link rel="stylesheet" href="/css/style.css?v=1789817198">
+<link rel="stylesheet" href="/css/style.css?v=1789822167">
 
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
@@ -107,7 +107,7 @@
         
           
           <div class="header-nav-item has-dropdown">
-            <a href="/more/" class="header-nav-link">
+            <a href="javascript:void(0);" class="header-nav-link" onclick="togglePinDropdown(this, event)">
               <span>更多</span>
               <svg class="dropdown-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </a>
@@ -245,10 +245,33 @@
     document.getElementById('search-overlay').classList.remove('open');
     document.body.style.overflow = '';
   }
+  
+  
+  function togglePinDropdown(element, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = element.closest('.has-dropdown');
+    if (parent) {
+      parent.classList.toggle('is-pinned');
+    }
+  }
+
+  
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.has-dropdown')) {
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
+    }
+  });
+
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       if (document.getElementById('menu-overlay').classList.contains('open')) toggleMenu();
       if (document.getElementById('search-overlay').classList.contains('open')) closeSearch();
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
     }
   });
 </script>
@@ -381,6 +404,6 @@
   </div>
 </footer>
 
-  <script src="/js/main.js?v=1789817198"></script>
+  <script src="/js/main.js?v=1789822167"></script>
 </body>
 </html>

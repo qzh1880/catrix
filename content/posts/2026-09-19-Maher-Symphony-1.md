@@ -3,6 +3,8 @@ date: '2026-09-19T11:40:17+08:00'
 draft: false
 title: "巨人的崛起：评古斯塔夫·马勒《D大调第一交响曲“泰坦”》"
 author: "岳"
+category: 
+    - 2026年9月上
 description: 在黎明破晓的号角与流浪者的足音中，一个年轻灵魂对自然、爱情与存在的全部渴望与诘问，就此展开……
 featured: true
 cover: 'https://media.catrix.net/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png'

@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 
-<link rel="stylesheet" href="/css/style.css?v=1789817198">
+<link rel="stylesheet" href="/css/style.css?v=1789822167">
 
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
@@ -107,7 +107,7 @@
         
           
           <div class="header-nav-item has-dropdown">
-            <a href="/more/" class="header-nav-link">
+            <a href="javascript:void(0);" class="header-nav-link" onclick="togglePinDropdown(this, event)">
               <span>更多</span>
               <svg class="dropdown-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </a>
@@ -245,10 +245,33 @@
     document.getElementById('search-overlay').classList.remove('open');
     document.body.style.overflow = '';
   }
+  
+  
+  function togglePinDropdown(element, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = element.closest('.has-dropdown');
+    if (parent) {
+      parent.classList.toggle('is-pinned');
+    }
+  }
+
+  
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.has-dropdown')) {
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
+    }
+  });
+
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       if (document.getElementById('menu-overlay').classList.contains('open')) toggleMenu();
       if (document.getElementById('search-overlay').classList.contains('open')) closeSearch();
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
     }
   });
 </script>
@@ -267,6 +290,25 @@
   <div class="container">
     
     <div class="post-list">
+      
+      <a href="http://localhost:1313/posts/2026-09-19-maher-symphony-1/" class="post-list-item">
+        
+        <div class="post-list-cover">
+          <img src="https://media.catrix.net/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png" alt="巨人的崛起：评古斯塔夫·马勒《D大调第一交响曲“泰坦”》" loading="lazy">
+        </div>
+        
+        <div class="post-list-content">
+          <div class="post-list-meta">
+            <time>September 19, 2026</time>
+            
+          </div>
+          <h3 class="post-list-title">巨人的崛起：评古斯塔夫·马勒《D大调第一交响曲“泰坦”》</h3>
+          
+          <p class="post-list-excerpt">在黎明破晓的号角与流浪者的足音中，一个年轻灵魂对自然、爱情与存在的全部渴望与诘问，就此展开……</p>
+          
+          
+        </div>
+      </a>
       
       <a href="http://localhost:1313/posts/2026-08-29-how-to-begin/" class="post-list-item">
         
@@ -302,6 +344,6 @@
   </div>
 </footer>
 
-  <script src="/js/main.js?v=1789817198"></script>
+  <script src="/js/main.js?v=1789822167"></script>
 </body>
 </html>

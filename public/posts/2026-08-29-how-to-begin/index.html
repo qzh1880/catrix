@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=64675&amp;path=livereload" data-no-instant defer></script>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Catrix.net 创作者投稿与协作指南 · [catrix]</title>
@@ -11,7 +11,7 @@
 <meta property="og:title" content="Catrix.net 创作者投稿与协作指南">
 <meta property="og:description" content="面向 catrix.net 创作者的完整协作与提交流程指南，涵盖从拉取代码到文章发布的每一步">
 <meta property="og:type" content="article">
-<meta property="og:url" content="http://localhost:64675/posts/2026-08-29-how-to-begin/">
+<meta property="og:url" content="http://localhost:1313/posts/2026-08-29-how-to-begin/">
 <meta property="og:image" content="https://media.tallcat.cn/d0c4fffa3bf3ebafc2e80da1b95f035.png">
 
 
@@ -19,8 +19,8 @@
 <meta name="twitter:title" content="Catrix.net 创作者投稿与协作指南">
 <meta name="twitter:description" content="面向 catrix.net 创作者的完整协作与提交流程指南，涵盖从拉取代码到文章发布的每一步">
 
-<link rel="canonical" href="http://localhost:64675/posts/2026-08-29-how-to-begin/">
-<link rel="alternate" type="application/rss+xml" title="[catrix]" href="http://localhost:64675/index.xml">
+<link rel="canonical" href="http://localhost:1313/posts/2026-08-29-how-to-begin/">
+<link rel="alternate" type="application/rss+xml" title="[catrix]" href="http://localhost:1313/index.xml">
 
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 
-<link rel="stylesheet" href="/css/style.css?v=1789300528">
+<link rel="stylesheet" href="/css/style.css?v=1789821684">
 
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
@@ -40,52 +40,92 @@
 <body>
   <header class="site-header">
   <div class="header-inner">
-    <a class="site-logo" href="http://localhost:64675/">[catrix]</a>
+    <a class="site-logo" href="http://localhost:1313/">[catrix]</a>
 
     <nav class="header-nav">
       
       
+        
+        
+        
+
+        
+          
+          <a href="/" class="header-nav-link">
+            <span>首页</span>
+          </a>
+        
       
+        
+        
+        
+
+        
+          
+          <a href="/posts/" class="header-nav-link active">
+            <span>文章</span>
+          </a>
+        
       
+        
+        
+        
+
+        
+          
+          <a href="/categories/" class="header-nav-link">
+            <span>往期</span>
+          </a>
+        
       
-      <a href="/" class="header-nav-link">
-        <span>首页</span>
-      </a>
+        
+        
+        
+
+        
+          
+          <a href="/gallery/" class="header-nav-link">
+            <span>相册</span>
+          </a>
+        
       
+        
+        
+        
+
+        
+          
+          <a href="/tags/" class="header-nav-link">
+            <span>标签</span>
+          </a>
+        
       
-      
-      
-      <a href="/posts/" class="header-nav-link active">
-        <span>文章</span>
-      </a>
-      
-      
-      
-      
-      <a href="/categories/" class="header-nav-link">
-        <span>往期</span>
-      </a>
-      
-      
-      
-      
-      <a href="/gallery/" class="header-nav-link">
-        <span>相册</span>
-      </a>
-      
-      
-      
-      
-      <a href="/tags/" class="header-nav-link">
-        <span>标签</span>
-      </a>
-      
-      
-      
-      
-      <a href="/joinus/" class="header-nav-link">
-        <span>加入CATRIX</span>
-      </a>
+        
+        
+        
+
+        
+          
+          <div class="header-nav-item has-dropdown">
+            <a href="javascript:void(0);" class="header-nav-link" onclick="togglePinDropdown(this, event)">
+              <span>更多</span>
+              <svg class="dropdown-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </a>
+            <div class="dropdown-menu">
+              
+                
+                <a href="https://value.catrix.net/" class="dropdown-link">
+                  球员身价榜
+                </a>
+              
+                
+                <a href="/joinus/" class="dropdown-link">
+                  加入CATRIX
+                </a>
+              
+            </div>
+          </div>
+        
       
     </nav>
 
@@ -110,35 +150,60 @@
     </button>
     <nav class="menu-nav">
       
-      <a href="/" class="menu-link" onclick="toggleMenu()">
-        <span class="menu-link-num">01</span>
-        <span class="menu-link-text">首页</span>
-      </a>
+        
+          <a href="/" class="menu-link" onclick="toggleMenu()">
+            <span class="menu-link-num">01</span>
+            <span class="menu-link-text">首页</span>
+          </a>
+        
       
-      <a href="/posts/" class="menu-link" onclick="toggleMenu()">
-        <span class="menu-link-num">02</span>
-        <span class="menu-link-text">文章</span>
-      </a>
+        
+          <a href="/posts/" class="menu-link" onclick="toggleMenu()">
+            <span class="menu-link-num">02</span>
+            <span class="menu-link-text">文章</span>
+          </a>
+        
       
-      <a href="/categories/" class="menu-link" onclick="toggleMenu()">
-        <span class="menu-link-num">03</span>
-        <span class="menu-link-text">往期</span>
-      </a>
+        
+          <a href="/categories/" class="menu-link" onclick="toggleMenu()">
+            <span class="menu-link-num">03</span>
+            <span class="menu-link-text">往期</span>
+          </a>
+        
       
-      <a href="/gallery/" class="menu-link" onclick="toggleMenu()">
-        <span class="menu-link-num">04</span>
-        <span class="menu-link-text">相册</span>
-      </a>
+        
+          <a href="/gallery/" class="menu-link" onclick="toggleMenu()">
+            <span class="menu-link-num">04</span>
+            <span class="menu-link-text">相册</span>
+          </a>
+        
       
-      <a href="/tags/" class="menu-link" onclick="toggleMenu()">
-        <span class="menu-link-num">05</span>
-        <span class="menu-link-text">标签</span>
-      </a>
+        
+          <a href="/tags/" class="menu-link" onclick="toggleMenu()">
+            <span class="menu-link-num">05</span>
+            <span class="menu-link-text">标签</span>
+          </a>
+        
       
-      <a href="/joinus/" class="menu-link" onclick="toggleMenu()">
-        <span class="menu-link-num">06</span>
-        <span class="menu-link-text">加入CATRIX</span>
-      </a>
+        
+          <div class="menu-group">
+            <div class="menu-group-title">
+              <span class="menu-link-num">67</span>
+              <span class="menu-link-text">更多</span>
+            </div>
+            <div class="menu-sub-links">
+              
+                <a href="https://value.catrix.net/" class="menu-sub-link" onclick="toggleMenu()">
+                  球员身价榜
+                </a>
+              
+                <a href="/joinus/" class="menu-sub-link" onclick="toggleMenu()">
+                  加入CATRIX
+                </a>
+              
+            </div>
+          </div>
+        
       
     </nav>
     <div class="menu-footer">
@@ -180,14 +245,36 @@
     document.getElementById('search-overlay').classList.remove('open');
     document.body.style.overflow = '';
   }
+  
+  
+  function togglePinDropdown(element, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = element.closest('.has-dropdown');
+    if (parent) {
+      parent.classList.toggle('is-pinned');
+    }
+  }
+
+  
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.has-dropdown')) {
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
+    }
+  });
+
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       if (document.getElementById('menu-overlay').classList.contains('open')) toggleMenu();
       if (document.getElementById('search-overlay').classList.contains('open')) closeSearch();
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
     }
   });
 </script>
-
   <main class="site-main">
     
 <article class="single-post">
@@ -197,10 +284,23 @@
       <time datetime="2026-08-29">August 29, 2026</time>
       
     </p>
+
     <h1 class="single-title">Catrix.net 创作者投稿与协作指南</h1>
+
+    
+    
+    <p class="single-author" style="margin-top: 12px; margin-bottom: 8px; font-size: 1.15rem; opacity: 0.9;">
+      <span class="by-line" style="font-weight: 400;">By </span>
+      <a href="/author/linearcat/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">
+        linearcat
+      </a>
+    </p>
+    
+
     
     <p class="single-excerpt">面向 catrix.net 创作者的完整协作与提交流程指南，涵盖从拉取代码到文章发布的每一步</p>
     
+
     
   </header>
 
@@ -218,13 +318,13 @@
     
     <aside class="single-share-side">
       <span class="share-side-label">Share</span>
-      <a href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2flocalhost%3a64675%2fposts%2f2026-08-29-how-to-begin%2f" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Facebook">
+      <a href="https://www.facebook.com/sharer/sharer.php?u=http%3a%2f%2flocalhost%3a1313%2fposts%2f2026-08-29-how-to-begin%2f" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Facebook">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
       </a>
-      <a href="https://twitter.com/intent/tweet?url=http%3a%2f%2flocalhost%3a64675%2fposts%2f2026-08-29-how-to-begin%2f&text=Catrix.net%20%e5%88%9b%e4%bd%9c%e8%80%85%e6%8a%95%e7%a8%bf%e4%b8%8e%e5%8d%8f%e4%bd%9c%e6%8c%87%e5%8d%97" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Twitter">
+      <a href="https://twitter.com/intent/tweet?url=http%3a%2f%2flocalhost%3a1313%2fposts%2f2026-08-29-how-to-begin%2f&text=Catrix.net%20%e5%88%9b%e4%bd%9c%e8%80%85%e6%8a%95%e7%a8%bf%e4%b8%8e%e5%8d%8f%e4%bd%9c%e6%8c%87%e5%8d%97" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Twitter">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
       </a>
-      <a href="https://pinterest.com/pin/create/button/?url=http%3a%2f%2flocalhost%3a64675%2fposts%2f2026-08-29-how-to-begin%2f&description=Catrix.net%20%e5%88%9b%e4%bd%9c%e8%80%85%e6%8a%95%e7%a8%bf%e4%b8%8e%e5%8d%8f%e4%bd%9c%e6%8c%87%e5%8d%97" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Pinterest">
+      <a href="https://pinterest.com/pin/create/button/?url=http%3a%2f%2flocalhost%3a1313%2fposts%2f2026-08-29-how-to-begin%2f&description=Catrix.net%20%e5%88%9b%e4%bd%9c%e8%80%85%e6%8a%95%e7%a8%bf%e4%b8%8e%e5%8d%8f%e4%bd%9c%e6%8c%87%e5%8d%97" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Pinterest">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.24 2.65 7.86 6.39 9.29-.09-.78-.17-1.98.04-2.83.19-.77 1.25-5.28 1.25-5.28s-.31-.62-.31-1.54c0-1.44.83-2.52 1.87-2.52.88 0 1.31.66 1.31 1.45 0 .89-.57 2.22-.86 3.45-.24 1.03.52 1.87 1.54 1.87 1.85 0 3.27-1.95 3.27-4.76 0-2.49-1.79-4.23-4.35-4.23-2.96 0-4.7 2.22-4.7 4.52 0 .89.34 1.85.77 2.37.08.1.09.18.07.28l-.28 1.15c-.04.18-.14.22-.33.13-1.22-.57-1.98-2.35-1.98-3.78 0-3.08 2.24-5.9 6.45-5.9 3.39 0 6.02 2.41 6.02 5.64 0 3.37-2.12 6.07-5.07 6.07-.99 0-1.92-.51-2.24-1.12l-.61 2.33c-.22.85-.82 1.92-1.22 2.57.92.28 1.89.44 2.9.44 5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
       </a>
     </aside>
@@ -316,16 +416,26 @@
 
     
     
-
-
-
     
     
     
     
-    
-    
-
+    <div class="related-posts">
+      <h3 class="related-title">Related posts</h3>
+      <div class="related-grid">
+        
+        <a href="http://localhost:1313/posts/2026-09-19-maher-symphony-1/" class="related-card">
+          
+          <div class="related-cover"><img src="https://media.catrix.net/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png" alt="巨人的崛起：评古斯塔夫·马勒《D大调第一交响曲“泰坦”》" loading="lazy"></div>
+          
+          <div class="related-info">
+            
+            <h4>巨人的崛起：评古斯塔夫·马勒《D大调第一交响曲“泰坦”》</h4>
+          </div>
+        </a>
+        
+      </div>
+    </div>
     
   </div>
 </article>
@@ -339,6 +449,6 @@
   </div>
 </footer>
 
-  <script src="/js/main.js?v=1789300528"></script>
+  <script src="/js/main.js?v=1789821684"></script>
 </body>
 </html>

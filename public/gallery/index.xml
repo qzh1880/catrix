@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 	<channel>
 		<title>Galleries on [catrix]</title>
-		<link>http://localhost:64675/gallery/</link>
+		<link>http://localhost:1313/gallery/</link>
 		<description>Recent content in Galleries on [catrix]</description>
 		<generator>Hugo</generator>
 		<language>zh-cn</language>
@@ -12,33 +12,33 @@
 		
 			<lastBuildDate>Thu, 03 Sep 2026 00:00:00 +0000</lastBuildDate>
 		
-			<atom:link href="http://localhost:64675/gallery/index.xml" rel="self" type="application/rss+xml" />
+			<atom:link href="http://localhost:1313/gallery/index.xml" rel="self" type="application/rss+xml" />
 			<item>
 				<title>窗边的光</title>
-				<link>http://localhost:64675/gallery/by-the-window/</link>
+				<link>http://localhost:1313/gallery/by-the-window/</link>
 				<pubDate>Thu, 03 Sep 2026 00:00:00 +0000</pubDate>
-				<guid>http://localhost:64675/gallery/by-the-window/</guid>
+				<guid>http://localhost:1313/gallery/by-the-window/</guid>
 				<description>&lt;p&gt;这是一本完全使用&lt;strong&gt;本地图片&lt;/strong&gt;的相册，用来演示新的自定义方式：照片就放在 &lt;code&gt;index.md&lt;/code&gt; 旁边，不需要上传图床，也不需要在文档里逐个粘贴链接。&lt;/p&gt;&#xA;&lt;p&gt;清晨的光从窗格斜斜地落进来，在地板上一格一格地移动。我泡了杯茶，坐在光里，看灰尘在光束中缓慢地浮浮沉沉。&lt;/p&gt;&#xA;&lt;p&gt;很多个这样安静的早晨，被我用镜头留了下来。照片不必多，三张就够讲一个小故事；文字也不必长，写下当时的光线、温度和心情就好。&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;把照片丢进文件夹，再用这篇 md 写下它们背后的话，一本相册就完成了。&lt;/p&gt;&#xA;&lt;/blockquote&gt;</description>
 			</item>
 			<item>
 				<title>京都秋日</title>
-				<link>http://localhost:64675/gallery/kyoto-autumn/</link>
+				<link>http://localhost:1313/gallery/kyoto-autumn/</link>
 				<pubDate>Fri, 08 Nov 2024 00:00:00 +0000</pubDate>
-				<guid>http://localhost:64675/gallery/kyoto-autumn/</guid>
+				<guid>http://localhost:1313/gallery/kyoto-autumn/</guid>
 				<description>&lt;p&gt;十一月的京都，是一年中最美的时候。&lt;/p&gt;&#xA;&lt;p&gt;红叶从山顶开始，一点点蔓延到山脚。古寺的屋檐、溪边的石阶、街道的拐角，到处都是层层叠叠的红。&lt;/p&gt;&#xA;&lt;p&gt;这组照片记录了我在京都五天里看到的那些光影。有清晨清水寺的薄雾，有哲学之道的午后阳光，也有东福寺夜枫的灯火。&lt;/p&gt;&#xA;&lt;p&gt;希望你也能感受到那份安静。&lt;/p&gt;</description>
 			</item>
 			<item>
 				<title>城市光影</title>
-				<link>http://localhost:64675/gallery/city-light-shadow/</link>
+				<link>http://localhost:1313/gallery/city-light-shadow/</link>
 				<pubDate>Tue, 10 Sep 2024 00:00:00 +0000</pubDate>
-				<guid>http://localhost:64675/gallery/city-light-shadow/</guid>
+				<guid>http://localhost:1313/gallery/city-light-shadow/</guid>
 				<description>&lt;p&gt;我住的城市不算大，但每天的光影都不一样。&lt;/p&gt;&#xA;&lt;p&gt;清晨，阳光从东边的楼缝里挤进来，在街道上画出一道道金色的线。中午，光从头顶直直地照下来，影子缩成脚下的一小团。傍晚，夕阳把整座城市染成橙红色，连玻璃幕墙都变得温柔起来。&lt;/p&gt;&#xA;&lt;p&gt;这组照片是我在上下班路上拍的。没有刻意的构图，只是觉得那一刻的光很好看，就停下来按下了快门。&lt;/p&gt;&#xA;&lt;p&gt;生活中从来不缺美，缺的是停下来看一眼的心情。&lt;/p&gt;</description>
 			</item>
 			<item>
 				<title>伦敦街头</title>
-				<link>http://localhost:64675/gallery/london-streets/</link>
+				<link>http://localhost:1313/gallery/london-streets/</link>
 				<pubDate>Thu, 20 Jun 2024 00:00:00 +0000</pubDate>
-				<guid>http://localhost:64675/gallery/london-streets/</guid>
+				<guid>http://localhost:1313/gallery/london-streets/</guid>
 				<description>&lt;p&gt;伦敦是一座适合步行的城市。&lt;/p&gt;&#xA;&lt;p&gt;从泰晤士河畔到考文特花园，从大英博物馆的台阶到诺丁山的彩色房屋，每一条街道都有自己的故事。&lt;/p&gt;&#xA;&lt;p&gt;我喜欢在伦敦的街头漫无目的地走，看红色的双层巴士从身边驶过，看穿着西装的上班族在地铁站口匆匆赶路，看街头艺人在街角拉小提琴。&lt;/p&gt;&#xA;&lt;p&gt;这座城市有一种独特的节奏，不紧不慢，却永远充满活力。&lt;/p&gt;</description>
 			</item>
 	</channel>

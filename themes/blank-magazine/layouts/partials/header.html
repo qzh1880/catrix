@@ -5,12 +5,32 @@
     <nav class="header-nav">
       {{ $currentURL := $.RelPermalink }}
       {{ range .Site.Menus.main }}
-      {{ $isActive := false }}
-      {{ if and $.IsHome (eq .URL "/") }}{{ $isActive = true }}{{ end }}
-      {{ if and (not $.IsHome) (ne .URL "/") (hasPrefix $currentURL .URL) }}{{ $isActive = true }}{{ end }}
-      <a href="{{ .URL }}" class="header-nav-link{{ if $isActive }} active{{ end }}">
-        <span>{{ .Name }}</span>
-      </a>
+        {{ $isActive := false }}
+        {{ if and $.IsHome (eq .URL "/") }}{{ $isActive = true }}{{ end }}
+        {{ if and (not $.IsHome) (ne .URL "/") (hasPrefix $currentURL .URL) }}{{ $isActive = true }}{{ end }}
+
+        {{ if .HasChildren }}
+          <!-- 包含二级菜单的父项（如“更多”） -->
+          <div class="header-nav-item has-dropdown">
+            <a href="javascript:void(0);" class="header-nav-link{{ if $isActive }} active{{ end }}" onclick="togglePinDropdown(this, event)">
+              <span>{{ .Name }}</span>
+              <svg class="dropdown-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </a>
+            <div class="dropdown-menu">
+              {{ range .Children }}
+                {{ $childActive := hasPrefix $currentURL .URL }}
+                <a href="{{ .URL }}" class="dropdown-link{{ if $childActive }} active{{ end }}">
+                  {{ .Name }}
+                </a>
+              {{ end }}
+            </div>
+          </div>
+        {{ else }}
+          <!-- 普通单级菜单 -->
+          <a href="{{ .URL }}" class="header-nav-link{{ if $isActive }} active{{ end }}">
+            <span>{{ .Name }}</span>
+          </a>
+        {{ end }}
       {{ end }}
     </nav>
 
@@ -35,10 +55,26 @@
     </button>
     <nav class="menu-nav">
       {{ range .Site.Menus.main }}
-      <a href="{{ .URL }}" class="menu-link{{ if $.IsMenuCurrent "main" . }} active{{ end }}" onclick="toggleMenu()">
-        <span class="menu-link-num">{{ printf "%02d" .Weight }}</span>
-        <span class="menu-link-text">{{ .Name }}</span>
-      </a>
+        {{ if .HasChildren }}
+          <div class="menu-group">
+            <div class="menu-group-title">
+              <span class="menu-link-num">{{ printf "%02d" .Weight }}</span>
+              <span class="menu-link-text">{{ .Name }}</span>
+            </div>
+            <div class="menu-sub-links">
+              {{ range .Children }}
+                <a href="{{ .URL }}" class="menu-sub-link{{ if $.IsMenuCurrent "main" . }} active{{ end }}" onclick="toggleMenu()">
+                  {{ .Name }}
+                </a>
+              {{ end }}
+            </div>
+          </div>
+        {{ else }}
+          <a href="{{ .URL }}" class="menu-link{{ if $.IsMenuCurrent "main" . }} active{{ end }}" onclick="toggleMenu()">
+            <span class="menu-link-num">{{ printf "%02d" .Weight }}</span>
+            <span class="menu-link-text">{{ .Name }}</span>
+          </a>
+        {{ end }}
       {{ end }}
     </nav>
     <div class="menu-footer">
@@ -80,10 +116,33 @@
     document.getElementById('search-overlay').classList.remove('open');
     document.body.style.overflow = '';
   }
+  
+  // 切换固定展开/收起下拉菜单
+  function togglePinDropdown(element, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = element.closest('.has-dropdown');
+    if (parent) {
+      parent.classList.toggle('is-pinned');
+    }
+  }
+
+  // 点击页面任意非菜单区域时自动关闭已固定的下拉菜单
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.has-dropdown')) {
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
+    }
+  });
+
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       if (document.getElementById('menu-overlay').classList.contains('open')) toggleMenu();
       if (document.getElementById('search-overlay').classList.contains('open')) closeSearch();
+      document.querySelectorAll('.has-dropdown.is-pinned').forEach(el => {
+        el.classList.remove('is-pinned');
+      });
     }
   });
 </script>

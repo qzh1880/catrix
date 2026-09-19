@@ -36,6 +36,7 @@ enableRobotsTXT = true
     name = "往期"
     url = "/categories/"
     weight = 3
+
   [[menu.main]]
     name = "相册"
     url = "/gallery/"
@@ -46,9 +47,20 @@ enableRobotsTXT = true
     weight = 5
 
   [[menu.main]]
+    parent = "more"
     name = "加入CATRIX"
     url = "/joinus/"
     weight = 6
+  [[menu.main]]
+    name = "更多"
+    identifier = "more"    
+    url = "/more/"
+    weight = 67
+  [[menu.main]]
+    name = "球员身价榜"
+    parent = "more"
+    url = "https://value.catrix.net/"
+    weight = 2
 
 [taxonomies]
   tag = "tags"

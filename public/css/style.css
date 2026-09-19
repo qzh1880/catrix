@@ -2534,3 +2534,179 @@ input, textarea {
     display: none;
   }
 }
+/* ==========================================================================
+   二级下拉菜单样式 (Magazine Theme Refinement)
+   ========================================================================== */
+
+/* 顶部菜单项定位：增加底部 padding 与负 margin 形成连续响应区 */
+.header-nav-item.has-dropdown {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
+  margin-bottom: -8px;
+}
+
+.header-nav-item .dropdown-arrow {
+  margin-left: 4px;
+  vertical-align: middle;
+  transition: transform 0.2s ease;
+}
+
+/* 桌面端下拉菜单面板：清除 margin-top，防止断层 */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  padding: 10px 0;
+  margin-top: 0; /* 关键修改：移除 8px 间距，紧贴父容器 */
+  z-index: 100;
+}
+
+/* 隐形桥梁：在面板上方向上延伸 10px 的透明防断层热区 */
+.dropdown-menu::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: transparent;
+}
+
+/* 悬停展开与箭头旋转 */
+.header-nav-item.has-dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.header-nav-item.has-dropdown:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单链接 */
+.dropdown-link {
+  display: block;
+  padding: 8px 20px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.dropdown-link:hover,
+.dropdown-link.active {
+  background-color: rgba(0, 0, 0, 0.04);
+  opacity: 1;
+}
+
+/* 移动端/全屏 Overlay 菜单中的子菜单结构 */
+.menu-group {
+  margin-bottom: 20px;
+}
+
+.menu-group-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-bottom: 10px;
+}
+
+.menu-sub-links {
+  padding-left: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-sub-link {
+  font-size: 1.05rem;
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.menu-sub-link:hover,
+.menu-sub-link.active {
+  opacity: 1;
+}
+/* ==========================================================================
+   二级下拉菜单样式 (支持悬停 + 点击固定)
+   ========================================================================== */
+
+/* 顶部菜单项定位 */
+.header-nav-item.has-dropdown {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
+  margin-bottom: -8px;
+}
+
+.header-nav-item .dropdown-arrow {
+  margin-left: 4px;
+  vertical-align: middle;
+  transition: transform 0.2s ease;
+}
+
+/* 桌面端下拉菜单面板 */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  padding: 10px 0;
+  margin-top: 0;
+  z-index: 100;
+}
+
+/* 隐形防断层桥梁 */
+.dropdown-menu::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: transparent;
+}
+
+/* 悬停展开 OR 点击固定（.is-pinned）时显示菜单 */
+.header-nav-item.has-dropdown:hover .dropdown-menu,
+.header-nav-item.has-dropdown.is-pinned .dropdown-menu {
+  display: block;
+}
+
+/* 悬停 OR 点击固定时旋转箭头 */
+.header-nav-item.has-dropdown:hover .dropdown-arrow,
+.header-nav-item.has-dropdown.is-pinned .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单链接 */
+.dropdown-link {
+  display: block;
+  padding: 8px 20px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.dropdown-link:hover,
+.dropdown-link.active {
+  background-color: rgba(0, 0, 0, 0.04);
+  opacity: 1;
+}

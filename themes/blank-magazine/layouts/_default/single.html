@@ -9,10 +9,23 @@
       {{ range first 1 .Params.categories }}<a href="{{ "/categories/" | relURL }}{{ . | urlize }}/">{{ . | upper }}</a>{{ end }}
       {{ end }}
     </p>
+
     <h1 class="single-title">{{ .Title }}</h1>
+
+    <!-- Author Link (调大字体) -->
+    {{ with .Params.author }}
+    <p class="single-author" style="margin-top: 12px; margin-bottom: 8px; font-size: 1.15rem; opacity: 0.9;">
+      <span class="by-line" style="font-weight: 400;">By </span>
+      <a href="{{ "/author/" | relURL }}{{ . | urlize }}/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">
+        {{ . }}
+      </a>
+    </p>
+    {{ end }}
+
     {{ with .Description }}
     <p class="single-excerpt">{{ . }}</p>
     {{ end }}
+
     <!--<div class="single-author">
       {{ with .Site.Params.authorAvatar }}
       <div class="single-author-avatar">
@@ -68,23 +81,6 @@
     </div>
     {{ end }}
 
-    <!-- Share Bottom -->
-    <!--<div class="single-share-bottom">
-      <span class="share-label">Share this</span>
-      <div class="share-buttons">
-        <a href="https://www.facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank" rel="noopener" class="share-btn">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
-          Facebook
-        </a>
-        <a href="https://twitter.com/intent/tweet?url={{ .Permalink }}&text={{ .Title }}" target="_blank" rel="noopener" class="share-btn">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
-          Twitter
-        </a>
-      </div>
-    </div>-->
-
-
-
     <!-- Related Posts -->
     {{ $related := .Site.RegularPages.Related . | first 2 }}
     {{ if not $related }}
@@ -108,12 +104,6 @@
       </div>
     </div>
     {{ end }}
-
-    <!-- Comments
-    <!--<div class="comments-section">
-      <h3 class="comments-title">Comments</h3>
-      <p class="comments-hint">评论功能即将上线</p>
-    </div>-->
   </div>
 </article>
 {{ end }}

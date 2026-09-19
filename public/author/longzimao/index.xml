@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 	<channel>
 		<title>楼下笼子猫 on [catrix]</title>
-		<link>http://localhost:64675/author/longzimao/</link>
+		<link>http://localhost:1313/author/longzimao/</link>
 		<description>Recent content in 楼下笼子猫 on [catrix]</description>
 		<generator>Hugo</generator>
 		<language>zh-cn</language>
@@ -12,19 +12,19 @@
 		
 			<lastBuildDate>Sun, 09 Aug 2026 11:40:17 +0800</lastBuildDate>
 		
-			<atom:link href="http://localhost:64675/author/longzimao/index.xml" rel="self" type="application/rss+xml" />
+			<atom:link href="http://localhost:1313/author/longzimao/index.xml" rel="self" type="application/rss+xml" />
 			<item>
 				<title>Test</title>
-				<link>http://localhost:64675/articles/test-copy/</link>
+				<link>http://localhost:1313/articles/test-copy/</link>
 				<pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
-				<guid>http://localhost:64675/articles/test-copy/</guid>
+				<guid>http://localhost:1313/articles/test-copy/</guid>
 				<description>summary:qwfewviure34y5987b498v5yuihdfdhjvae</description>
 			</item>
 			<item>
 				<title>Test</title>
-				<link>http://localhost:64675/news/test-copy/</link>
+				<link>http://localhost:1313/news/test-copy/</link>
 				<pubDate>Sun, 09 Aug 2026 11:40:17 +0800</pubDate>
-				<guid>http://localhost:64675/news/test-copy/</guid>
+				<guid>http://localhost:1313/news/test-copy/</guid>
 				<description>summary:qwfewviure34y5987b498v5yuihdfdhjvae</description>
 			</item>
 	</channel>

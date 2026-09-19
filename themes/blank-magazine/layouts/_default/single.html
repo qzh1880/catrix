@@ -80,29 +80,32 @@
       {{ end }}
     </div>
     {{ end }}
-
-    <!-- Related Posts -->
-    {{ $related := .Site.RegularPages.Related . | first 2 }}
-    {{ if not $related }}
-    {{ $related = where (where .Site.RegularPages "Section" "posts") "Permalink" "!=" .Permalink | first 2 }}
-    {{ end }}
-    {{ if $related }}
-    <div class="related-posts">
-      <h3 class="related-title">Related posts</h3>
-      <div class="related-grid">
-        {{ range $related }}
-        <a href="{{ .Permalink }}" class="related-card">
-          {{ if .Params.cover }}
-          <div class="related-cover"><img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy"></div>
+    
+<!-- Related Posts (条件判断控制) -->
+    {{ $showRelated := default .Site.Params.showRelated .Params.showRelated }}
+    {{ if $showRelated }}
+      {{ $related := .Site.RegularPages.Related . | first 2 }}
+      {{ if not $related }}
+        {{ $related = where (where .Site.RegularPages "Section" "posts") "Permalink" "!=" .Permalink | first 2 }}
+      {{ end }}
+      {{ if $related }}
+      <div class="related-posts">
+        <h3 class="related-title">Related posts</h3>
+        <div class="related-grid">
+          {{ range $related }}
+          <a href="{{ .Permalink }}" class="related-card">
+            {{ if .Params.cover }}
+            <div class="related-cover"><img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy"></div>
+            {{ end }}
+            <div class="related-info">
+              {{ with .Params.categories }}<span class="related-cat">{{ range first 1 . }}{{ . | upper }}{{ end }}</span>{{ end }}
+              <h4>{{ .Title }}</h4>
+            </div>
+          </a>
           {{ end }}
-          <div class="related-info">
-            {{ with .Params.categories }}<span class="related-cat">{{ range first 1 . }}{{ . | upper }}{{ end }}</span>{{ end }}
-            <h4>{{ .Title }}</h4>
-          </div>
-        </a>
-        {{ end }}
+        </div>
       </div>
-    </div>
+      {{ end }}
     {{ end }}
   </div>
 </article>

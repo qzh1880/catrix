@@ -8,7 +8,7 @@ category:
 description: 在黎明破晓的号角与流浪者的足音中，一个年轻灵魂对自然、爱情与存在的全部渴望与诘问，就此展开……
 featured: true
 showRelated: false
-cover: 'https://media.tallcat.cn/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png'
+cover: 'https://media.catrix.net/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.jpg'
 ---
 
 {{< bilibili "BV1fjtWe4Eg5" >}}
@@ -16,7 +16,7 @@ cover: 'https://media.tallcat.cn/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png'
 # 作曲背景
 
 1884年，年仅24岁的奥地利指挥家、作曲家古斯塔夫·马勒（Gustav Mahler,1860-1911）开始动笔谱写他的第一部有正式编号的交响曲。
-![Mahler](https://media.catrix.net/%E5%9B%BE%E7%89%871.png "Gustav Mahler")
+![Mahler](https://media.tallcat.cn/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE. "Gustav Mahler")
 
 事实上，这并非马勒创作的第一部交响曲，在他17岁时，他就写了一部练习用的交响曲，1882年又写了一部《北欧交响曲》和一部《A小调交响曲》，从这一点上，他和安东·布鲁克纳（Anton Bruckner,1824-1896）比较像，后者有一部《学习交响曲》。但是也有一些区别，布鲁克纳的《学习交响曲》如今仍然偶尔会上演，而马勒的三部早期交响曲都已经遗失，这是莫大的遗憾。
 

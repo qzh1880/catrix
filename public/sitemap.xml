@@ -8,7 +8,13 @@
     <loc>http://localhost:1313/author/</loc>
     <lastmod>2026-09-19T11:40:17+08:00</lastmod>
   </url><url>
+    <loc>http://localhost:1313/categories/</loc>
+    <lastmod>2026-09-19T11:40:17+08:00</lastmod>
+  </url><url>
     <loc>http://localhost:1313/posts/</loc>
+    <lastmod>2026-09-19T11:40:17+08:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/categories/sep.2026/</loc>
     <lastmod>2026-09-19T11:40:17+08:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/posts/2026-09-19-maher-symphony-1/</loc>
@@ -40,7 +46,7 @@
   </url><url>
     <loc>http://localhost:1313/about/</loc>
   </url><url>
-    <loc>http://localhost:1313/categories/</loc>
+    <loc>http://localhost:1313/games/</loc>
   </url><url>
     <loc>http://localhost:1313/submit/</loc>
   </url><url>

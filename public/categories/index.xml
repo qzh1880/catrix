@@ -20,40 +20,5 @@
 				<guid>http://localhost:1313/categories/sep.2026/</guid>
 				<description></description>
 			</item>
-			<item>
-				<title>2026</title>
-				<link>http://localhost:1313/categories/2026/</link>
-				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-				<guid>http://localhost:1313/categories/2026/</guid>
-				<description></description>
-			</item>
-			<item>
-				<title>2026 9月上</title>
-				<link>http://localhost:1313/categories/2026-9%E6%9C%88%E4%B8%8A/</link>
-				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-				<guid>http://localhost:1313/categories/2026-9%E6%9C%88%E4%B8%8A/</guid>
-				<description></description>
-			</item>
-			<item>
-				<title>2026i</title>
-				<link>http://localhost:1313/categories/2026i/</link>
-				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-				<guid>http://localhost:1313/categories/2026i/</guid>
-				<description></description>
-			</item>
-			<item>
-				<title>2026年9月上</title>
-				<link>http://localhost:1313/categories/2026%E5%B9%B49%E6%9C%88%E4%B8%8A/</link>
-				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-				<guid>http://localhost:1313/categories/2026%E5%B9%B49%E6%9C%88%E4%B8%8A/</guid>
-				<description></description>
-			</item>
-			<item>
-				<title>September 2026</title>
-				<link>http://localhost:1313/categories/september-2026/</link>
-				<pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-				<guid>http://localhost:1313/categories/september-2026/</guid>
-				<description></description>
-			</item>
 	</channel>
 </rss>

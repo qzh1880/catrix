@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>合成大·学校</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= 选校界面 ================= -->
+  <section id="selectScreen" class="screen">
+    <header class="hero">
+      <h1>合成大 · 学校</h1>
+      <p class="sub">选一所学校当最大的球。它从排名里抽出来放在最上面，剩下的按序往下排。</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="chip">最高分 <b id="bestScore">0</b></div>
+      <div class="chip">每局 11 档</div>
+    </div>
+
+    <div id="schoolGrid" class="grid"></div>
+
+    <p class="hint" id="poolHint"></p>
+
+    <div class="actions">
+      <button id="startBtn" class="btn primary" disabled>先选一所学校</button>
+    </div>
+  </section>
+
+  <!-- ================= 游戏界面 ================= -->
+  <section id="gameScreen" class="screen" hidden>
+    <div class="hud">
+      <div class="hud-left">
+        <div class="hud-item"><span>得分</span><b id="scoreVal">0</b></div>
+        <div class="hud-item"><span>最高</span><b id="bestVal">0</b></div>
+      </div>
+      <div class="hud-right">
+        <button id="shareBtn" class="icon-btn wide" title="分享">分享</button>
+        <button id="soundBtn" class="icon-btn" title="音效">🔊</button>
+        <button id="restartBtn" class="icon-btn" title="重开">↻</button>
+        <button id="backBtn" class="icon-btn" title="换学校">⇦</button>
+      </div>
+    </div>
+
+    <div class="goal-bar">
+      <span class="goal-label">本局球王</span>
+      <img id="goalLogo" alt="">
+      <b id="goalName"></b>
+      <span class="goal-tip" id="goalTip"></span>
+    </div>
+
+    <div class="stage" id="stage">
+      <canvas id="canvas"></canvas>
+      <div id="overlay" class="overlay" hidden>
+        <div class="panel">
+          <h2 id="ovTitle"></h2>
+          <p id="ovText"></p>
+          <div class="ov-actions">
+            <button id="ovAgain" class="btn primary">再来一局</button>
+            <button id="ovShare" class="btn ghost">分享</button>
+            <button id="ovChange" class="btn ghost">换学校</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chain" id="chain"></div>
+  </section>
+
+  <!-- ================= 分享面板 ================= -->
+  <div id="shareModal" class="modal" hidden>
+    <div class="sheet">
+      <h3>分享成绩</h3>
+      <p class="share-preview" id="sharePreview"></p>
+      <div class="share-grid">
+        <button class="share-item" id="shSystem">系统分享<em>微信 / 朋友圈 / QQ / B站</em></button>
+        <button class="share-item" id="shCopy">复制文案<em>粘到任意 App</em></button>
+        <button class="share-item" id="shQQ">QQ 好友</button>
+        <button class="share-item" id="shQzone">QQ 空间</button>
+        <button class="share-item" id="shWeibo">微博</button>
+        <button class="share-item" id="shBili">B站动态</button>
+      </div>
+      <p class="share-note">
+        这是个本地网页，没有可分享的网址，所以分享的是成绩文案。<br>
+        手机上点「系统分享」会弹出系统面板，微信、朋友圈、QQ、B站都在里面；电脑上请用「复制文案」再粘贴。
+      </p>
+      <button id="shareClose" class="btn ghost">关闭</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+</div>
+
+<script src="physics.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

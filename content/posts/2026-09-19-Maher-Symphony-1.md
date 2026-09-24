@@ -8,7 +8,7 @@ category:
 description: 在黎明破晓的号角与流浪者的足音中，一个年轻灵魂对自然、爱情与存在的全部渴望与诘问，就此展开……
 featured: true
 showRelated: false
-cover: 'https://media.catrix.net/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png'
+cover: 'https://media.tallcat.cn/%E5%B0%81%E9%9D%A2%E5%A4%A7%E5%9B%BE.png'
 ---
 
 {{< bilibili "BV1fjtWe4Eg5" >}}

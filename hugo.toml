@@ -59,7 +59,7 @@ enableRobotsTXT = true
   [[menu.main]]
     name = "球员身价榜"
     parent = "more"
-    url = "https://value.catrix.net/"
+    url = "https://www.jcleague.win/"
     weight = 2
   [[menu.main]]
     name = "小游戏"

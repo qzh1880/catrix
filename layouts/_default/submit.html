@@ -1,0 +1,340 @@
+{{ define "main" }}
+<article class="submission container-narrow">
+  <header class="page-header">
+    <p class="page-eyebrow">Catrix · Submissions</p>
+    <h1 class="page-title">把你的作品，寄给我们。</h1>
+    <p class="page-desc">文字、影像，或一个值得分享的想法。<br>期待在这里，读到你的声音。</p>
+    <div class="page-divider" aria-hidden="true"></div>
+  </header>
+
+  {{ with .Content }}<div class="post-content submission-intro">{{ . }}</div>{{ end }}
+
+  <form id="submission-form" action="https://submit-catrix.hsszl4.workers.dev/" method="post" enctype="multipart/form-data">
+    <fieldset id="submission-fields">
+      <legend class="submission-sr-only">投稿信息</legend>
+      <div class="submission-row">
+        <div class="submission-field">
+          <label for="submission-name">你的名字 <span>或笔名</span></label>
+          <input id="submission-name" name="name" autocomplete="name" maxlength="80" placeholder="怎么称呼你" required>
+        </div>
+        <div class="submission-field">
+          <label for="submission-contact">联系方式</label>
+          <input id="submission-contact" name="contact" type="text" maxlength="254" placeholder="手机号 / 微信 / 邮箱 / 学号" aria-describedby="submission-contact-hint" required>
+          <p class="submission-field-hint" id="submission-contact-hint">任选一种。</p>
+        </div>
+      </div>
+
+      <div class="submission-field">
+        <label for="submission-title">作品标题</label>
+        <input id="submission-title" name="title" maxlength="120" placeholder="这篇文章 / 这件作品叫什么" required>
+      </div>
+
+      <div class="submission-field">
+        <label for="submission-tags">标签 <span>选填</span></label>
+        <input id="submission-tags" name="tags" maxlength="120" list="site-tags" placeholder="如 Maths、影评，逗号隔开，也能自创新标签">
+        <datalist id="site-tags">
+          <option value="音乐">
+          {{ range .Site.Taxonomies.tags.Alphabetical }}<option value="{{ .Name }}">{{ end }}
+        </datalist>
+        <p class="submission-field-hint">给作品贴几个关键词，读者靠它找到同类文章。</p>
+      </div>
+
+      <div class="submission-field">
+        <label for="submission-files">你的作品</label>
+        <div class="submission-drop" id="submission-drop">
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true"><path d="M16 21V5m-6 6 6-6 6 6M6 21v6h20v-6"/></svg>
+          <p>将文件拖到这里，或 <span class="submission-choose">点击选择</span></p>
+          <span class="submission-hint" id="submission-file-hint">请上传 .md 主文件以及配套文件 · 不超过 5 个文件，合计不超过 3 MB</span>
+          <input id="submission-files" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,.zip" aria-describedby="submission-file-hint submission-file-status">
+        </div>
+        <p class="submission-sr-only" id="submission-file-status" role="status"></p>
+        <ul class="submission-files" id="submission-file-list" aria-label="已选择的文件"></ul>
+        <p class="submission-field-hint">不知道投稿格式？<a href="#" id="submission-template">下载投稿模板 .md</a>，填好后把文件拖回上面的框。</p>
+      </div>
+
+      <div class="submission-actions">
+        <p>作品与联系方式仅用于投稿沟通。</p>
+        <button class="submission-send" id="submission-send" type="submit" disabled><span>提交作品</span><span aria-hidden="true">↗</span></button>
+      </div>
+    </fieldset>
+    <p class="submission-status" id="submission-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <noscript><p class="submission-fallback">请启用 JavaScript 后上传，或通过下方邮箱投稿。</p></noscript>
+  </form>
+
+  {{ with .Site.Params.email }}
+  <p class="submission-contact">也可以直接写信给我们 <a href="mailto:{{ . }}">{{ . }}</a></p>
+  {{ end }}
+</article>
+
+<style>
+  .submission { padding-bottom: var(--spacing-xl); }
+  .submission .page-title { font-size: clamp(1.8rem, 4.5vw, 2.65rem); }
+  .submission .page-desc { font-size: .9rem; line-height: 1.9; }
+  .submission-intro { margin-bottom: 36px; font-size: .85rem; color: var(--color-text-secondary); }
+  .submission-intro h3 { margin-top: 0; font-size: 1rem; }
+  .submission fieldset { border: 0; min-width: 0; }
+  .submission-row { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .submission-field { min-width: 0; margin-bottom: 28px; }
+  .submission-field > label { display: block; margin-bottom: 10px; font-size: .85rem; }
+  .submission-field > label span { margin-left: 6px; font-size: .75rem; color: var(--color-text-muted); font-weight: 400; }
+  .submission-field-hint, .submission-hint, .submission-file-size, .submission-actions p { font-size: .72rem; color: var(--color-text-muted); }
+  .submission-field-hint { margin-top: 8px; }
+  .submission-field-hint a { color: var(--color-link); text-decoration: underline; text-underline-offset: 4px; }
+  .submission-field > input {
+    width: 100%; border: 1px solid var(--color-border); border-radius: 0;
+    padding: 12px 14px; background: var(--color-bg); color: var(--color-text);
+    font: inherit; font-size: .875rem; line-height: 1.7; transition: border-color .15s;
+  }
+  .submission-field input::placeholder { color: var(--color-text-muted); }
+  .submission-field > input:focus { outline: none; border-color: var(--color-text); }
+  .submission-drop {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; min-height: 206px; padding: 30px 20px;
+    border: 1px dashed #bbb; background: var(--color-bg-alt); text-align: center;
+    transition: border-color .15s, background .15s;
+  }
+  .submission-drop > svg { color: var(--color-text-secondary); }
+  .submission-drop p { font-family: var(--font-serif); font-size: 1rem; }
+  .submission-choose { text-decoration: underline; text-underline-offset: 4px; }
+  .submission-drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .submission-drop:hover, .submission-drop.is-dragging { border-color: var(--color-text); background: #f3f3f3; }
+  .submission-drop:focus-within { outline: 2px solid var(--color-text); outline-offset: 4px; }
+  .submission-files li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); font-size: .8rem; }
+  .submission-file-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .submission-file-size { white-space: nowrap; }
+  .submission-remove { flex-shrink: 0; min-height: 32px; padding: 4px 8px; color: var(--color-text-secondary); font-size: .75rem; }
+  .submission-remove:hover { color: var(--color-text); text-decoration: underline; }
+  .submission-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .submission-send { display: inline-flex; justify-content: space-between; align-items: center; gap: 32px; min-width: 156px; padding: 13px 22px; background: var(--color-text); color: var(--color-bg); font-size: .85rem; white-space: nowrap; }
+  .submission-send:hover { background: #393939; }
+  .submission button:focus-visible { outline: 2px solid var(--color-text); outline-offset: 4px; }
+  .submission button:disabled { opacity: .55; cursor: not-allowed; }
+  .submission fieldset:disabled .submission-drop { opacity: .6; }
+  .submission fieldset:disabled .submission-drop input { cursor: wait; }
+  .submission-status { margin-top: 18px; font-size: .8rem; overflow-wrap: anywhere; }
+  .submission-status:empty { margin: 0; }
+  .submission-status[data-state="error"] { color: #a13d32; }
+  .submission-status[data-state="success"] { color: #356148; }
+  .submission-contact { margin-top: 42px; padding-top: 24px; border-top: 1px solid var(--color-border); font-size: .75rem; color: var(--color-text-muted); text-align: center; }
+  .submission-contact a { display: inline-block; margin-left: 8px; color: var(--color-text-secondary); text-decoration: underline; text-underline-offset: 4px; }
+  .submission-fallback { font-size: .8rem; margin-top: 16px; }
+  .submission-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @media (max-width: 560px) {
+    .submission .page-header { padding-top: 48px; }
+    .submission-row { grid-template-columns: 1fr; gap: 0; }
+    .submission-actions { flex-direction: column; align-items: stretch; gap: 16px; }
+    .submission-send { justify-content: center; gap: 20px; }
+    .submission-drop { padding: 28px 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .submission * { transition: none !important; } }
+  .submission .page-eyebrow { text-transform: none; }
+  .submission .post-content > p:first-of-type::first-letter { font: inherit; float: none; padding: 0; }
+</style>
+
+<script>
+(() => {
+  const form = document.getElementById('submission-form');
+  const fields = document.getElementById('submission-fields');
+  const picker = document.getElementById('submission-files');
+  const drop = document.getElementById('submission-drop');
+  const list = document.getElementById('submission-file-list');
+  const fileStatus = document.getElementById('submission-file-status');
+  const status = document.getElementById('submission-status');
+  const send = document.getElementById('submission-send');
+  const allowed = /\.(pdf|docx?|txt|md|jpe?g|png|webp|zip)$/i;
+  const maxBytes = 3 * 1024 * 1024;
+  let files = [];
+  let busy = false;
+  let dragDepth = 0;
+
+  // 正文骨架模板：YAML frontmatter 由编辑端程序自动生成，投稿人只写正文。
+  const TEMPLATE = [
+    '这是投稿模板：每一节都是一个 Markdown 语法示例，照着改就行，用不到的示例直接删掉。',
+    '标题、作者、日期不用写，编辑端会自动生成。',
+    '',
+    '## 第一个小标题',
+    '',
+    '普通段落直接打字，两段之间空一行就是新段落。',
+    '',
+    '**两个星号是粗体**，*一个星号是斜体*。',
+    '',
+    '- 短横线加空格，是无序列表',
+    '- 列表第二项',
+    '  - 行首缩进两格，变成子项',
+    '',
+    '1. 数字加空格加点，是编号列表',
+    '2. 第二项',
+    '',
+    '> 大于号开头是引用块，适合放重点句子或别人的话。',
+    '',
+    '[这是个链接](https://catrix.net)',
+    '',
+    '图片这样插入：![图片说明](图片链接)',
+    '',
+    '`反引号包住的是行内代码`，整段代码用三个反引号上下围住：',
+    '',
+    '```',
+    '这里是代码块',
+    '```',
+    '',
+    '行内公式夹在两个 $ 之间，例如 $E = mc^2$；大公式用两个 $ 单独成行包住，会居中显示。',
+    '',
+    '---',
+    '',
+    '三个减号单独一行是分割线。正文写完后，删掉所有用不到的示例。'
+  ].join('\n');
+
+  document.getElementById('submission-template').addEventListener('click', (event) => {
+    event.preventDefault();
+    const blob = new Blob([TEMPLATE], { type: 'text/markdown; charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'catrix-投稿模板.md';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  function announce(message, state = '') {
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  function renderFiles() {
+    list.replaceChildren();
+    files.forEach((file, index) => {
+      const row = document.createElement('li');
+      const name = document.createElement('span');
+      name.className = 'submission-file-name';
+      name.textContent = file.name;
+      const size = document.createElement('span');
+      size.className = 'submission-file-size';
+      size.textContent = file.size < 1024 * 1024
+        ? `${Math.ceil(file.size / 1024)} KB`
+        : `${(file.size / 1024 / 1024).toFixed(1)} MB`;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'submission-remove';
+      remove.textContent = '移除';
+      remove.setAttribute('aria-label', `移除 ${file.name}`);
+      remove.addEventListener('click', () => {
+        if (busy) return;
+        files.splice(index, 1);
+        renderFiles();
+        announce('');
+        const next = list.querySelectorAll('button');
+        (next[Math.min(index, next.length - 1)] || picker).focus();
+      });
+      row.append(name, size, remove);
+      list.append(row);
+    });
+    fileStatus.textContent = files.length ? `已选择 ${files.length} 个文件。` : '尚未选择文件。';
+  }
+
+  function addFiles(incoming) {
+    if (busy) return;
+    const combined = [...files];
+    for (const file of incoming) {
+      if (!allowed.test(file.name)) {
+        announce('请选择 PDF、Word、TXT、Markdown、JPG、PNG、WebP 或 ZIP 文件。', 'error');
+        return;
+      }
+      if (!file.size) {
+        announce('无法添加空文件，请检查后重新选择。', 'error');
+        return;
+      }
+      if (!combined.some(item => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified)) combined.push(file);
+    }
+    if (combined.length > 5 || combined.reduce((total, file) => total + file.size, 0) > maxBytes) {
+      announce('最多添加 5 个文件，合计不超过 3 MB。请减少文件后重试。', 'error');
+      return;
+    }
+    files = combined;
+    renderFiles();
+    announce('');
+  }
+
+  picker.addEventListener('change', () => {
+    addFiles(Array.from(picker.files));
+    picker.value = '';
+  });
+  drop.addEventListener('dragenter', event => {
+    event.preventDefault();
+    if (!busy) { dragDepth++; drop.classList.add('is-dragging'); }
+  });
+  drop.addEventListener('dragover', event => {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = busy ? 'none' : 'copy';
+  });
+  drop.addEventListener('dragleave', event => {
+    event.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) drop.classList.remove('is-dragging');
+  });
+  drop.addEventListener('drop', event => {
+    event.preventDefault();
+    dragDepth = 0;
+    drop.classList.remove('is-dragging');
+    if (event.dataTransfer) addFiles(Array.from(event.dataTransfer.files));
+  });
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (busy || !form.reportValidity()) return;
+    if (!files.length) {
+      announce('请先添加你的作品。', 'error');
+      picker.focus();
+      return;
+    }
+    const body = new FormData(form);
+    body.set('name', String(body.get('name')).trim());
+    body.set('contact', String(body.get('contact')).trim());
+    if (!body.get('name')) {
+      announce('请填写你的名字或笔名。', 'error');
+      document.getElementById('submission-name').focus();
+      return;
+    }
+    if (!body.get('contact')) {
+      announce('请留下一种能找到你的联系方式。', 'error');
+      document.getElementById('submission-contact').focus();
+      return;
+    }
+    files.forEach(file => body.append('files', file, file.name));
+    busy = true;
+    fields.disabled = true;
+    form.setAttribute('aria-busy', 'true');
+    send.firstElementChild.textContent = '正在提交…';
+    announce('作品正在寄出，请稍候。');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+    try {
+      // Worker contract: multipart fields name, contact, title, tags, files (repeated).
+      // Confirm receipt only after persistence, with a 2xx JSON response: { "ok": true }.
+      const response = await fetch(form.action, { method: 'POST', body, signal: controller.signal, credentials: 'omit' });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.ok !== true) {
+        const message = response.status === 429 ? '提交过于频繁，请稍后再试。'
+          : response.status === 413 ? '文件超过接收限制，请减少文件后重试。'
+          : '暂未确认接收成功，作品已保留在页面中，请稍后重试或通过邮箱联系。';
+        announce(message, 'error');
+        return;
+      }
+      form.reset();
+      files = [];
+      renderFiles();
+      announce('投稿成功。谢谢你分享作品，后续将通过你留下的联系方式沟通。', 'success');
+    } catch (error) {
+      announce(error.name === 'AbortError'
+        ? '等待超时，暂时无法确认是否收到，请通过邮箱确认后再重试。'
+        : '连接中断，暂时无法确认是否收到。请检查网络，或通过邮箱联系我们。', 'error');
+    } finally {
+      clearTimeout(timeout);
+      busy = false;
+      fields.disabled = false;
+      form.removeAttribute('aria-busy');
+      send.firstElementChild.textContent = '提交作品';
+    }
+  });
+  send.disabled = false;
+})();
+</script>
+{{ end }}

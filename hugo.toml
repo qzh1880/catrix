@@ -17,10 +17,6 @@ enableRobotsTXT = true
   authorBio = ""
   slogan = ""
   email = "contact@catrix.net"
-  instagram = "https://instagram.com/"
-  twitter = "https://twitter.com/"
-  facebook = "https://facebook.com/"
-  pinterest = "https://pinterest.com/"
   mainSections = ["posts"]
 
 [menu]

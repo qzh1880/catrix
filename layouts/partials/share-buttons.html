@@ -1,0 +1,12 @@
+<button type="button" class="share-side-btn" aria-label="分享" onclick="doShare()">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+</button>
+<a href="https://www.facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Facebook">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+</a>
+<a href="https://twitter.com/intent/tweet?url={{ .Permalink }}&text={{ .Title }}" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Twitter">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+</a>
+<a href="https://pinterest.com/pin/create/button/?url={{ .Permalink }}&description={{ .Title }}" target="_blank" rel="noopener" class="share-side-btn" aria-label="Share on Pinterest">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.24 2.65 7.86 6.39 9.29-.09-.78-.17-1.98.04-2.83.19-.77 1.25-5.28 1.25-5.28s-.31-.62-.31-1.54c0-1.44.83-2.52 1.87-2.52.88 0 1.31.66 1.31 1.45 0 .89-.57 2.22-.86 3.45-.24 1.03.52 1.87 1.54 1.87 1.85 0 3.27-1.95 3.27-4.76 0-2.49-1.79-4.23-4.35-4.23-2.96 0-4.7 2.22-4.7 4.52 0 .89.34 1.85.77 2.37.08.1.09.18.07.28l-.28 1.15c-.04.18-.14.22-.33.13-1.22-.57-1.98-2.35-1.98-3.78 0-3.08 2.24-5.9 6.45-5.9 3.39 0 6.02 2.41 6.02 5.64 0 3.37-2.12 6.07-5.07 6.07-.99 0-1.92-.51-2.24-1.12l-.61 2.33c-.22.85-.82 1.92-1.22 2.57.92.28 1.89.44 2.9.44 5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
+</a>

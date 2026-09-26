@@ -1,0 +1,126 @@
+{{ define "main" }}
+<article class="single-post">
+  <!-- Article Header -->
+  <header class="single-header">
+    <p class="single-date">
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "January 2, 2006" }}</time>
+      {{ if .Params.categories }}
+      <span class="meta-sep">·</span>
+      {{ range first 1 .Params.categories }}<a href="{{ "/categories/" | relURL }}{{ . | urlize }}/">{{ . | upper }}</a>{{ end }}
+      {{ end }}
+    </p>
+
+    <h1 class="single-title">{{ .Title }}</h1>
+
+    <!-- Author Link (调大字体) -->
+    {{ with .Params.author }}
+    <p class="single-author" style="margin-top: 12px; margin-bottom: 8px; font-size: 1.15rem; opacity: 0.9;">
+      <span class="by-line" style="font-weight: 400;">By </span>
+      <a href="{{ "/author/" | relURL }}{{ . | urlize }}/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">
+        {{ . }}
+      </a>
+    </p>
+    {{ end }}
+
+    {{ with .Description }}
+    <p class="single-excerpt">{{ . }}</p>
+    {{ end }}
+
+    <!--<div class="single-author">
+      {{ with .Site.Params.authorAvatar }}
+      <div class="single-author-avatar">
+        <img src="{{ . }}" alt="{{ $.Site.Params.author }}">
+      </div>
+      {{ end }}
+      <div class="single-author-info">
+        <span class="single-author-name">{{ .Site.Params.author }}</span>
+        <span class="single-author-role">{{ .Site.Params.authorBio }}</span>
+      </div>
+    </div>-->
+  </header>
+
+  <!-- Cover Image -->
+  {{ if .Params.cover }}
+  <div class="single-cover">
+    <div class="container">
+      <img src="{{ .Params.cover }}" alt="{{ .Title }}">
+    </div>
+  </div>
+  {{ end }}
+
+  <!-- Content with Side Share -->
+  <div class="single-body">
+    <!-- Vertical Share Bar -->
+    <aside class="single-share-side">
+      <span class="share-side-label">Share</span>
+      {{ partial "share-buttons.html" . }}
+    </aside>
+
+    <!-- Main Content -->
+    <div class="post-content">
+      {{ .Content }}
+    </div>
+  </div>
+
+  <!-- Mobile Share Bar -->
+  <div class="single-share-bottom">
+  <span class="share-label">Share</span>
+  {{ partial "share-buttons.html" . }}
+  </div>
+
+  <div class="container-narrow">
+    <!-- Tags -->
+    {{ if .Params.tags }}
+    <div class="single-tags">
+      <span class="tags-label">Tags</span>
+      {{ range .Params.tags }}
+      <a href="{{ "/tags/" | relURL }}{{ . | urlize }}/" class="tag-link">{{ . }}</a>
+      {{ end }}
+    </div>
+    {{ end }}
+    
+<!-- Related Posts (条件判断控制) -->
+    {{ $showRelated := default .Site.Params.showRelated .Params.showRelated }}
+    {{ if $showRelated }}
+      {{ $related := .Site.RegularPages.Related . | first 2 }}
+      {{ if not $related }}
+        {{ $related = where (where .Site.RegularPages "Section" "posts") "Permalink" "!=" .Permalink | first 2 }}
+      {{ end }}
+      {{ if $related }}
+      <div class="related-posts">
+        <h3 class="related-title">Related posts</h3>
+        <div class="related-grid">
+          {{ range $related }}
+          <a href="{{ .Permalink }}" class="related-card">
+            {{ if .Params.cover }}
+            <div class="related-cover"><img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy"></div>
+            {{ end }}
+            <div class="related-info">
+              {{ with .Params.categories }}<span class="related-cat">{{ range first 1 . }}{{ . | upper }}{{ end }}</span>{{ end }}
+              <h4>{{ .Title }}</h4>
+            </div>
+          </a>
+          {{ end }}
+        </div>
+      </div>
+      {{ end }}
+    {{ end }}
+  </div>
+</article>
+<style>
+  .single-share-bottom { display: none; justify-content: center; }
+  @media (max-width: 1024px) {
+    .single-share-bottom { display: flex; flex-direction: row; }
+  }
+</style>
+<script>
+function doShare(){
+  if (navigator.share) {
+    navigator.share({ title: document.title, url: location.href }).catch(function(){});
+  } else {
+    alert('当前浏览器不支持系统分享，已为你复制链接');
+    if (navigator.clipboard) navigator.clipboard.writeText(location.href);
+  }
+}
+</script>
+{{ end }}

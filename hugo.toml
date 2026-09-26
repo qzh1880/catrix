@@ -61,7 +61,11 @@ enableRobotsTXT = true
     parent = "more"
     url = "https://value.catrix.net/"
     weight = 2
-
+  [[menu.main]]
+    name = "小游戏"
+    parent = "more"
+    url = "/games/"
+    weight = 3
 [taxonomies]
   tag = "tags"
   category = "categories"

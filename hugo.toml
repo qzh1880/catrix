@@ -68,3 +68,8 @@ enableRobotsTXT = true
   author = "author"
 [outputs]
   home = ["HTML", "RSS", "JSON"]
+[markup.goldmark.extensions.passthrough]
+enable = true
+[markup.goldmark.extensions.passthrough.delimiters]
+inline = [['$', '$']]
+block  = [['$$', '$$']]

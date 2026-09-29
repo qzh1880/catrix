@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f3eb">
+  <title>俄罗斯方块 · Catrix</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="engine.js" defer></script>
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <main class="game-shell" aria-labelledby="title">
+    <header class="game-header">
+      <div><p class="eyebrow"><span class="brand-mark" aria-hidden="true">▦</span> CATRIX PLAY / 01</p><h1 id="title">方块之间<span>俄罗斯方块</span></h1></div>
+      <span class="status-pill" id="state-label">准备开始</span>
+    </header>
+    <p class="intro">让纷乱落定，给下一块留点空间。</p>
+    <section class="scoreboard" aria-label="游戏成绩">
+      <div><span>本局得分</span><strong id="score">0</strong></div>
+      <div><span>消除行数</span><strong id="lines">0</strong></div>
+      <div><span>当前等级</span><strong id="level">01</strong></div>
+      <div><span>本机最高</span><strong id="best">0</strong></div>
+    </section>
+    <div class="game-layout">
+      <div class="board-wrap">
+        <canvas id="board" width="300" height="600" tabindex="0" role="img" aria-label="俄罗斯方块棋盘，10列20行。用下方按钮或键盘控制。"></canvas>
+        <div class="board-overlay" id="overlay">
+          <div class="overlay-inner"><p class="overlay-kicker" id="overlay-kicker">A LITTLE BREAK</p><h2 id="overlay-title">留一点时间<br>给自己。</h2><p id="overlay-description">拼满一行，就能腾出新的空间。</p><button id="start" class="primary" type="button">开始游戏 <span aria-hidden="true">↗</span></button></div>
+        </div>
+      </div>
+      <aside class="sidebar" aria-label="预览与操作">
+        <section class="preview-card"><h2>下一块 <span>NEXT</span></h2><canvas id="next" width="120" height="210" role="img" aria-label="接下来的三块"></canvas></section>
+        <section class="preview-card hold-card"><h2>暂存 <span>HOLD</span></h2><canvas id="hold" width="120" height="76" role="img" aria-label="尚未暂存方块"></canvas><button id="hold-button" type="button" disabled>暂存 / 交换 <kbd>C</kbd></button></section>
+        <button id="pause" class="secondary" type="button" disabled>暂停 <kbd>P</kbd></button>
+        <button id="restart" class="quiet" type="button">重新开始</button>
+        <p class="side-note">每消除 10 行升级<br>落点虚影帮你瞄准</p>
+      </aside>
+    </div>
+    <!-- 触屏与鼠标共用 Pointer Events；按钮保留原生键盘操作能力。 -->
+    <section class="touch-controls" aria-label="方块操作">
+      <button type="button" data-action="left" aria-label="向左移动" disabled>←<span>左移</span></button>
+      <button type="button" data-action="rotate" aria-label="顺时针旋转" disabled>↻<span>旋转</span></button>
+      <button type="button" data-action="right" aria-label="向右移动" disabled>→<span>右移</span></button>
+      <button type="button" data-action="down" aria-label="加速下落" disabled>↓<span>下落</span></button>
+      <button type="button" data-action="drop" class="drop-button" aria-label="直接落到底部" disabled>⤓<span>落到底</span></button>
+    </section>
+    <p id="announcement" class="announcement" role="status" aria-live="polite">点击开始，或按 Enter 开始游戏。</p>
+    <details class="instructions"><summary>玩法与键盘操作 <span aria-hidden="true">＋</span></summary><div><p>左右移动方块，填满整行即可消除。堆到顶部则结束。暂存方块每次落定后可使用一次。</p><p><kbd>←</kbd> <kbd>→</kbd> 移动 · <kbd>↑</kbd> / <kbd>X</kbd> 顺时针旋转 · <kbd>Z</kbd> 逆时针旋转<br><kbd>↓</kbd> 加速下落 · <kbd>空格</kbd> 落到底 · <kbd>C</kbd> 暂存 · <kbd>P</kbd> / <kbd>Esc</kbd> 暂停</p><p>消除 1 / 2 / 3 / 4 行分别获得 100 / 300 / 500 / 800 × 当前等级分。最高分仅保存在当前浏览器。</p></div></details>
+    <footer><span>TAKE A BREAK. MAKE SOME SPACE.</span><span>纯前端 · 无需登录</span></footer>
+    <noscript><p>请启用 JavaScript 后开始游戏。</p></noscript>
+  </main>
+</body>
+</html>

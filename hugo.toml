@@ -73,3 +73,9 @@ enable = true
 [markup.goldmark.extensions.passthrough.delimiters]
 inline = [['$', '$']]
 block  = [['$$', '$$']]
+
+# 评论后台部署并完成数据库迁移后，再填写真实 API 地址并开启。
+# GitHub Pages 提供前端文件，不能直接执行仓库中的 Worker 代码。
+[params.comments]
+  enabled = false
+  apiURL = ""

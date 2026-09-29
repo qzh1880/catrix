@@ -1,0 +1,36 @@
+{{/* 仅在已开启评论的文章页渲染；单篇可设置 comments: false 隐藏。 */}}
+{{ if and (eq .Section "posts") .Site.Params.comments.enabled (ne .Params.comments false) }}
+  {{ with .Site.Params.comments.apiURL }}
+    {{/* 内容指纹随资源修改而变化，让浏览器能获取更新后的脚本和样式。 */}}
+    {{ $css := resources.Get "css/comments.css" | minify | fingerprint }}
+    {{ $js := resources.Get "js/comments.js" | minify | fingerprint }}
+    <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+    {{/* 去掉站点子路径，使 GitHub Pages 项目路径与自定义域名使用相同的文章标识。 */}}
+    <section class="article-comments" id="comments" aria-labelledby="comments-heading" data-api="{{ . }}" data-article="{{ strings.TrimPrefix $.Site.Home.RelPermalink $.RelPermalink | printf "/%s" }}">
+      <header class="article-comments__header">
+        <p class="article-comments__eyebrow">CATRIX · 读者来信</p>
+        <h2 id="comments-heading">读到这里，你有什么想说的？</h2>
+        <p class="article-comments__intro">一个想法、一点共鸣，或不同的看法，都欢迎留下。</p>
+      </header>
+      {{/* 提交时禁用整个 fieldset 防止重复操作；aria-live 播报结果。 */}}
+      <form class="comment-form" id="comment-form">
+        <fieldset id="comment-fields">
+          <label for="comment-nickname">怎么称呼你 <span>公开显示 · 无需注册</span></label>
+          <input id="comment-nickname" name="nickname" type="text" maxlength="40" required autocomplete="nickname" placeholder="你的昵称" aria-describedby="comment-policy">
+          <label for="comment-body">你的留言</label>
+          <textarea id="comment-body" name="body" rows="5" minlength="2" maxlength="2000" required placeholder="从这篇文章出发，聊聊你的想法…" aria-describedby="comment-policy comment-counter"></textarea>
+          <div class="comment-form__footnote"><p id="comment-policy">评论经编辑审核后公开。请友善讨论，勿留下手机号等私人信息。</p><span id="comment-counter">0 / 2000</span></div>
+          <div class="comment-form__actions"><span>每一条认真表达，都值得被看见。</span><button type="submit" id="comment-send" disabled><span id="comment-send-label">提交留言</span><span aria-hidden="true">↗</span></button></div>
+        </fieldset>
+        <p class="comment-status" id="comment-submit-status" role="status" aria-live="polite"></p>
+        <noscript><p>请启用 JavaScript 后查看和提交评论。</p></noscript>
+      </form>
+      <div class="comment-list-heading"><h3>读者留言</h3><span>最新在前</span></div>
+      <p class="comment-status" id="comment-load-status" role="status" aria-live="polite">正在读取留言…</p>
+      {{/* 前端从 Worker 读取留言，Hugo 构建时不连接数据库。 */}}
+      <ol class="comment-list" id="comment-list"></ol>
+      <div class="comment-list-actions"><button type="button" id="comment-retry" hidden>重新加载</button><button type="button" id="comment-more" hidden>查看更多留言</button></div>
+    </section>
+    <script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer></script>
+  {{ end }}
+{{ end }}

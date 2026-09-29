@@ -1,0 +1,42 @@
+/* 评论区沿用主题颜色和字体；锚点跳转留出顶部导航栏的空间。 */
+.article-comments { margin: 64px 0 24px; padding-top: 36px; scroll-margin-top: 84px; border-top: 1px solid var(--color-border, #dedfd8); font-family: var(--font-sans, sans-serif); }
+.article-comments__eyebrow { color: var(--color-text-secondary, #62665d); font-size: .7rem; letter-spacing: .13em; margin: 0 0 12px; }
+.article-comments h2 { font-family: var(--font-serif, serif); font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.5; font-weight: 500; margin: 0; }
+.article-comments__intro { font-size: .86rem; color: var(--color-text-secondary, #62665d); margin: 12px 0 28px; line-height: 1.8; }
+/* 输入区：限制昵称框宽度，正文允许纵向拖大；提示和计数位于正文下方。 */
+.comment-form { padding: 24px; background: var(--color-bg-alt, #f6f6f2); border: 1px solid var(--color-border, #dedfd8); }
+.comment-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.comment-form label { display: block; font-size: .84rem; margin: 0 0 8px; }
+.comment-form label span { margin-left: 8px; font-size: .74rem; color: var(--color-text-secondary, #62665d); }
+.comment-form input, .comment-form textarea { display: block; box-sizing: border-box; width: 100%; border: 1px solid var(--color-border, #dedfd8); background: var(--color-bg, #fff); color: var(--color-text, #23251f); padding: 12px 14px; border-radius: 2px; font: inherit; font-size: 16px; line-height: 1.75; }
+.comment-form input { max-width: 320px; margin-bottom: 20px; }
+.comment-form textarea { min-height: 150px; resize: vertical; }
+.comment-form__footnote { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-top: 10px; color: var(--color-text-secondary, #62665d); font-size: .73rem; line-height: 1.8; }
+.comment-form__footnote p { margin: 0; }
+#comment-counter { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.comment-form__actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 24px; }
+.comment-form__actions > span { color: var(--color-text-secondary, #62665d); font-size: .74rem; }
+.article-comments button { min-height: 44px; padding: 10px 18px; font: inherit; font-size: .84rem; border: 1px solid var(--color-border, #dedfd8); border-radius: 2px; background: var(--color-bg, #fff); color: var(--color-text, #23251f); cursor: pointer; }
+.article-comments #comment-send { background: var(--color-text, #23251f); color: var(--color-bg, #fff); border-color: var(--color-text, #23251f); white-space: nowrap; }
+#comment-send span + span { margin-left: 22px; }
+.article-comments button:disabled { cursor: wait; opacity: .55; }
+/* 保留清晰的键盘焦点，配合模板中的状态播报提高可访问性。 */
+.article-comments :is(input, textarea, button):focus-visible { outline: 2px solid var(--color-text, #23251f); outline-offset: 4px; }
+.comment-status { font-size: .82rem; line-height: 1.8; margin-top: 16px; overflow-wrap: anywhere; }
+.comment-status:empty { display: none; }
+.comment-status[data-state="error"] { color: #9c3026; }
+.comment-status[data-state="success"] { color: #32653b; }
+.comment-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: 40px; }
+.comment-list-heading h3 { margin: 0; font-size: 1rem; font-weight: 500; }
+.comment-list-heading span { font-size: .74rem; color: var(--color-text-secondary, #62665d); }
+/* 列表保留留言中的换行，长昵称和连续长文本可折行，避免撑宽页面。 */
+.comment-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.comment-item { padding: 24px 0; border-bottom: 1px solid var(--color-border, #dedfd8); }
+.comment-item header { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+.comment-item strong { font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+.comment-item time { font-size: .72rem; color: var(--color-text-secondary, #62665d); }
+.comment-item p { font-size: .88rem; line-height: 1.9; margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-list-actions { margin-top: 20px; text-align: center; }
+.article-comments [hidden] { display: none !important; }
+/* 窄屏改为纵向排列提示和按钮，输入框使用可用宽度。 */
+@media (max-width: 560px) { .article-comments { margin-top: 40px; } .comment-form { padding: 18px; } .comment-form__actions { flex-direction: column; align-items: stretch; } .comment-form__footnote { flex-direction: column; gap: 6px; } .comment-form input { max-width: none; } }

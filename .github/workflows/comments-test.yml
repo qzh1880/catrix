@@ -1,0 +1,35 @@
+# 评论相关变更触发自动检查；不会部署 Worker 或修改线上数据库。
+name: Comments tests
+on:
+  pull_request:
+    paths:
+      - 'worker/**'
+      - 'assets/css/comments.css'
+      - 'assets/js/comments.js'
+      - 'layouts/**'
+      - 'hugo.toml'
+      - '.github/workflows/comments-test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'assets/css/comments.css'
+      - 'assets/js/comments.js'
+      - 'layouts/**'
+      - 'hugo.toml'
+      - '.github/workflows/comments-test.yml'
+permissions:
+  # 测试只需读取仓库，无需写入或发布权限。
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Node 24 内置 SQLite，测试不依赖线上 D1 和部署凭证。
+      - run: node --test worker/tests/comments.test.mjs
+      - name: Check frontend syntax
+        run: node --check assets/js/comments.js

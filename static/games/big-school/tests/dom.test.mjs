@@ -279,13 +279,25 @@ expect(api().tiers[1].school.group === '四校', 'tier1 位置上是那一所随
 console.log('\n--- drop probability P(k)=exp(k)/Σexp(i) ---');
 {
   const prob = api().TIER_PROB;
-  const S = Array.from({ length: 11 }, (_, i) => Math.exp(i + 1)).reduce((a, b) => a + b, 0);
+  const E = Math.E;
+  // 分子 e^k（k = 1..11，k 是「第几大」，对应 TIERS 索引 k-1）
+  const num = Array.from({ length: 11 }, (_, i) => Math.exp(i + 1));
+  const S = num.reduce((a, b) => a + b, 0);
+
   expect(prob.length === 11, '11 档各有一个概率');
-  expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-12, '概率之和为 1');
-  expect(prob.every((p, i) => Math.abs(p - Math.exp(i + 1) / S) < 1e-12),
-    'P(k) 等于 exp(k)/Σexp(i)');
+  expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-15, '概率之和为 1');
+  expect(prob.every((p, i) => Math.abs(p - num[i] / S) < 1e-18), 'P(k) = exp(k)/Σexp(i)，k = 索引+1');
   expect(prob.every((p, i) => i === 0 || prob[i - 1] < p), '概率随档位（越小越大）单调上升');
+  // 不看公式本身、只看这个数列的形状：相邻两项的比必须恒等于 e
+  const ratios = prob.slice(1).map((p, i) => p / prob[i]);
+  expect(ratios.every(r => Math.abs(r - E) < 1e-12),
+    '相邻概率之比恒为 e（P(k+1)/P(k) = e，最大误差 ' +
+    Math.max(...ratios.map(r => Math.abs(r - E))).toExponential(2) + '）');
+  // 闭式解：Σ_{i=1..11} e^i = e(e^11-1)/(e-1)
+  const Sclosed = E * (Math.pow(E, 11) - 1) / (E - 1);
+  expect(Math.abs(S - Sclosed) / S < 1e-14, '分母等于闭式解 e(e^11-1)/(e-1)');
   console.log('  ' + prob.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(3) + '%').join(' '));
+
   const droppable = prob.filter(p => p >= api().DROP_P_MIN).length;
   expect(droppable === 5, '按 1% 阈值高亮出来的可投放档位是 5 个');
   expect(prob.slice(6).reduce((a, b) => a + b, 0) > 0.99, '最小的 5 档占了 99% 以上的概率');
@@ -294,6 +306,39 @@ console.log('\n--- drop probability P(k)=exp(k)/Σexp(i) ---');
     const chips = byId.get('chain').children.filter(c => String(c.className).indexOf('drop') >= 0);
     expect(chips.length === 5, '合成链里高亮的正好是 5 档 (got ' + chips.length + ')');
   }
+
+  /* (a) 取档用的逆累积分布：边界逐个精确核对 */
+  const realRandom = Math.random;
+  const cum = [];
+  prob.reduce((a, p) => (cum.push(a + p), a + p), 0);
+  const at = (u) => { Math.random = () => u; const r = api().randTier(); Math.random = realRandom; return r; };
+  let boundaryOk = true, badBoundary = '';
+  for (let i = 0; i < 11; i++) {
+    const lo = i === 0 ? 0 : cum[i - 1];
+    const mid = lo + (cum[i] - lo) / 2;
+    if (at(mid) !== i) { boundaryOk = false; badBoundary = '区间中点 u=' + mid + ' 应得索引 ' + i + '，实得 ' + at(mid); break; }
+    if (at(lo) !== i) { boundaryOk = false; badBoundary = '下边界 u=' + lo + ' 应得索引 ' + i + '，实得 ' + at(lo); break; }
+    if (i > 0 && at(lo * (1 - 1e-9)) !== i - 1) {
+      boundaryOk = false; badBoundary = 'u 刚好在 cum[' + (i - 1) + '] 之前应得索引 ' + (i - 1); break;
+    }
+  }
+  expect(boundaryOk, 'u 落在哪个累积区间就返回哪一档' + (boundaryOk ? '' : '（' + badBoundary + '）'));
+
+  /* (b) 统计检验：抽 40 万次，做卡方拟合优度检验 */
+  const N = 400000;
+  const hits = new Array(11).fill(0);
+  for (let k = 0; k < N; k++) hits[api().randTier()]++;
+  let chi2 = 0;
+  for (let i = 0; i < 11; i++) {
+    const exp = N * prob[i];
+    chi2 += (hits[i] - exp) * (hits[i] - exp) / exp;
+  }
+  // df = 10，α = 1e-6 的临界值约 41.8；通过则说明抽样分布与公式一致
+  console.log('  抽样 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=10，α=1e-6 临界值 41.82）');
+  console.log('  实测 ' + hits.map((h, i) => '#' + (i + 1) + '=' + (h / N * 100).toFixed(3) + '%').join(' '));
+  expect(chi2 < 41.82, '抽样分布符合 P(k)=exp(k)/Σexp(i)（卡方 ' + chi2.toFixed(2) + '）');
+  const maxDev = Math.max(...hits.map((h, i) => Math.abs(h - N * prob[i]) / Math.sqrt(N * prob[i])));
+  expect(maxDev < 5, '每一档的抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
 }
 
 function gameRunning() { return byId.get('gameScreen').hidden === false; }
@@ -379,6 +424,9 @@ console.log('\n--- 分享 ---');
   expect(shareModal.hidden === false, 'HUD share button opens the panel');
   const txt = byId.get('sharePreview').textContent;
   expect(txt.includes('分') && txt.includes(api().tiers[0].school.name), 'preview shows score + goal school: "' + txt + '"');
+  expect(txt.includes('catrix.net/games/big-school'), '分享文案里带上了网址 catrix.net/games/big-school');
+  expect(txt.trim().endsWith(api().SHARE_URL), '网址收在文案最后');
+  expect(api().SHARE_URL === 'https://catrix.net/games/big-school', '分享网址是 https://catrix.net/games/big-school');
   expect(byId.get('shSystem').hidden === false, 'system share is offered (navigator.share exists)');
 
   const nBodies = api().world.bodies.length;
@@ -392,6 +440,9 @@ console.log('\n--- 分享 ---');
   sandbox.__opened.length = 0;
   byId.get('shQQ').dispatch('click');
   expect(sandbox.__opened.length === 1 && sandbox.__opened[0].includes('connect.qq.com'), 'QQ 好友 opens the QQ widget');
+  expect(sandbox.__opened[0].includes(encodeURIComponent(api().SHARE_URL)),
+    'QQ 分享带上的是站点网址（不是本地 file:// 路径）');
+  expect(!/url=file/i.test(sandbox.__opened[0]), 'QQ 分享的 url 不是本地路径');
   sandbox.__opened.length = 0;
   byId.get('shQzone').dispatch('click');
   expect(sandbox.__opened[0].includes('qzone.qq.com'), 'QQ 空间 opens the Qzone widget');

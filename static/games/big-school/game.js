@@ -818,12 +818,13 @@
 
   /* ============================================================
    * 分享
-   * 说明：这是个本地 HTML，没有可分享的网址，所以分享的是「文案」。
+   * 说明：游戏挂在站点上，分享文案里带上固定网址；
    * 手机上「系统分享」会调起系统面板（里面有微信、朋友圈、QQ、B站）；
    * 桌面端走各家的网页分享入口，微信/朋友圈只能复制文案自己粘。
    * ============================================================ */
   var toastTimer = 0;
   var paused = false;
+  var SHARE_URL = 'https://catrix.net/games/big-school';
 
   function shareText() {
     var goal = TIERS.length ? TIERS[0].school.name : '学校';
@@ -831,7 +832,8 @@
       ? '我在《合成大 · 学校》里把【' + goal + '】合出来了！'
       : '我在《合成大 · 学校》里拿了 ';
     var tail = won ? '' : '本局球王是' + goal + '，';
-    return head + score + ' 分（最高 ' + best + ' 分）。' + tail + '你能合到哪一所？';
+    return head + score + ' 分（最高 ' + best + ' 分）。' + tail +
+      '你能合到哪一所？来玩：' + SHARE_URL;
   }
 
   function openShare() {
@@ -902,8 +904,7 @@
 
   function shareTo(kind) {
     var t = shareText();
-    var url = '';
-    try { url = location.href; } catch (e) { url = ''; }
+    var url = SHARE_URL;          // 用站点上的固定地址，file:// 打开时也分享得出去
     var enc = encodeURIComponent;
     var title = enc('合成大 · 学校');
     if (kind === 'qq') {
@@ -935,6 +936,9 @@
     TIER_PCT: TIER_PCT,
     TIER_PROB: TIER_PROB,
     DROP_P_MIN: DROP_P_MIN,
+    SHARE_URL: SHARE_URL,
+    shareText: shareText,
+    randTier: randTier,            // 暴露出来给测试做分布抽样
     W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY
   };
 })();

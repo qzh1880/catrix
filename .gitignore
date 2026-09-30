@@ -1,2 +1,5 @@
 public/
 .hugo_build.lock
+.comment-preview/
+.dev.vars
+.wrangler/

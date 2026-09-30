@@ -8,7 +8,9 @@
   var P = window.SuikaPhysics;
 
   /* ---------------- 学校数据 ----------------
-   * 数组顺序 = 默认大小顺序（索引越小越大）。四校在最前，其后是上海实验学校、八大。
+   * 数组顺序 = 默认大小顺序（索引越小越大）。
+   * 前 14 所是原有的「四校 + 上海实验学校 + 八大 + 进才」，
+   * 后面是新加的 17 所市重点（上外附中、上师大附中、位育、曹杨二中……）。
    * 进才中学默认排在建平中学前面（比建平大一档）。
    */
   var SCHOOLS = [
@@ -17,28 +19,68 @@
     { id: 'fudan',         name: '复旦附中',     group: '四校',   color: '#1a4fa0' },
     { id: 'jiaoda',        name: '交大附中',     group: '四校',   color: '#a8202a' },
     { id: 'ses',           name: '上海实验学校', group: '实验',   color: '#6aa84f' },
+    { id: 'sfls',          name: '上外附中',     group: '市重点', color: '#1a3e8c' },
     { id: 'qibao',         name: '七宝中学',     group: '八大',   color: '#2f8f4e' },
     { id: 'nanmo',         name: '南洋模范中学', group: '八大',   color: '#8c1f2b' },
+    { id: 'weiyu',         name: '位育中学',     group: '市重点', color: '#b08d57' },
     { id: 'jincai',        name: '进才中学',     group: '新五虎', color: '#a01820' },
     { id: 'jianping',      name: '建平中学',     group: '八大',   color: '#1a8fd1' },
     { id: 'kongjiang',     name: '控江中学',     group: '八大',   color: '#c0392b' },
+    { id: 'shnu',          name: '上师大附中',   group: '市重点', color: '#1a6b3c' },
     { id: 'yanan',         name: '延安中学',     group: '八大',   color: '#2f8f4e' },
     { id: 'gezhi',         name: '格致中学',     group: '八大',   color: '#6b4226' },
     { id: 'datong',        name: '大同中学',     group: '八大',   color: '#1b4f9c' },
-    { id: 'fuxing',        name: '复兴中学',     group: '八大',   color: '#1f4e9c' }
+    { id: 'fuxing',        name: '复兴中学',     group: '八大',   color: '#1f4e9c' },
+    { id: 'caoyang',       name: '曹杨二中',     group: '市重点', color: '#2a6fb5' },
+    { id: 'songjiang',     name: '松江二中',     group: '市重点', color: '#8c1f2b' },
+    { id: 'fengxian',      name: '奉贤中学',     group: '市重点', color: '#c0392b' },
+    { id: 'shixi',         name: '市西中学',     group: '市重点', color: '#d95f18' },
+    { id: 'shibei',        name: '市北中学',     group: '市重点', color: '#2f6b3c' },
+    { id: 'yucai',         name: '育才中学',     group: '市重点', color: '#1b6b4a' },
+    { id: 'xiangming',     name: '向明中学',     group: '市重点', color: '#d92b1f' },
+    { id: 'xingzhi',       name: '行知中学',     group: '市重点', color: '#c8102e' },
+    { id: 'jinyuan',       name: '晋元高级中学', group: '市重点', color: '#8c1a17' },
+    { id: 'jiading',       name: '嘉定一中',     group: '市重点', color: '#14535f' },
+    { id: 'shisan',        name: '市三女中',     group: '市重点', color: '#2f5d94' },
+    { id: 'yangjing',      name: '洋泾中学',     group: '市重点', color: '#5b3d8c' },
+    { id: 'chuansha',      name: '川沙中学',     group: '市重点', color: '#1f3a63' },
+    { id: 'gaoqiao',       name: '高桥中学',     group: '市重点', color: '#b8912f' }
   ];
 
   /* 每局固定 11 档。尺寸按「直径占游戏池宽度的百分比」给（最大 -> 最小）。 */
   var TIER_PCT = [54.4, 41.0, 41.0, 34.4, 28.2, 24.5, 20.2, 15.7, 14.4, 10.6, 7.0];
   var TIER_COUNT = 11;
 
-  /* ---------------- 场地参数 ---------------- */
-  var W = 420, H = 700;
-  var DROP_Y = 64;
-  var DANGER_Y = 128;
+  /* ---------------- 落球概率 ----------------
+   * 第 k 大球（k 从 1 数起，即 TIERS 索引 k-1）的出现概率：
+   *     P(k) = exp(k) / Σ_{i=1..11} exp(i)
+   * 概率随 k 指数上升，所以实际能掉下来的基本是最小的几档：
+   * 7~11 档（索引 6~10）合计约 99.3%，1~6 档合计只有 0.67%。
+   */
+  var TIER_PROB = (function () {
+    var raw = [], sum = 0, k, w;
+    for (k = 1; k <= TIER_COUNT; k++) { w = Math.exp(k); raw.push(w); sum += w; }
+    return raw.map(function (x) { return x / sum; });
+  })();
+  var DROP_P_MIN = 0.01;      // 概率 ≥1% 的档位在合成链里高亮成「可投放」
+
+  /* ---------------- 场地参数 ----------------
+   * 以前是 420 × 700 的框，警戒虚线画在 y=128，上面 128px 是纯死区。
+   * 现在把框顶挪到那条虚线上（虚线就是框顶），再去掉死区、整体等比放大
+   * 700/572 ≈ 1.2238 倍，让纵向长度仍然保持 700：
+   *     宽 420 × 700/572 ≈ 514，高 700
+   * 球的大小是按「池宽的百分比」算的，所以框变宽时球跟着一起等比放大。
+   */
+  var H = 700;
+  var BOX_SCALE = 700 / 572;           // 572 = 原来 700 高的框减去 128 的死区
+  var W = Math.round(420 * BOX_SCALE); // 514
+  var DANGER_Y = 2;                   // 警戒线 = 框顶（留 2px 让虚线画在框内沿）
+  var DROP_PAD = 4;                   // 球出现时贴着框顶：y = r + DROP_PAD
   var COOLDOWN = 0.34;
-  var DROP_SPAN = 5;          // 可投放的是最小的 5 档
   var FIXED = 1 / 120;
+
+  /* 某一档球「待投放」时的球心 y：贴着框顶 */
+  function dropY(tier) { return tier.r + DROP_PAD; }
 
   /* ---------------- DOM ---------------- */
   var $ = function (id) { return document.getElementById(id); };
@@ -135,8 +177,8 @@
   }
 
   function updateHint() {
-    poolHint.textContent = '每局 11 档：你选的学校当最大球，次大球从四校里随机抽一所，' +
-      '其余位置由八大、进才中学填满（不够 11 档时补上海实验学校）。';
+    poolHint.textContent = '每局 11 档：你选的学校当最大球，再随机配 1 所四校、4 所现有学校' +
+      '（上实 / 八大 / 进才）和 5 所市重点。落球概率按 exp(k)/Σexp(i) 给，越大的球越难掉出来。';
   }
 
   function refreshBest() {
@@ -147,23 +189,41 @@
   /* ============================================================
    * 分档 & 精灵图
    * ============================================================ */
-  /* 凑出本局的 11 所学校（索引 0 最大） */
+  /* 从数组里随机抽 n 个不重复的元素 */
+  function pickRandom(list, n) {
+    var pool = list.slice(), out = [];
+    while (out.length < n && pool.length) {
+      out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    return out;
+  }
+
+  /* 凑出本局的 11 所学校（索引 0 最大）
+   *   选中的学校 + 1 所四校 + 现有球（上实 / 八大 / 进才）里 4 所 + 市重点里 5 所
+   * 除选中的球王固定占第 0 档外，其余 10 所按 SCHOOLS 的默认大小顺序排列。
+   */
   function buildTierSchools() {
     var chosen = SCHOOLS.filter(function (s) { return s.id === chosenId; })[0];
-    // 次大球：随机一所四校（选中的是四校就换一所）
-    var four = SCHOOLS.filter(function (s) { return s.group === '四校' && s.id !== chosenId; });
-    var pick = four[Math.floor(Math.random() * four.length)];
-    // 八大 + 进才，按原顺序，去掉已选中的
-    var base = SCHOOLS.filter(function (s) {
-      return (s.group === '八大' || s.group === '新五虎') && s.id !== chosenId;
-    });
-    var rest = base.slice(0, TIER_COUNT - 2);
-    // 名额不够就用上海实验学校补，插在四校之后（它比八大更靠前）
-    if (rest.length < TIER_COUNT - 2) {
-      var filler = SCHOOLS.filter(function (s) { return s.id === 'ses' && s.id !== chosenId; })[0];
-      if (filler) rest = [filler].concat(rest).slice(0, TIER_COUNT - 2);
-    }
-    return [chosen, pick].concat(rest);
+    if (!chosen) return [];
+
+    // 1 所四校（选中的是四校就换一所）
+    var four = pickRandom(SCHOOLS.filter(function (s) {
+      return s.group === '四校' && s.id !== chosenId;
+    }), 1);
+
+    // 现有球里 4 所（四校以外的老名单：上海实验学校 / 八大 / 进才）
+    var legacy = pickRandom(SCHOOLS.filter(function (s) {
+      return s.group !== '四校' && s.group !== '市重点' && s.id !== chosenId;
+    }), 4);
+
+    // 新增市重点里 5 所
+    var fresh = pickRandom(SCHOOLS.filter(function (s) {
+      return s.group === '市重点' && s.id !== chosenId;
+    }), 5);
+
+    var rest = four.concat(legacy, fresh);
+    rest.sort(function (a, b) { return SCHOOLS.indexOf(a) - SCHOOLS.indexOf(b); });
+    return [chosen].concat(rest);
   }
 
   function buildTiers() {
@@ -278,13 +338,18 @@
     rafId = requestAnimationFrame(frame);
   }
 
+  /* 按 P(k) = exp(k) / Σ exp(i) 抽下一颗要投放的球（返回 TIERS 索引） */
   function randTier() {
-    var n = TIERS.length;
-    return n - 1 - Math.floor(Math.random() * Math.min(DROP_SPAN, n));
+    var r = Math.random(), acc = 0;
+    for (var i = 0; i < TIER_PROB.length; i++) {
+      acc += TIER_PROB[i];
+      if (r < acc) return i;
+    }
+    return TIER_PROB.length - 1;
   }
 
   function isDroppable(i) {
-    return i >= TIERS.length - Math.min(DROP_SPAN, TIERS.length);
+    return (TIER_PROB[i] || 0) >= DROP_P_MIN;
   }
 
   function renderChain() {
@@ -323,7 +388,7 @@
     if (!running || gameOver || paused || cooldown > 0) return;
     var t = TIERS[heldTier];
     var x = clamp(heldX, t.r + 2, W - t.r - 2);
-    var b = new P.Body({ x: x, y: DROP_Y, r: t.r, tier: heldTier, tag: 'ball' });
+    var b = new P.Body({ x: x, y: dropY(t), r: t.r, tier: heldTier, tag: 'ball' });
     b.vy = 120;
     world.add(b);
     heldTier = randTier();
@@ -551,6 +616,9 @@
     ctx.restore();
   }
 
+  /* 警戒线现在就是框顶（DANGER_Y 只留一点点，让虚线画在框内沿） */
+  var WARN_H = 46;
+
   function drawDanger() {
     var a = 0.2 + warnLevel * 0.65;
     ctx.save();
@@ -558,18 +626,18 @@
     ctx.lineWidth = 1 + warnLevel * 1.2;
     ctx.strokeStyle = 'rgba(224,49,49,' + a + ')';
     ctx.beginPath();
-    ctx.moveTo(0, DANGER_Y);
-    ctx.lineTo(W, DANGER_Y);
+    ctx.moveTo(0, DANGER_Y + 0.5);
+    ctx.lineTo(W, DANGER_Y + 0.5);
     ctx.stroke();
     ctx.restore();
 
     if (warnLevel > 0.05) {
       ctx.save();
-      var g = ctx.createLinearGradient(0, 0, 0, DANGER_Y + 26);
+      var g = ctx.createLinearGradient(0, 0, 0, WARN_H);
       g.addColorStop(0, 'rgba(224,49,49,' + (warnLevel * 0.14) + ')');
       g.addColorStop(1, 'rgba(224,49,49,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, DANGER_Y + 26);
+      ctx.fillRect(0, 0, W, WARN_H);
       ctx.restore();
     }
   }
@@ -602,6 +670,7 @@
     var t = TIERS[heldTier];
     if (!t) return;
     var x = clamp(heldX, t.r + 2, W - t.r - 2);
+    var y = dropY(t);                 // 贴着框顶
 
     var gy = guideY(x);
     ctx.save();
@@ -609,7 +678,7 @@
     ctx.lineWidth = 1.2;
     ctx.strokeStyle = hexA(t.color, 0.45);
     ctx.beginPath();
-    ctx.moveTo(x, DROP_Y + t.r);
+    ctx.moveTo(x, y + t.r);
     ctx.lineTo(x, gy);
     ctx.stroke();
     ctx.restore();
@@ -617,7 +686,7 @@
     ctx.save();
     ctx.globalAlpha = cooldown > 0 ? 0.3 : 1;
     var s = t.spriteSize;
-    ctx.drawImage(t.sprite, x - s / 2, DROP_Y - s / 2, s, s);
+    ctx.drawImage(t.sprite, x - s / 2, y - s / 2, s, s);
     ctx.restore();
   }
 
@@ -886,6 +955,8 @@
     get score() { return score; },
     SCHOOLS: SCHOOLS,
     TIER_PCT: TIER_PCT,
-    W: W, H: H, DANGER_Y: DANGER_Y, DROP_Y: DROP_Y
+    TIER_PROB: TIER_PROB,
+    DROP_P_MIN: DROP_P_MIN,
+    W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY
   };
 })();

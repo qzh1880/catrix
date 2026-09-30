@@ -69,7 +69,8 @@
   function World(w, h) {
     this.w = w;
     this.h = h;
-    this.gravity = 2600;
+    this.gravity = 2600;      // 竖直重力（正 = 画布向下）
+    this.gravityX = 0;        // 水平重力分量（体感倾斜 / 甩动惯性注入）
     this.iterations = 7;
     this.bodies = [];
     this.merges = [];
@@ -112,6 +113,7 @@
       b = bodies[i];
       if (b.isStatic) continue;
       b.vy += this.gravity * dt;
+      b.vx += this.gravityX * dt;
       b.vx *= this.linearDamping;
       b.vy *= this.linearDamping;
       b.omega *= this.angularDamping;

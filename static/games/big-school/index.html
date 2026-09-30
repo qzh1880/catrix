@@ -26,6 +26,18 @@
 
     <p class="hint" id="poolHint"></p>
 
+    <div class="opts">
+      <div class="opt">
+        <div class="opt-head"><span>球大小</span><b id="sizeLabel">标准</b></div>
+        <!-- 离散滑块：轨道、停靠点、旋钮、标签由 game.js 按 SIZES 生成 -->
+        <div class="range" id="sizeSeg" role="slider" tabindex="0" aria-label="球大小"></div>
+      </div>
+      <button type="button" id="extraFourBtn" class="opt-toggle">
+        多一所四校
+        <em>第二大、第三大都从四校抽</em>
+      </button>
+    </div>
+
     <div class="actions">
       <button id="startBtn" class="btn primary" disabled>先选一所学校</button>
     </div>

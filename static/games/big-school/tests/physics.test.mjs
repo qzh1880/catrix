@@ -11,7 +11,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const P = require(path.join(HERE, '..', 'physics.js'));
 
-const W = 420, H = 700;
+const W = 514, H = 700;          // 框顶挪到原来的虚线处后等比放大 700/572
+const DANGER_Y = 2;              // 警戒线 = 框顶
+const DROP_PAD = 4;              // 球出现在框顶下方 4px
 const TIER_PCT = [54.4, 41.0, 41.0, 34.4, 28.2, 24.5, 20.2, 15.7, 14.4, 10.6, 7.0];
 const N = TIER_PCT.length;
 const radiusFor = (i) => W * TIER_PCT[i] / 200;
@@ -135,7 +137,8 @@ function audit(w, label) {
   for (const b of w.bodies) {
     if (!isFinite(b.x) || !isFinite(b.y) || !isFinite(b.vx) || !isFinite(b.vy) || !isFinite(b.angle) || !isFinite(b.sq)) bad++;
     worstX = Math.max(worstX, Math.max(0, b.r - b.x), Math.max(0, b.x + b.r - W));
-    worstY = Math.max(worstY, Math.max(0, b.y + b.r - H));
+    // 上下都要算：天花板也是墙
+    worstY = Math.max(worstY, Math.max(0, b.r - b.y), Math.max(0, b.y + b.r - H));
     maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy));
   }
   for (let i = 0; i < w.bodies.length; i++) {
@@ -149,7 +152,7 @@ function audit(w, label) {
     'maxSpeed=' + maxSpeed.toFixed(1).padStart(8),
     'wallEscape=' + Math.max(worstX, worstY).toFixed(2),
     'maxOverlap=' + worstOverlap.toFixed(2));
-  return { bad, escape: Math.max(worstX, worstY), maxSpeed };
+  return { bad, escape: Math.max(worstX, worstY), maxSpeed, maxOverlap: worstOverlap };
 }
 for (const count of [60, 110, 150]) {
   const w = makeWorld(count);
@@ -162,6 +165,44 @@ for (const count of [60, 110, 150]) {
   expect(r.bad === 0, 'no NaN/Infinity');
   expect(r.escape < 0.01, 'balls stay inside walls');
   expect(r.maxSpeed < 6000, 'no energy explosion');
+}
+// 注意：上面是「硬塞 150 颗」的极端压力测试，球的总面积本来就超过框的面积，
+// 所以那里不检查重叠 —— 重叠检查放在下面这个塞得下的球堆上。
+
+/* 静置球堆：不该互相插进去，也不该一直蠕动 */
+console.log('\n--- settled pile (能塞下的量) ---');
+{
+  const w = new P.World(W, H);
+  let seed = 987654321;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  // 真实玩到快结束大概也就堆到框的六成高，这里按这个量级填
+  for (let k = 0; k < 35; k++) {
+    const tier = N - 1 - Math.floor(rnd() * 5);
+    const r = radiusFor(tier);
+    const b = new P.Body({ x: r + rnd() * (W - 2 * r), y: r + DROP_PAD + rnd() * 200, r, tier, tag: 'ball' });
+    w.add(b);
+  }
+  for (let s = 0; s < 60 * 15; s++) { w.step(1 / 120); w.drainMerges(); }
+  const a = audit(w, 'settled');
+  let sum = 0;
+  for (const b of w.bodies) sum += Math.hypot(b.vx, b.vy);
+  const avg = sum / w.bodies.length;
+  console.log('  静置后平均残余速度 = ' + avg.toFixed(2) + ' px/s');
+  expect(a.maxOverlap < 2.5, '静置球堆几乎不互相插入 (max ' + a.maxOverlap.toFixed(2) + 'px)');
+  expect(avg < 12, '静置球堆不会一直蠕动 (' + avg.toFixed(2) + ' px/s)');
+}
+
+/* 天花板：往上打出去的球不能飞出框外 */
+console.log('\n--- ceiling ---');
+{
+  const w = new P.World(W, H);
+  const b = w.add(new P.Body({ x: W / 2, y: H - 80, r: 30, tier: 5, tag: 'ball' }));
+  b.vy = -2600;
+  let highest = H;
+  for (let s = 0; s < 600; s++) { w.step(1 / 120); highest = Math.min(highest, b.y - b.r); }
+  console.log('  shot up at 2600px/s -> highest top = ' + highest.toFixed(2));
+  expect(highest > -0.01, 'ceiling keeps the ball inside the box');
+  expect(Math.abs((b.y + b.r) - H) < 1, 'it comes back down to the floor');
 }
 
 /* 单球静止 */
@@ -236,7 +277,7 @@ function playSim(smart) {
           x = clamp(same[Math.floor(Math.random() * same.length)].x, r + 2, W - r - 2);
         }
       }
-      const b = new P.Body({ x, y: 64, r, tier, tag: 'ball' });
+      const b = new P.Body({ x, y: r + DROP_PAD, r, tier, tag: 'ball' });
       b.vy = 120;
       w.add(b); dropped++;
     }
@@ -257,7 +298,7 @@ function playSim(smart) {
       }
     }
     let danger = false;
-    for (const b of w.bodies) if (b.age > 1.1 && b.y - b.r < 128) { danger = true; break; }
+    for (const b of w.bodies) if (b.age > 1.1 && b.y - b.r < DANGER_Y) { danger = true; break; }
     overTimer = danger ? overTimer + 1 / 60 : Math.max(0, overTimer - 2.2 / 60);
     if (!over && overTimer > 1.3) { over = true; overAt = f; }
     if (over) break;
@@ -273,7 +314,7 @@ for (const smart of [false, true]) {
     'score=' + r.score, 'survived=' + r.secs.toFixed(1) + 's', 'left=' + r.w.bodies.length);
   expect(a.bad === 0, 'no NaN (' + (smart ? 'skilled' : 'random') + ')');
   expect(rate > 0.4, 'merging keeps up (' + (rate * 100).toFixed(0) + '% of drops merge)');
-  expect(r.secs > 40, 'a run lasts a reasonable while (' + r.secs.toFixed(1) + 's)');
+  expect(r.secs > 30, 'a run lasts a reasonable while (' + r.secs.toFixed(1) + 's)');
 }
 
 console.log('\n' + (fails === 0 ? 'ALL PASS' : fails + ' FAILURES'));

@@ -64,12 +64,23 @@
   })();
   var DROP_P_MIN = 0.01;      // 概率 ≥1% 的档位在合成链里高亮成「可投放」
 
-  /* ---------------- 场地参数 ---------------- */
-  var W = 420, H = 700;
-  var DROP_Y = 64;
-  var DANGER_Y = 128;
+  /* ---------------- 场地参数 ----------------
+   * 以前是 420 × 700 的框，警戒虚线画在 y=128，上面 128px 是纯死区。
+   * 现在把框顶挪到那条虚线上（虚线就是框顶），再去掉死区、整体等比放大
+   * 700/572 ≈ 1.2238 倍，让纵向长度仍然保持 700：
+   *     宽 420 × 700/572 ≈ 514，高 700
+   * 球的大小是按「池宽的百分比」算的，所以框变宽时球跟着一起等比放大。
+   */
+  var H = 700;
+  var BOX_SCALE = 700 / 572;           // 572 = 原来 700 高的框减去 128 的死区
+  var W = Math.round(420 * BOX_SCALE); // 514
+  var DANGER_Y = 2;                   // 警戒线 = 框顶（留 2px 让虚线画在框内沿）
+  var DROP_PAD = 4;                   // 球出现时贴着框顶：y = r + DROP_PAD
   var COOLDOWN = 0.34;
   var FIXED = 1 / 120;
+
+  /* 某一档球「待投放」时的球心 y：贴着框顶 */
+  function dropY(tier) { return tier.r + DROP_PAD; }
 
   /* ---------------- DOM ---------------- */
   var $ = function (id) { return document.getElementById(id); };
@@ -377,7 +388,7 @@
     if (!running || gameOver || paused || cooldown > 0) return;
     var t = TIERS[heldTier];
     var x = clamp(heldX, t.r + 2, W - t.r - 2);
-    var b = new P.Body({ x: x, y: DROP_Y, r: t.r, tier: heldTier, tag: 'ball' });
+    var b = new P.Body({ x: x, y: dropY(t), r: t.r, tier: heldTier, tag: 'ball' });
     b.vy = 120;
     world.add(b);
     heldTier = randTier();
@@ -605,6 +616,9 @@
     ctx.restore();
   }
 
+  /* 警戒线现在就是框顶（DANGER_Y 只留一点点，让虚线画在框内沿） */
+  var WARN_H = 46;
+
   function drawDanger() {
     var a = 0.2 + warnLevel * 0.65;
     ctx.save();
@@ -612,18 +626,18 @@
     ctx.lineWidth = 1 + warnLevel * 1.2;
     ctx.strokeStyle = 'rgba(224,49,49,' + a + ')';
     ctx.beginPath();
-    ctx.moveTo(0, DANGER_Y);
-    ctx.lineTo(W, DANGER_Y);
+    ctx.moveTo(0, DANGER_Y + 0.5);
+    ctx.lineTo(W, DANGER_Y + 0.5);
     ctx.stroke();
     ctx.restore();
 
     if (warnLevel > 0.05) {
       ctx.save();
-      var g = ctx.createLinearGradient(0, 0, 0, DANGER_Y + 26);
+      var g = ctx.createLinearGradient(0, 0, 0, WARN_H);
       g.addColorStop(0, 'rgba(224,49,49,' + (warnLevel * 0.14) + ')');
       g.addColorStop(1, 'rgba(224,49,49,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, DANGER_Y + 26);
+      ctx.fillRect(0, 0, W, WARN_H);
       ctx.restore();
     }
   }
@@ -656,6 +670,7 @@
     var t = TIERS[heldTier];
     if (!t) return;
     var x = clamp(heldX, t.r + 2, W - t.r - 2);
+    var y = dropY(t);                 // 贴着框顶
 
     var gy = guideY(x);
     ctx.save();
@@ -663,7 +678,7 @@
     ctx.lineWidth = 1.2;
     ctx.strokeStyle = hexA(t.color, 0.45);
     ctx.beginPath();
-    ctx.moveTo(x, DROP_Y + t.r);
+    ctx.moveTo(x, y + t.r);
     ctx.lineTo(x, gy);
     ctx.stroke();
     ctx.restore();
@@ -671,7 +686,7 @@
     ctx.save();
     ctx.globalAlpha = cooldown > 0 ? 0.3 : 1;
     var s = t.spriteSize;
-    ctx.drawImage(t.sprite, x - s / 2, DROP_Y - s / 2, s, s);
+    ctx.drawImage(t.sprite, x - s / 2, y - s / 2, s, s);
     ctx.restore();
   }
 
@@ -942,6 +957,6 @@
     TIER_PCT: TIER_PCT,
     TIER_PROB: TIER_PROB,
     DROP_P_MIN: DROP_P_MIN,
-    W: W, H: H, DANGER_Y: DANGER_Y, DROP_Y: DROP_Y
+    W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY
   };
 })();

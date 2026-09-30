@@ -260,7 +260,7 @@ function checkTiers(label, chosenId) {
     expect(iJin < iJian, label + ': 进才中学 ranks above 建平中学 (#' + (iJin + 1) + ' vs #' + (iJian + 1) + ')');
   }
   // 尺寸
-  const pct = t.map(x => x.r * 200 / 420);
+  const pct = t.map(x => x.r * 200 / api().W);
   expect(Math.abs(pct[0] - 54.4) < 0.01 && Math.abs(pct[10] - 7.0) < 0.01,
     label + ': sizes follow the table (' + pct.map(v => v.toFixed(1)).join(' ') + ')');
 }
@@ -306,7 +306,9 @@ expect(cvs.width > 0 && cvs.height > 0, 'canvas sized by resize() (' + cvs.width
 expect(byId.get('chain').children.length > 11, 'merge chain strip populated');
 
 const W = api().W, H = api().H, DANGER = api().DANGER_Y;
-expect(W === 420 && H === 700, 'board is 420x700');
+expect(W === 514 && H === 700, '把框顶挪到虚线处再等比放大后，框是 514x700（纵向仍是 700）');
+expect(DANGER === 2, '警戒线就是框顶（DANGER_Y=' + DANGER + '）');
+expect(Math.abs((W / H) - (514 / 700)) < 1e-9, '框的宽高比 = 514/700');
 
 // 鼠标：在 stage 上按下即投
 for (let i = 0; i < 40; i++) {
@@ -320,8 +322,22 @@ expect(w.bodies.length > 5, 'balls exist on the board (' + w.bodies.length + ')'
 expect(api().score > 0, 'score increased from merges (' + api().score + ')');
 expect(store.bigschool_best !== undefined, 'best score persisted (' + store.bigschool_best + ')');
 expect(w.bodies.every(b => isFinite(b.x) && isFinite(b.y) && isFinite(b.sq)), 'no NaN bodies');
-expect(w.bodies.every(b => b.x >= b.r - 0.5 && b.x <= W - b.r + 0.5 && b.y + b.r <= H + 0.5), 'all bodies inside the board');
+expect(w.bodies.every(b => b.x >= b.r - 0.5 && b.x <= W - b.r + 0.5 && b.y + b.r <= H + 0.5 && b.y - b.r >= -0.5), 'all bodies inside the board (含天花板)');
 expect(w.bodies.every(b => b.sq >= 0 && b.sq <= 0.1601), 'squash stays in range');
+
+console.log('\n--- 新球出现在框顶 ---');
+{
+  frame(30);   // 等冷却
+  const t = api().tiers[api().tiers.length - 1];   // 不管随机到哪档，都是贴着框顶出生
+  const before = w.bodies.length;
+  stage.dispatch('pointerdown', { clientX: 260, pointerType: 'mouse', preventDefault() {} });
+  const fresh = w.bodies[w.bodies.length - 1];
+  expect(w.bodies.length === before + 1, 'drop fired');
+  expect(Math.abs((fresh.y - fresh.r) - api().DROP_PAD) < 0.001,
+    '新球贴在框顶出现（顶到边距 ' + (fresh.y - fresh.r).toFixed(2) + 'px = DROP_PAD）');
+  expect(Math.abs(fresh.y - api().dropY(fresh)) < 0.001, 'dropY(tier) = r + DROP_PAD');
+  frame(30);
+}
 
 console.log('\n--- 拖出边界点击 ---');
 {

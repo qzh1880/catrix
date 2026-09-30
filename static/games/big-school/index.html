@@ -12,9 +12,13 @@
 
   <!-- ================= 选校界面 ================= -->
   <section id="selectScreen" class="screen">
+    <div class="page-bar">
+      <a class="back-link" id="upBtn" href="../" title="返回上一级">⇦ 返回上一级</a>
+    </div>
+
     <header class="hero">
       <h1>合成大 · 学校</h1>
-      <p class="sub">选一所学校当最大的球。它从排名里抽出来放在最上面，剩下的按序往下排。</p>
+      <p class="sub">选一所学校当最大的球。其余 10 档由 1 所四校、4 所现有学校（上实 / 八大 / 进才）和 5 所市重点随机组成。</p>
     </header>
 
     <div class="toolbar">
@@ -33,6 +37,10 @@
 
   <!-- ================= 游戏界面 ================= -->
   <section id="gameScreen" class="screen" hidden>
+    <div class="page-bar">
+      <button type="button" class="back-link" id="backBtn" title="返回选校界面">⇦ 返回上一级</button>
+    </div>
+
     <div class="hud">
       <div class="hud-left">
         <div class="hud-item"><span>得分</span><b id="scoreVal">0</b></div>
@@ -42,7 +50,6 @@
         <button id="shareBtn" class="icon-btn wide" title="分享">分享</button>
         <button id="soundBtn" class="icon-btn" title="音效">🔊</button>
         <button id="restartBtn" class="icon-btn" title="重开">↻</button>
-        <button id="backBtn" class="icon-btn" title="换学校">⇦</button>
       </div>
     </div>
 

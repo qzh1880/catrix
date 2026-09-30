@@ -307,7 +307,7 @@ expect(byId.get('chain').children.length > 11, 'merge chain strip populated');
 
 const W = api().W, H = api().H, DANGER = api().DANGER_Y;
 expect(W === 514 && H === 700, '把框顶挪到虚线处再等比放大后，框是 514x700（纵向仍是 700）');
-expect(DANGER === 2, '警戒线就是框顶（DANGER_Y=' + DANGER + '）');
+expect(DANGER === 52, '警戒线在框顶往下 52px（DANGER_Y=' + DANGER + '）');
 expect(Math.abs((W / H) - (514 / 700)) < 1e-9, '框的宽高比 = 514/700');
 
 // 鼠标：在 stage 上按下即投

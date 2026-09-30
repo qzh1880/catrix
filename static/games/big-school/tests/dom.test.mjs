@@ -185,10 +185,33 @@ const tick = () => new Promise(r => setTimeout(r, 6));
 console.log('\n--- school selection ---');
 const grid = byId.get('schoolGrid');
 const api = () => sandbox.window.__bigschool;
-expect(grid.children.length === 14, 'renders 14 selectable schools (got ' + grid.children.length + ')');
+const ALL = api().SCHOOLS;
+expect(grid.children.length === ALL.length, 'renders every selectable school (got ' + grid.children.length + ')');
+expect(grid.children.length === 31, '31 selectable schools：14 原有 + 17 新增市重点');
 const ids = grid.children.map(c => c.dataset.id);
 expect(ids.includes('ses'), 'Shanghai Experimental School is in the list');
-expect(!ids.includes('caoyang') && !ids.includes('weiyu'), 'the dropped 新五虎 schools are gone');
+expect(['sfls', 'shnu', 'weiyu', 'caoyang', 'songjiang', 'fengxian', 'shixi', 'shibei',
+  'yucai', 'xiangming', 'xingzhi', 'jinyuan', 'jiading', 'shisan', 'yangjing',
+  'chuansha', 'gaoqiao'].every(id => ids.includes(id)), '新增的 17 所市重点都在列表里');
+expect(ALL.filter(s => s.group === '市重点').length === 17, '市重点恰好 17 所');
+expect(ALL.filter(s => s.group === '四校').length === 4, '四校还是 4 所');
+
+// 每所学校的校徽文件都得真实存在，而且和 SCHOOLS 顺序一一对应
+{
+  const missing = ALL.filter(s => !fs.existsSync(path.join(DIR, 'logos', s.id + '.png')));
+  expect(missing.length === 0, '每所学校都有本地校徽 PNG' +
+    (missing.length ? ' (missing: ' + missing.map(s => s.id).join(', ') + ')' : ''));
+}
+
+// 选校界面每个「页面」都要有返回上一级
+{
+  const anchor = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');
+  expect(/id="selectScreen"[\s\S]*?id="upBtn"[^>]*>⇦ 返回上一级/.test(anchor),
+    '选校界面有「返回上一级」按钮（指回上一级目录）');
+  expect(/id="gameScreen"[\s\S]*?id="backBtn"[^>]*>⇦ 返回上一级/.test(anchor),
+    '游戏界面有「返回上一级」按钮（回选校界面）');
+  expect(/id="upBtn"[^>]*href="\.\.\/"/.test(anchor), '选校界面的返回按钮指向 ../');
+}
 
 const startBtn = byId.get('startBtn');
 expect(startBtn.disabled === true, 'start button disabled before choosing');
@@ -205,54 +228,124 @@ async function startWith(id) {
   frame(1);
 }
 
-function checkTiers(label, chosenId, expectFour, expectSes) {
+const LEGACY = ['实验', '八大', '新五虎'];
+
+function checkTiers(label, chosenId) {
   const t = api().tiers;
   const schools = t.map(x => x.school);
-  const four = schools.filter(s => s.group === '四校');
-  const sesCount = schools.filter(s => s.id === 'ses').length;
-  const names = schools.map(s => s.name).join(' ');
-  console.log('  [' + label + '] ' + names);
+  const chosen = ALL.filter(s => s.id === chosenId)[0];
+  console.log('  [' + label + '] ' + schools.map(s => s.group + ':' + s.name).join(' '));
   expect(t.length === 11, label + ': exactly 11 types');
   expect(schools[0].id === chosenId, label + ': chosen school is tier 0 (the biggest)');
-  expect(four.length === expectFour, label + ': ' + expectFour + ' 四校 in play (got ' + four.length + ')');
-  expect(sesCount === expectSes, label + ': 上海实验学校 count=' + expectSes + ' (got ' + sesCount + ')');
-  expect(schools.some(s => s.id === 'jincai'), label + ': 进才中学 always present');
-  const ba = schools.filter(s => s.group === '八大');
-  expect(ba.length === 8 || ba.length === 7, label + ': 八大 filled in (got ' + ba.length + ')');
-  // 进才默认排在建平前面（比建平大一档）
+  expect(new Set(schools.map(s => s.id)).size === 11, label + ': 11 schools are all distinct');
+
+  const others = schools.slice(1);
+  const four = others.filter(s => s.group === '四校');
+  const legacy = others.filter(s => LEGACY.indexOf(s.group) >= 0);
+  const fresh = others.filter(s => s.group === '市重点');
+  expect(four.length === 1, label + ': 其余 10 档里有且只有 1 所四校 (got ' + four.length + ')');
+  expect(legacy.length === 4, label + ': 现有球（上实 / 八大 / 进才）恰好 4 所 (got ' + legacy.length + ')');
+  expect(fresh.length === 5, label + ': 新增市重点恰好 5 所 (got ' + fresh.length + ')');
+  // 只可能是「选中的那所」所在的组少一个
+  const totalFour = schools.filter(s => s.group === '四校').length;
+  const totalLegacy = schools.filter(s => LEGACY.indexOf(s.group) >= 0).length;
+  const totalFresh = schools.filter(s => s.group === '市重点').length;
+  expect(totalFour === (chosen.group === '四校' ? 2 : 1), label + ': 四校总数 ' + totalFour);
+  expect(totalLegacy === (LEGACY.indexOf(chosen.group) >= 0 ? 5 : 4), label + ': 现有球总数 ' + totalLegacy);
+  expect(totalFresh === (chosen.group === '市重点' ? 6 : 5), label + ': 市重点总数 ' + totalFresh);
+
+  // 除球王外按默认大小顺序排
+  const ranks = others.map(s => ALL.indexOf(s));
+  expect(ranks.every((v, i) => i === 0 || ranks[i - 1] < v), label + ': 其余 10 档按默认大小顺序排列');
+  // 进才默认排在建平前面（两者同时在场时）
   const iJin = schools.findIndex(s => s.id === 'jincai');
   const iJian = schools.findIndex(s => s.id === 'jianping');
   if (iJin >= 0 && iJian >= 0) {
     expect(iJin < iJian, label + ': 进才中学 ranks above 建平中学 (#' + (iJin + 1) + ' vs #' + (iJian + 1) + ')');
   }
   // 尺寸
-  const pct = t.map(x => x.r * 200 / 420);
+  const pct = t.map(x => x.r * 200 / api().W);
   expect(Math.abs(pct[0] - 54.4) < 0.01 && Math.abs(pct[10] - 7.0) < 0.01,
     label + ': sizes follow the table (' + pct.map(v => v.toFixed(1)).join(' ') + ')');
 }
 
-// 选中的是四校 -> 2 所四校（选中的 + 随机 1 所），不需要上实
-await startWith('shanghai-high');
-checkTiers('chosen=上中', 'shanghai-high', 2, 0);
-expect(api().tiers[0].school.id !== api().tiers[1].school.id, 'tier1 is a different 四校');
-expect(api().tiers[1].school.group === '四校', 'tier1 is a 四校');
+// 四种情况各跑一遍（选的学校分属不同组）
+for (const pick of [['shanghai-high', 'chosen=上中（四校）'], ['qibao', 'chosen=七宝（八大）'],
+  ['ses', 'chosen=上实（实验）'], ['jincai', 'chosen=进才（新五虎）'],
+  ['caoyang', 'chosen=曹杨二中（市重点）'], ['sfls', 'chosen=上外附中（市重点）']]) {
+  if (pick[0] !== 'shanghai-high') { byId.get('backBtn').dispatch('click'); }
+  await startWith(pick[0]);
+  checkTiers(pick[1], pick[0]);
+}
+expect(api().tiers[1].school.group === '四校', 'tier1 位置上是那一所随机四校（本轮排序结果）');
 
-// 选中的不是四校 -> 1 所随机四校 + 上海实验学校补足 11 档
-byId.get('backBtn').dispatch('click');
-await startWith('qibao');
-checkTiers('chosen=七宝', 'qibao', 1, 1);
-expect(api().tiers[1].school.group === '四校', 'tier1 is the random 四校');
-expect(api().tiers[2].school.id === 'ses', '上海实验学校 sits right after the 四校');
+/* ---------------- 落球概率 ---------------- */
+console.log('\n--- drop probability P(k)=exp(k)/Σexp(i) ---');
+{
+  const prob = api().TIER_PROB;
+  const E = Math.E;
+  // 分子 e^k（k = 1..11，k 是「第几大」，对应 TIERS 索引 k-1）
+  const num = Array.from({ length: 11 }, (_, i) => Math.exp(i + 1));
+  const S = num.reduce((a, b) => a + b, 0);
 
-// 选中上实自己
-byId.get('backBtn').dispatch('click');
-await startWith('ses');
-checkTiers('chosen=上实', 'ses', 1, 1);
+  expect(prob.length === 11, '11 档各有一个概率');
+  expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-15, '概率之和为 1');
+  expect(prob.every((p, i) => Math.abs(p - num[i] / S) < 1e-18), 'P(k) = exp(k)/Σexp(i)，k = 索引+1');
+  expect(prob.every((p, i) => i === 0 || prob[i - 1] < p), '概率随档位（越小越大）单调上升');
+  // 不看公式本身、只看这个数列的形状：相邻两项的比必须恒等于 e
+  const ratios = prob.slice(1).map((p, i) => p / prob[i]);
+  expect(ratios.every(r => Math.abs(r - E) < 1e-12),
+    '相邻概率之比恒为 e（P(k+1)/P(k) = e，最大误差 ' +
+    Math.max(...ratios.map(r => Math.abs(r - E))).toExponential(2) + '）');
+  // 闭式解：Σ_{i=1..11} e^i = e(e^11-1)/(e-1)
+  const Sclosed = E * (Math.pow(E, 11) - 1) / (E - 1);
+  expect(Math.abs(S - Sclosed) / S < 1e-14, '分母等于闭式解 e(e^11-1)/(e-1)');
+  console.log('  ' + prob.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(3) + '%').join(' '));
 
-// 选中进才
-byId.get('backBtn').dispatch('click');
-await startWith('jincai');
-checkTiers('chosen=进才', 'jincai', 1, 1);
+  const droppable = prob.filter(p => p >= api().DROP_P_MIN).length;
+  expect(droppable === 5, '按 1% 阈值高亮出来的可投放档位是 5 个');
+  expect(prob.slice(6).reduce((a, b) => a + b, 0) > 0.99, '最小的 5 档占了 99% 以上的概率');
+
+  if (gameRunning()) {
+    const chips = byId.get('chain').children.filter(c => String(c.className).indexOf('drop') >= 0);
+    expect(chips.length === 5, '合成链里高亮的正好是 5 档 (got ' + chips.length + ')');
+  }
+
+  /* (a) 取档用的逆累积分布：边界逐个精确核对 */
+  const realRandom = Math.random;
+  const cum = [];
+  prob.reduce((a, p) => (cum.push(a + p), a + p), 0);
+  const at = (u) => { Math.random = () => u; const r = api().randTier(); Math.random = realRandom; return r; };
+  let boundaryOk = true, badBoundary = '';
+  for (let i = 0; i < 11; i++) {
+    const lo = i === 0 ? 0 : cum[i - 1];
+    const mid = lo + (cum[i] - lo) / 2;
+    if (at(mid) !== i) { boundaryOk = false; badBoundary = '区间中点 u=' + mid + ' 应得索引 ' + i + '，实得 ' + at(mid); break; }
+    if (at(lo) !== i) { boundaryOk = false; badBoundary = '下边界 u=' + lo + ' 应得索引 ' + i + '，实得 ' + at(lo); break; }
+    if (i > 0 && at(lo * (1 - 1e-9)) !== i - 1) {
+      boundaryOk = false; badBoundary = 'u 刚好在 cum[' + (i - 1) + '] 之前应得索引 ' + (i - 1); break;
+    }
+  }
+  expect(boundaryOk, 'u 落在哪个累积区间就返回哪一档' + (boundaryOk ? '' : '（' + badBoundary + '）'));
+
+  /* (b) 统计检验：抽 40 万次，做卡方拟合优度检验 */
+  const N = 400000;
+  const hits = new Array(11).fill(0);
+  for (let k = 0; k < N; k++) hits[api().randTier()]++;
+  let chi2 = 0;
+  for (let i = 0; i < 11; i++) {
+    const exp = N * prob[i];
+    chi2 += (hits[i] - exp) * (hits[i] - exp) / exp;
+  }
+  // df = 10，α = 1e-6 的临界值约 41.8；通过则说明抽样分布与公式一致
+  console.log('  抽样 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=10，α=1e-6 临界值 41.82）');
+  console.log('  实测 ' + hits.map((h, i) => '#' + (i + 1) + '=' + (h / N * 100).toFixed(3) + '%').join(' '));
+  expect(chi2 < 41.82, '抽样分布符合 P(k)=exp(k)/Σexp(i)（卡方 ' + chi2.toFixed(2) + '）');
+  const maxDev = Math.max(...hits.map((h, i) => Math.abs(h - N * prob[i]) / Math.sqrt(N * prob[i])));
+  expect(maxDev < 5, '每一档的抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
+}
+
+function gameRunning() { return byId.get('gameScreen').hidden === false; }
 
 /* ---------------- 玩法 ---------------- */
 console.log('\n--- dropping & playing ---');
@@ -262,7 +355,9 @@ expect(cvs.width > 0 && cvs.height > 0, 'canvas sized by resize() (' + cvs.width
 expect(byId.get('chain').children.length > 11, 'merge chain strip populated');
 
 const W = api().W, H = api().H, DANGER = api().DANGER_Y;
-expect(W === 420 && H === 700, 'board is 420x700');
+expect(W === 514 && H === 700, '把框顶挪到虚线处再等比放大后，框是 514x700（纵向仍是 700）');
+expect(DANGER === 52, '警戒线在框顶往下 52px（DANGER_Y=' + DANGER + '）');
+expect(Math.abs((W / H) - (514 / 700)) < 1e-9, '框的宽高比 = 514/700');
 
 // 鼠标：在 stage 上按下即投
 for (let i = 0; i < 40; i++) {
@@ -276,8 +371,22 @@ expect(w.bodies.length > 5, 'balls exist on the board (' + w.bodies.length + ')'
 expect(api().score > 0, 'score increased from merges (' + api().score + ')');
 expect(store.bigschool_best !== undefined, 'best score persisted (' + store.bigschool_best + ')');
 expect(w.bodies.every(b => isFinite(b.x) && isFinite(b.y) && isFinite(b.sq)), 'no NaN bodies');
-expect(w.bodies.every(b => b.x >= b.r - 0.5 && b.x <= W - b.r + 0.5 && b.y + b.r <= H + 0.5), 'all bodies inside the board');
+expect(w.bodies.every(b => b.x >= b.r - 0.5 && b.x <= W - b.r + 0.5 && b.y + b.r <= H + 0.5 && b.y - b.r >= -0.5), 'all bodies inside the board (含天花板)');
 expect(w.bodies.every(b => b.sq >= 0 && b.sq <= 0.1601), 'squash stays in range');
+
+console.log('\n--- 新球出现在框顶 ---');
+{
+  frame(30);   // 等冷却
+  const t = api().tiers[api().tiers.length - 1];   // 不管随机到哪档，都是贴着框顶出生
+  const before = w.bodies.length;
+  stage.dispatch('pointerdown', { clientX: 260, pointerType: 'mouse', preventDefault() {} });
+  const fresh = w.bodies[w.bodies.length - 1];
+  expect(w.bodies.length === before + 1, 'drop fired');
+  expect(Math.abs((fresh.y - fresh.r) - api().DROP_PAD) < 0.001,
+    '新球贴在框顶出现（顶到边距 ' + (fresh.y - fresh.r).toFixed(2) + 'px = DROP_PAD）');
+  expect(Math.abs(fresh.y - api().dropY(fresh)) < 0.001, 'dropY(tier) = r + DROP_PAD');
+  frame(30);
+}
 
 console.log('\n--- 拖出边界点击 ---');
 {
@@ -319,6 +428,9 @@ console.log('\n--- 分享 ---');
   expect(shareModal.hidden === false, 'HUD share button opens the panel');
   const txt = byId.get('sharePreview').textContent;
   expect(txt.includes('分') && txt.includes(api().tiers[0].school.name), 'preview shows score + goal school: "' + txt + '"');
+  expect(txt.includes('catrix.net/games/big-school'), '分享文案里带上了网址 catrix.net/games/big-school');
+  expect(txt.trim().endsWith(api().SHARE_URL), '网址收在文案最后');
+  expect(api().SHARE_URL === 'https://catrix.net/games/big-school', '分享网址是 https://catrix.net/games/big-school');
   expect(byId.get('shSystem').hidden === false, 'system share is offered (navigator.share exists)');
 
   const nBodies = api().world.bodies.length;
@@ -332,6 +444,9 @@ console.log('\n--- 分享 ---');
   sandbox.__opened.length = 0;
   byId.get('shQQ').dispatch('click');
   expect(sandbox.__opened.length === 1 && sandbox.__opened[0].includes('connect.qq.com'), 'QQ 好友 opens the QQ widget');
+  expect(sandbox.__opened[0].includes(encodeURIComponent(api().SHARE_URL)),
+    'QQ 分享带上的是站点网址（不是本地 file:// 路径）');
+  expect(!/url=file/i.test(sandbox.__opened[0]), 'QQ 分享的 url 不是本地路径');
   sandbox.__opened.length = 0;
   byId.get('shQzone').dispatch('click');
   expect(sandbox.__opened[0].includes('qzone.qq.com'), 'QQ 空间 opens the Qzone widget');
@@ -404,7 +519,8 @@ console.log('\n--- 多一所四校 ---');
   expect(fours.length === 3, 'extraFour: chosen + 2 random 四校 (got ' + fours.length + ')');
   expect(new Set(fours).size === 3, 'extraFour: the two picks are different schools');
   expect(t[1].school.group === '四校' && t[2].school.group === '四校', 'extraFour: tier 1 & 2 are both 四校');
-  expect(t.some(x => x.school.id === 'jincai'), 'extraFour: 进才中学 still present');
+  expect(t.filter(x => LEGACY.indexOf(x.school.group) >= 0).length === 4 &&
+    t.filter(x => x.school.group === '市重点').length === 4, 'extraFour: 4 所现有 + 4 所市重点（让出一个市重点名额）');
   byId.get('extraFourBtn').dispatch('click');
 }
 
@@ -428,7 +544,7 @@ console.log('\n--- 球大小滑块 ---');
 
   press(9999);
   await startWith('shanghai-high');
-  const pct = api().tiers.map(x => x.r * 200 / 420);
+  const pct = api().tiers.map(x => x.r * 200 / api().W);
   expect(Math.abs(pct[0] - 54.4 * 1.2) < 0.01, 'rightmost stop = +20% (' + pct[0].toFixed(1) + '%)');
   expect(Math.abs(pct[10] - 7.0 * 1.2) < 0.01, 'smallest scaled too (' + pct[10].toFixed(1) + '%)');
   expect(at('特大 20%', 2) && knob.style.left === '100%' && on() === '111', 'knob + fill at the right end');
@@ -442,7 +558,7 @@ console.log('\n--- 球大小滑块 ---');
 
   press(0);
   await startWith('shanghai-high');
-  expect(Math.abs(api().tiers[0].r * 200 / 420 - 54.4) < 0.01, 'leftmost stop = 标准');
+  expect(Math.abs(api().tiers[0].r * 200 / api().W - 54.4) < 0.01, 'leftmost stop = 标准');
 
   seg.dispatch('pointerdown', { clientX: 0 });
   expect(seg.classList.contains('drag'), 'dragging starts on press');
@@ -490,6 +606,27 @@ console.log('\n--- 三击调整投放上限 ---');
   tap(chipsNow()[3], 3);
   expect(api().dropTop === 6, 'triple tap again restores the default');
   expect(chipsNow()[3].className.indexOf('drop') < 0, 'highlight cleared after restore');
+}
+
+console.log('\n--- randTier 按公式取档 ---');
+{
+  await startWith('jincai');
+  frame(30);
+  const realRandom = Math.random;
+  // 每投一颗都要先等冷却；返回刚掉下来的那颗球
+  const dropOnce = () => {
+    frame(30);
+    stage.dispatch('pointerdown', { clientX: 210, pointerType: 'mouse', preventDefault() {} });
+    const bodies = api().world.bodies;
+    return bodies[bodies.length - 1];
+  };
+  Math.random = () => 0.999999;
+  dropOnce();                       // 这一颗用的是改随机数之前的档位
+  expect(dropOnce().tier === 10, 'Math.random→1 时掉最小档（索引 10 = 第 11 大球）');
+  Math.random = () => 0;
+  dropOnce();                       // 同上，先消化掉上一颗
+  expect(dropOnce().tier === 0, 'Math.random→0 时掉最大档（索引 0 = 第 1 大球）');
+  Math.random = realRandom;
 }
 
 console.log('\n' + (fails === 0 ? 'ALL PASS' : fails + ' FAILURES'));

@@ -3,8 +3,9 @@
  * 无依赖，浏览器 / Node 通用（UMD）。
  *
  * 特性：
- *  - 重力 + 圆-圆 / 圆-墙碰撞 + 切向摩擦 + 转动
+ *  - 重力 + 圆-圆 / 圆-墙（含天花板）碰撞 + 切向摩擦 + 转动
  *  - 滚动阻力：贴地的球很快就停下来，不会一直滑
+ *  - 静置抑制：接触着的球速度小于 9px/s 直接归零，整堆不会慢慢蠕动
  *  - 软接触（挤压）：每个球记录受压程度 sq 与受压方向 sqAngle。
  *    碰撞本身永远是刚性的（半径就是 r），挤压只体现在渲染上：
  *    把球心朝接触点挪 r*sq、并沿法线压扁 (1-sq)。
@@ -20,8 +21,11 @@
   'use strict';
 
   var POS_PERCENT = 0.85;    // 位置修正比例
+  var POS_MAX = 0.5;         // 单次迭代最多推开「较小球半径」的 50%，深穿透分几步消化，避免爆开
   var SLOP = 0.25;           // 允许的穿透容差，避免抖动
   var TOUCH_EPS = 0.05;      // 判定「实接触」的额外容差
+  var REST_SPEED = 9;        // 静置判定：接触着的球速度低于这个值就直接停住
+  var REST_SPIN = 0.35;      // 静置判定：自转低于这个值也一起停
   var SQ_MAX = 0.16;         // 最大挤压比例
   var SQ_K = 0.0008;         // 接触载荷 -> 挤压 的换算系数
   var SQ_IN = 0.85;          // 压下去的速度
@@ -49,6 +53,7 @@
     this._load = 0;          // 本步最大接触载荷（法向冲量 / 质量）
     this._loadAngle = 0;
     this._grounded = false;
+    this._contacts = 0;      // 本步的接触数（含墙），用来判断「有没有被托住」
 
     this.recomputeMass();
   }
@@ -71,7 +76,9 @@
     this.h = h;
     this.gravity = 2600;      // 竖直重力（正 = 画布向下）
     this.gravityX = 0;        // 水平重力分量（体感倾斜 / 甩动惯性注入）
-    this.iterations = 7;
+    /* 迭代次数从 7 提到 24：实测静置球堆的最大互相插入从 3~7px 降到 1px 上下，
+       堆里球的残余速度从 ~36px/s 降到 ~4px/s（不会整堆慢慢蠕动）；150 颗球约 1ms/步。 */
+    this.iterations = 24;
     this.bodies = [];
     this.merges = [];
     this._pairs = [];
@@ -81,6 +88,8 @@
     this.rollDamp = 0.045;         // 滚动阻力
     this.linearDamping = 0.9988;
     this.angularDamping = 0.993;
+    this.restSpeed = REST_SPEED;   // 静置抑制阈值（px/s），设 0 可关掉
+    this.restSpin = REST_SPIN;
   }
 
   World.prototype.add = function (body) { this.bodies.push(body); return body; };
@@ -122,6 +131,7 @@
       b.angle += b.omega * dt;
       b.age += dt;
       b._load = 0;
+      b._contacts = 0;
       if (!isFinite(b.x) || !isFinite(b.y)) {   // 保险：数值爆炸时归位
         b.x = this.w / 2; b.y = this.h / 2; b.vx = 0; b.vy = 0; b.omega = 0;
       }
@@ -135,6 +145,7 @@
     this.updateSquash();
     this.checkMerges();
     this.applyRollingResistance();
+    this.stabilizeRest();
     this.clampToBounds();
     return dt;
   };
@@ -185,6 +196,7 @@
       var b = bodies[i];
       if (b.isStatic) continue;
       var r = b.r;
+      if (b.y - r < 0) this.resolveWall(b, 0, 1, r - b.y);          // 天花板：球不能被顶出框外
       if (b.y + r > this.h) this.resolveWall(b, 0, -1, b.y + r - this.h);
       if (b.x - r < 0) this.resolveWall(b, 1, 0, r - b.x);
       if (b.x + r > this.w) this.resolveWall(b, -1, 0, b.x + r - this.w);
@@ -196,6 +208,7 @@
     if (pen <= 0) return;
     b.x += nx * pen;
     b.y += ny * pen;
+    b._contacts++;
     if (ny < 0) b._grounded = true;
 
     var r = b.r;
@@ -263,8 +276,15 @@
     var invSum = a.invM + b.invM;
     if (invSum === 0) return;
 
+    a._contacts++; b._contacts++;
+
     if (pen > SLOP) {
-      var corr = ((pen - SLOP) * POS_PERCENT) / invSum;
+      // 推开量封顶：合成出来的球天生比原来大，会瞬间插进邻居几十像素，
+      // 不限幅的话一次迭代就把整堆弹飞，分成几次迭代消化就平滑了。
+      var sep = (pen - SLOP) * POS_PERCENT;
+      var cap = POS_MAX * Math.min(ra, rb);
+      if (sep > cap) sep = cap;
+      var corr = sep / invSum;
       a.x -= nx * corr * a.invM; a.y -= ny * corr * a.invM;
       b.x += nx * corr * b.invM; b.y += ny * corr * b.invM;
     }
@@ -301,6 +321,21 @@
     b.omega += (rbx * jty - rby * jtx) * b.invI;
   };
 
+  /* 静置抑制：已经挨着东西、速度又极小的球直接停住，免得整堆慢慢蠕动 */
+  World.prototype.stabilizeRest = function () {
+    var bodies = this.bodies;
+    if (this.restSpeed <= 0) return;
+    for (var i = 0; i < bodies.length; i++) {
+      var b = bodies[i];
+      if (b.isStatic || b._contacts === 0) continue;
+      if (b.vx * b.vx + b.vy * b.vy < this.restSpeed * this.restSpeed) {
+        b.vx = 0;
+        b.vy = 0;
+        if (Math.abs(b.omega) < this.restSpin) b.omega = 0;
+      }
+    }
+  };
+
   /* 兜底：把球硬夹回场地内，杜绝贴墙穿透 */
   World.prototype.clampToBounds = function () {
     var bodies = this.bodies;
@@ -310,7 +345,8 @@
       var r = b.r;
       if (b.x - r < 0) b.x = r;
       else if (b.x + r > this.w) b.x = this.w - r;
-      if (b.y + r > this.h) b.y = this.h - r;
+      if (b.y - r < 0) b.y = r;
+      else if (b.y + r > this.h) b.y = this.h - r;
     }
   };
 

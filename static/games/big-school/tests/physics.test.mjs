@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url);
 const P = require(path.join(HERE, '..', 'physics.js'));
 
 const W = 514, H = 700;          // 框顶挪到原来的虚线处后等比放大 700/572
-const DANGER_Y = 2;              // 警戒线 = 框顶
+const DANGER_Y = 52;             // 警戒线：框顶往下 52px
 const DROP_PAD = 4;              // 球出现在框顶下方 4px
 const TIER_PCT = [54.4, 41.0, 41.0, 34.4, 28.2, 24.5, 20.2, 15.7, 14.4, 10.6, 7.0];
 const N = TIER_PCT.length;

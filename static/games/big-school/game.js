@@ -74,7 +74,10 @@
   var H = 700;
   var BOX_SCALE = 700 / 572;           // 572 = 原来 700 高的框减去 128 的死区
   var W = Math.round(420 * BOX_SCALE); // 514
-  var DANGER_Y = 2;                   // 警戒线 = 框顶（留 2px 让虚线画在框内沿）
+  /* 警戒线：框顶往下 52px（约等于最大的可投放球的半径）。
+     之前贴着框顶（2px）时，刚性天花板会让球堆顶停在离顶几像素的地方，
+     永远进不了那 2px 的判定带，于是「看着顶到顶了却死不了」。 */
+  var DANGER_Y = 52;
   var DROP_PAD = 4;                   // 球出现时贴着框顶：y = r + DROP_PAD
   var COOLDOWN = 0.34;
   var FIXED = 1 / 120;
@@ -616,8 +619,8 @@
     ctx.restore();
   }
 
-  /* 警戒线现在就是框顶（DANGER_Y 只留一点点，让虚线画在框内沿） */
-  var WARN_H = 46;
+  /* 警戒线 = DANGER_Y，线以上到框顶这一条是溢出区 */
+  var WARN_H = DANGER_Y + 46;
 
   function drawDanger() {
     var a = 0.2 + warnLevel * 0.65;
@@ -672,36 +675,11 @@
     var x = clamp(heldX, t.r + 2, W - t.r - 2);
     var y = dropY(t);                 // 贴着框顶
 
-    var gy = guideY(x);
-    ctx.save();
-    ctx.setLineDash([5, 8]);
-    ctx.lineWidth = 1.2;
-    ctx.strokeStyle = hexA(t.color, 0.45);
-    ctx.beginPath();
-    ctx.moveTo(x, y + t.r);
-    ctx.lineTo(x, gy);
-    ctx.stroke();
-    ctx.restore();
-
     ctx.save();
     ctx.globalAlpha = cooldown > 0 ? 0.3 : 1;
     var s = t.spriteSize;
     ctx.drawImage(t.sprite, x - s / 2, y - s / 2, s, s);
     ctx.restore();
-  }
-
-  function guideY(x) {
-    var y = H;
-    var bodies = world.bodies;
-    for (var i = 0; i < bodies.length; i++) {
-      var b = bodies[i];
-      var dx = b.x - x;
-      if (Math.abs(dx) < b.r) {
-        var top = b.y - Math.sqrt(Math.max(0, b.r * b.r - dx * dx));
-        if (top < y) y = top;
-      }
-    }
-    return y;
   }
 
   function drawParticles() {
@@ -840,12 +818,13 @@
 
   /* ============================================================
    * 分享
-   * 说明：这是个本地 HTML，没有可分享的网址，所以分享的是「文案」。
+   * 说明：游戏挂在站点上，分享文案里带上固定网址；
    * 手机上「系统分享」会调起系统面板（里面有微信、朋友圈、QQ、B站）；
    * 桌面端走各家的网页分享入口，微信/朋友圈只能复制文案自己粘。
    * ============================================================ */
   var toastTimer = 0;
   var paused = false;
+  var SHARE_URL = 'https://catrix.net/games/big-school';
 
   function shareText() {
     var goal = TIERS.length ? TIERS[0].school.name : '学校';
@@ -853,7 +832,8 @@
       ? '我在《合成大 · 学校》里把【' + goal + '】合出来了！'
       : '我在《合成大 · 学校》里拿了 ';
     var tail = won ? '' : '本局球王是' + goal + '，';
-    return head + score + ' 分（最高 ' + best + ' 分）。' + tail + '你能合到哪一所？';
+    return head + score + ' 分（最高 ' + best + ' 分）。' + tail +
+      '你能合到哪一所？来玩：' + SHARE_URL;
   }
 
   function openShare() {
@@ -924,8 +904,7 @@
 
   function shareTo(kind) {
     var t = shareText();
-    var url = '';
-    try { url = location.href; } catch (e) { url = ''; }
+    var url = SHARE_URL;          // 用站点上的固定地址，file:// 打开时也分享得出去
     var enc = encodeURIComponent;
     var title = enc('合成大 · 学校');
     if (kind === 'qq') {
@@ -957,6 +936,9 @@
     TIER_PCT: TIER_PCT,
     TIER_PROB: TIER_PROB,
     DROP_P_MIN: DROP_P_MIN,
+    SHARE_URL: SHARE_URL,
+    shareText: shareText,
+    randTier: randTier,            // 暴露出来给测试做分布抽样
     W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY
   };
 })();

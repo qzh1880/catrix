@@ -79,6 +79,9 @@
     </div>
     {{ end }}
     
+    {{/* 评论区的开关、资源和表单集中在 partial 中，方便单独维护。 */}}
+    {{ partial "comments.html" . }}
+
 <!-- Related Posts (条件判断控制) -->
     {{ $showRelated := default .Site.Params.showRelated .Params.showRelated }}
     {{ if $showRelated }}

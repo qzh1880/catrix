@@ -1,0 +1,21 @@
+# 规则测试不需要浏览器和后台；保持小游戏可以直接部署到 GitHub Pages。
+name: Tetris tests
+on:
+  pull_request:
+    paths: ['static/games/tetris/**', 'assets/js/games-embed.js', '.github/workflows/tetris-test.yml']
+  push:
+    branches: [main]
+    paths: ['static/games/tetris/**', 'assets/js/games-embed.js', '.github/workflows/tetris-test.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test static/games/tetris/tests/engine.test.mjs
+      - run: node --check static/games/tetris/game.js
+      - run: node --check assets/js/games-embed.js

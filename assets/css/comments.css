@@ -40,3 +40,13 @@
 .article-comments [hidden] { display: none !important; }
 /* 窄屏改为纵向排列提示和按钮，输入框使用可用宽度。 */
 @media (max-width: 560px) { .article-comments { margin-top: 40px; } .comment-form { padding: 18px; } .comment-form__actions { flex-direction: column; align-items: stretch; } .comment-form__footnote { flex-direction: column; gap: 6px; } .comment-form input { max-width: none; } }
+
+/* 回复保留单层上下文；举报表单在当前留言下展开，手机上自动换行。 */
+.comment-actions { display:flex; flex-wrap:wrap; align-items:start; gap:12px; margin-top:12px; }
+.comment-actions details { flex:1; min-width:160px; }
+.comment-actions summary { cursor:pointer; padding:10px; font-size:.84rem; min-height:44px; box-sizing:border-box; }
+.comment-report-form { padding:12px; border:1px solid var(--color-border,#dedfd8); }
+.comment-report-form label { display:block; font-size:.85rem; }
+.comment-report-form select { display:block; max-width:100%; margin:8px 0; padding:10px; font:inherit; }
+.comment-item .comment-reply-context { border-left:2px solid #abb7a3; padding-left:12px; color:var(--color-text-secondary,#62665d); font-size:.8rem; }
+#comment-reply { margin:0 0 16px; } #comment-reply-label { overflow-wrap:anywhere; }

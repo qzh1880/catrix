@@ -17,9 +17,10 @@
         <fieldset id="comment-fields">
           <label for="comment-nickname">怎么称呼你 <span>公开显示 · 无需注册</span></label>
           <input id="comment-nickname" name="nickname" type="text" maxlength="40" required autocomplete="nickname" placeholder="你的昵称" aria-describedby="comment-policy">
+          <div id="comment-reply" hidden><p id="comment-reply-label"></p><button type="button" id="comment-cancel-reply">取消回复</button></div>
           <label for="comment-body">你的留言</label>
           <textarea id="comment-body" name="body" rows="5" minlength="2" maxlength="2000" required placeholder="从这篇文章出发，聊聊你的想法…" aria-describedby="comment-policy comment-counter"></textarea>
-          <div class="comment-form__footnote"><p id="comment-policy">评论经编辑审核后公开。请友善讨论，勿留下手机号等私人信息。</p><span id="comment-counter">0 / 2000</span></div>
+          <div class="comment-form__footnote"><p id="comment-policy">评论提交后立即公开，管理员可删除不当留言。请友善讨论，勿留下手机号等私人信息。</p><span id="comment-counter">0 / 2000</span></div>
           <div class="comment-form__actions"><span>每一条认真表达，都值得被看见。</span><button type="submit" id="comment-send" disabled><span id="comment-send-label">提交留言</span><span aria-hidden="true">↗</span></button></div>
         </fieldset>
         <p class="comment-status" id="comment-submit-status" role="status" aria-live="polite"></p>

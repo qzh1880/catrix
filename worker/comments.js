@@ -70,6 +70,27 @@ function beforeId(url) {
   return id;
 }
 
+// 举报和留言使用不同限流桶，举报不会耗尽读者的留言配额。
+async function reportComment(request, env, data, reply) {
+  if (!Number.isSafeInteger(data.id) || data.id < 1 || !validArticle(data.article) ||
+      !['spam', 'abuse', 'privacy', 'other'].includes(data.reason)) return reply({ error: "举报参数不正确。" }, 400);
+  const target = await env.DB.prepare("SELECT id FROM comments WHERE id = ? AND article = ? AND status = 'approved' AND body != ''").bind(data.id, data.article).first();
+  if (!target) return reply({ error: "评论不存在或已删除。" }, 404);
+  const ip = request.headers.get('CF-Connecting-IP');
+  if (!ip || !env.COMMENTS_RATE_SALT || env.COMMENTS_RATE_SALT.length < 32) return reply({ error: "举报服务尚未配置。" }, 503);
+  const now = Math.floor(Date.now() / 1000), window = Math.floor(now / 600);
+  const hash = await crypto.subtle.digest('SHA-256', encoder.encode(`${env.COMMENTS_RATE_SALT}:report:${window}:${ip}`));
+  const bucket = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
+  const exists = await env.DB.prepare('SELECT id FROM comment_reports WHERE comment_id = ? AND reporter_bucket = ?').bind(data.id, bucket).first();
+  if (exists) return reply({ ok: true, message: '举报已收到，请等待管理员处理。' });
+  await env.DB.prepare('DELETE FROM comment_rate_limits WHERE expires_at < ?').bind(now).run();
+  const limit = await env.DB.prepare('INSERT INTO comment_rate_limits (bucket, count, expires_at) VALUES (?, 1, ?) ON CONFLICT(bucket) DO UPDATE SET count = count + 1 WHERE count < ? RETURNING count').bind(bucket, (window + 1) * 600, 10).first();
+  if (!limit) return reply({ error: '举报较频繁，请稍后再试。' }, 429, { 'Retry-After': String((window + 1) * 600 - now) });
+  // SQL 再检查目标状态，避免管理员同时删除后仍插入新的举报。
+  await env.DB.prepare("INSERT INTO comment_reports (comment_id, reporter_bucket, reason) SELECT id, ?, ? FROM comments WHERE id = ? AND status = 'approved' AND body != '' ON CONFLICT(comment_id, reporter_bucket) DO NOTHING").bind(bucket, data.reason, data.id).run();
+  return reply({ ok: true, message: '举报已收到，请等待管理员处理。' }, 201);
+}
+
 export async function handleComments(request, env, url = new URL(request.url)) {
   const admin = url.pathname.startsWith("/admin/comments");
   const origin = request.headers.get("Origin");
@@ -101,19 +122,33 @@ export async function handleComments(request, env, url = new URL(request.url)) {
       const key = request.headers.get("X-Comments-Key") || "";
       if (key.length > 512 || !await sameSecret(key, env.COMMENTS_ADMIN_KEY)) return reply({ error: "审核凭证不正确。" }, 401);
       if (url.pathname === "/admin/comments/list" && request.method === "GET") {
-        const status = url.searchParams.get("status") || "pending";
-        if (!STATUSES.has(status)) return reply({ error: "审核状态不正确。" }, 400);
-        const rows = (await env.DB.prepare(
-          "SELECT id, article, nickname, body, status, created_at FROM comments WHERE status = ? AND id < ? ORDER BY id DESC LIMIT 31"
-        ).bind(status, beforeId(url)).all()).results;
+        const status = url.searchParams.get("status") || "approved";
+        if (!STATUSES.has(status) && status !== "reported") return reply({ error: "审核状态不正确。" }, 400);
+        const rows = status === 'reported'
+          ? (await env.DB.prepare("SELECT c.id, c.article, c.nickname, c.body, c.status, c.created_at, COUNT(r.id) AS report_count, GROUP_CONCAT(DISTINCT r.reason) AS report_reasons FROM comments c JOIN comment_reports r ON r.comment_id = c.id AND r.status = 'pending' WHERE c.body != '' AND c.id < ? GROUP BY c.id ORDER BY c.id DESC LIMIT 31").bind(beforeId(url)).all()).results
+          : (await env.DB.prepare("SELECT id, article, nickname, body, status, created_at FROM comments WHERE status = ? AND body != '' AND id < ? ORDER BY id DESC LIMIT 31").bind(status, beforeId(url)).all()).results;
         // 多取一条判断是否还有下一页；额外那条留给下次请求返回。
         return reply({ comments: rows.slice(0, 30), next: rows.length > 30 ? rows[29].id : null });
+      }
+      if (url.pathname === '/admin/comments/resolve-reports' && request.method === 'POST') {
+        const data = await readJson(request);
+        if (!Number.isSafeInteger(data.id) || data.id < 1) return reply({ error: '评论编号不正确。' }, 400);
+        await env.DB.prepare("UPDATE comment_reports SET status = 'resolved' WHERE comment_id = ?").bind(data.id).run();
+        return reply({ ok: true });
+      }
+      if (url.pathname === "/admin/comments/delete" && request.method === "POST") {
+        const data = await readJson(request);
+        if (!Number.isSafeInteger(data.id) || data.id < 1) return reply({ error: "评论编号不正确。" }, 400);
+        // 清除用户内容，保留提交标识作为删除记录，防止超时重试重新发布。
+        const result = await env.DB.prepare("UPDATE comments SET nickname = '', body = '', status = 'rejected' WHERE id = ?").bind(data.id).run();
+        await env.DB.prepare("UPDATE comment_reports SET status = 'resolved' WHERE comment_id = ?").bind(data.id).run();
+        return result.meta.changes ? reply({ ok: true }) : reply({ error: "评论不存在。" }, 404);
       }
       if (url.pathname === "/admin/comments/moderate" && request.method === "POST") {
         // 审核仅修改状态，隐藏后仍可恢复；使用 POST 避免访问链接就改变数据。
         const data = await readJson(request);
         if (!Number.isSafeInteger(data.id) || data.id < 1 || !STATUSES.has(data.status)) return reply({ error: "审核参数不正确。" }, 400);
-        const result = await env.DB.prepare("UPDATE comments SET status = ? WHERE id = ?").bind(data.status, data.id).run();
+        const result = await env.DB.prepare("UPDATE comments SET status = ? WHERE id = ? AND body != ''").bind(data.status, data.id).run();
         return result.meta.changes ? reply({ ok: true }) : reply({ error: "评论不存在。" }, 404);
       }
       return reply({ error: "接口或请求方法不正确。" }, 405);
@@ -123,13 +158,17 @@ export async function handleComments(request, env, url = new URL(request.url)) {
       const article = url.searchParams.get("article");
       if (!validArticle(article)) return reply({ error: "文章地址不正确。" }, 400);
       const rows = (await env.DB.prepare(
-        "SELECT id, nickname, body, created_at FROM comments WHERE article = ? AND status = 'approved' AND id < ? ORDER BY id DESC LIMIT 21"
+        "SELECT c.id, c.nickname, c.body, c.created_at, c.parent_id, CASE WHEN p.status = 'approved' AND p.body != '' THEN p.nickname ELSE NULL END AS parent_nickname, CASE WHEN p.status = 'approved' AND p.body != '' THEN substr(p.body, 1, 120) ELSE NULL END AS parent_body FROM comments c LEFT JOIN comments p ON p.id = c.parent_id WHERE c.article = ? AND c.status = 'approved' AND c.id < ? ORDER BY c.id DESC LIMIT 21"
       ).bind(article, beforeId(url)).all()).results;
       return reply({ comments: rows.slice(0, 20), next: rows.length > 20 ? rows[19].id : null });
     }
     if (request.method !== "POST") return reply({ error: "请求方法不正确。" }, 405, { Allow: "GET, POST, OPTIONS" });
     if (!allowed) return reply({ error: "请从网站文章页提交评论。" }, 403);
     const data = await readJson(request);
+    if (data.action === 'report') return await reportComment(request, env, data, reply);
+    if (data.action && data.action !== 'comment') return reply({ error: '请求操作不正确。' }, 400);
+    const parentId = data.parentId ?? null;
+    if (parentId !== null && (!Number.isSafeInteger(parentId) || parentId < 1)) return reply({ error: '回复目标不正确。' }, 400);
     // 浏览器表单校验可以被绕过，因此服务端还要检查字段类型、长度和控制字符。
     const nickname = typeof data.nickname === "string" ? data.nickname.trim() : "";
     const body = typeof data.body === "string" ? data.body.trim() : "";
@@ -138,12 +177,18 @@ export async function handleComments(request, env, url = new URL(request.url)) {
         typeof data.requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.requestId)) {
       return reply({ error: "请填写 1–40 字符昵称及 2–2000 字符评论。" }, 400);
     }
-    const existing = await env.DB.prepare("SELECT article, nickname, body FROM comments WHERE request_id = ?").bind(data.requestId).first();
+    const existing = await env.DB.prepare("SELECT article, nickname, body, parent_id FROM comments WHERE request_id = ?").bind(data.requestId).first();
     // 超时重试可能发生在数据库已成功写入之后；相同标识、相同内容直接返回回执。
     // 此检查放在限流前，正常重试不重复扣除配额。
     if (existing) {
-      if (existing.article !== data.article || existing.nickname !== nickname || existing.body !== body) return reply({ error: "请重新提交。" }, 409);
-      return reply({ ok: true, message: "评论已收到，审核通过后显示。" });
+      if (existing.body === "") return reply({ error: "这条评论已被管理员删除。" }, 410);
+      if (existing.article !== data.article || existing.nickname !== nickname || existing.body !== body || existing.parent_id !== parentId) return reply({ error: "请重新提交。" }, 409);
+      return reply({ ok: true, message: "评论已提交，请查看留言列表。" });
+    }
+    // 仅允许回复同一文章的公开顶层留言，禁止跨文章关联或形成多层嵌套。
+    if (parentId !== null) {
+      const parent = await env.DB.prepare("SELECT id FROM comments WHERE id = ? AND article = ? AND parent_id IS NULL AND status = 'approved' AND body != ''").bind(parentId, data.article).first();
+      if (!parent) return reply({ error: '原留言已删除或无法回复，请取消回复后重试。' }, 409);
     }
     const ip = request.headers.get("CF-Connecting-IP");
     // 线上由 Cloudflare 提供客户端 IP；本地预览脚本用连接地址模拟该请求头。
@@ -163,10 +208,15 @@ export async function handleComments(request, env, url = new URL(request.url)) {
     ).bind(bucket, (window + 1) * 600, quota).first();
     if (!limit) return reply({ error: "提交较频繁，请稍后再试。" }, 429, { "Retry-After": String((window + 1) * 600 - now) });
     await env.DB.prepare(
-      // 唯一约束处理并发重试；省略 status 字段，使用数据库默认的 pending 状态。
-      "INSERT INTO comments (request_id, article, nickname, body) VALUES (?, ?, ?, ?) ON CONFLICT(request_id) DO NOTHING"
-    ).bind(data.requestId, data.article, nickname, body).run();
-    return reply({ ok: true, message: "评论已收到，审核通过后显示。" }, 201);
+      // 唯一约束处理并发重试；显式写入 approved，新旧数据库均直接公开新留言。
+      "INSERT INTO comments (request_id, article, nickname, body, status, parent_id) SELECT ?, ?, ?, ?, 'approved', ? WHERE ? IS NULL OR EXISTS (SELECT 1 FROM comments WHERE id = ? AND article = ? AND parent_id IS NULL AND status = 'approved' AND body != '') ON CONFLICT(request_id) DO NOTHING"
+    ).bind(data.requestId, data.article, nickname, body, parentId, parentId, parentId, data.article).run();
+    // 并发重试、父留言删除可能与写入交错，按最终数据库状态给出回执。
+    const saved = await env.DB.prepare('SELECT article, nickname, body, parent_id FROM comments WHERE request_id = ?').bind(data.requestId).first();
+    if (!saved) return reply({ error: '原留言已删除或无法回复。' }, 409);
+    if (saved.body === '') return reply({ error: '这条评论已被管理员删除。' }, 410);
+    if (saved.article !== data.article || saved.nickname !== nickname || saved.body !== body || saved.parent_id !== parentId) return reply({ error: '请重新提交。' }, 409);
+    return reply({ ok: true, message: "评论已提交，请查看留言列表。" }, 201);
   } catch (error) {
     // 已知输入错误给出明确提示；数据库等内部错误统一返回通用消息，不泄露细节。
     return reply({ error: error?.status ? error.message : "评论服务暂时不可用，请稍后再试。" }, error?.status || 503);

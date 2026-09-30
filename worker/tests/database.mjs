@@ -1,11 +1,14 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 // 在 SQLite 中运行真实迁移和查询，模拟业务用到的 D1 接口。
 // 不覆盖 Cloudflare 线上绑定、网络及运行时差异。
 export function createDatabase(filename = ':memory:') {
   const sqlite = new DatabaseSync(filename);
-  sqlite.exec(readFileSync(new URL('../migrations/0001_comments.sql', import.meta.url), 'utf8'));
+  // 按文件名依次执行所有迁移，模拟正式环境的升级顺序。
+  for (const file of readdirSync(new URL('../migrations/', import.meta.url)).filter(f => f.endsWith('.sql')).sort()) {
+    sqlite.exec(readFileSync(new URL('../migrations/' + file, import.meta.url), 'utf8'));
+  }
   return {
     sqlite,
     prepare(sql) {

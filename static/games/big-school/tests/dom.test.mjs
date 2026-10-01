@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = path.join(HERE, '..');
 const html = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');
+const css = fs.readFileSync(path.join(DIR, 'style.css'), 'utf8');
 
 let fails = 0;
 const expect = (c, m) => { console.log((c ? '  \u2713 ' : '  \u2717 FAIL: ') + m); if (!c) fails++; };
@@ -44,7 +45,10 @@ function makeEl(tag, id) {
     id: id || '',
     children: [],
     dataset: {},
-    style: {},
+    style: { setProperty(k, v) { this[k] = String(v); } },
+    attrs: {},
+    setAttribute(k, v) { this.attrs[k] = String(v); },
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
     parentNode: null,
     width: 0, height: 0,
     textContent: '', title: '', src: '', alt: '', type: '',
@@ -192,39 +196,13 @@ expect(['sfls', 'shnu', 'weiyu', 'caoyang', 'songjiang', 'fengxian', 'shixi', 's
 expect(ALL.filter(s => s.group === '市重点').length === 17, '市重点恰好 17 所');
 expect(ALL.filter(s => s.group === '四校').length === 4, '四校还是 4 所');
 
-/* ---------------- 难度选择器 ---------------- */
-console.log('\n--- difficulty selector ---');
+/* ---------------- 难度功能已移除 ---------------- */
 {
   const html = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');
-  expect(/id="diffEasy"/.test(html) && /id="diffNormal"/.test(html) && /id="diffHard"/.test(html),
-    '选校界面有三个难度按钮');
-  expect(/id="diffTip"/.test(html), '有一个显示当前难度说明的 diffTip');
-  expect(api().DIFF_ORDER.join(',') === 'easy,normal,hard', '难度顺序 简单/普通/困难');
-  expect(api().difficulty.key === 'hard', '默认难度是「困难」(got ' + api().difficulty.key + ')');
-
-  // 点按钮能切、按钮高亮跟着走、提示文字跟着变
-  byId.get('diffEasy').dispatch('click');
-  expect(api().difficulty.key === 'easy', '点「简单」切到 easy');
-  expect(byId.get('diffEasy').classList.contains('on'), '「简单」按钮被高亮');
-  expect(!byId.get('diffHard').classList.contains('on'), '「困难」按钮取消高亮');
-  expect(byId.get('diffTip').textContent.includes('简单'), '提示文字跟着切: "' + byId.get('diffTip').textContent + '"');
-  expect(store.bigschool_diff === 'easy', '难度写进了 localStorage');
-  byId.get('diffHard').dispatch('click');
-  expect(api().difficulty.key === 'hard', '切回「困难」');
-  // 三档的参数
-  const D = api().DIFFICULTY;
-  const shape = ['easy', 'normal', 'hard'].map(k => D[k].label + '/T=' + D[k].antiT + '/d=' + D[k].danger).join('  ');
-  console.log('  ' + shape);
-  expect(D.easy.antiT > 1, '简单档也开了避免连出（T > 1）');
-  expect(D.normal.antiT > D.easy.antiT && D.hard.antiT > D.normal.antiT,
-    '难度越高避免连出越强（T 递增）');
-  expect(D.normal.danger > D.easy.danger && D.hard.danger > D.normal.danger,
-    '难度越高警戒线越低（可用高度越小）');
-  expect(D.easy.temp === undefined && D.normal.temp === undefined && D.hard.temp === undefined,
-    '难度里已经没有「基础公式温度」这个旋钮了');
-  expect(D.easy.ballScale === undefined, '难度也不再改球径');
+  expect(!/diffEasy|diffNormal|diffHard|diffTip/.test(html), '选校界面已经没有难度按钮');
+  expect(api().DIFFICULTY === undefined && api().selectDifficulty === undefined,
+    'window.__bigschool 上已经没有难度相关的 API');
 }
-expect(store.bigschool_diff === 'hard', '难度选择被记住');
 
 // 每所学校的校徽文件都得真实存在，而且和 SCHOOLS 顺序一一对应
 {
@@ -310,30 +288,28 @@ for (const pick of [['shanghai-high', 'chosen=上中（四校）'], ['qibao', 'c
 expect(api().tiers[1].school.group === '四校', 'tier1 位置上是那一所随机四校（本轮排序结果）');
 
 /* ---------------- 基础落球概率 ---------------- */
-console.log('\n--- base P(k) = exp(k)/Σexp(i)（三档共用） ---');
+console.log('\n--- base P(k) = (e^(2k-1)+e^(2k)) / Σ_{i=1..22} e^i ---');
 {
   const E = Math.E;
-  const S = Array.from({ length: 11 }, (_, i) => Math.exp(i + 1)).reduce((a, b) => a + b, 0);
-  const ref = Array.from({ length: 11 }, (_, i) => Math.exp(i + 1) / S);
-  let first = null;
+  const denom = Array.from({ length: 22 }, (_, i) => Math.exp(i + 1)).reduce((a, b) => a + b, 0);
+  const ref = Array.from({ length: 11 }, (_, i) => (Math.exp(2 * (i + 1) - 1) + Math.exp(2 * (i + 1))) / denom);
+  const prob = api().TIER_PROB;
 
-  for (const key of ['easy', 'normal', 'hard']) {
-    api().selectDifficulty(key);
-    const d = api().difficulty;
-    const prob = api().TIER_PROB;
-    const tag = '[' + d.label + '] ';
-
-    expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-15, tag + '概率之和为 1');
-    expect(prob.every((p, i) => Math.abs(p - ref[i]) < 1e-18), tag + 'P(k) = exp(k)/Σexp(i)，k = 索引+1');
-    expect(prob.every((p, i) => i === 0 || prob[i - 1] < p), tag + '概率随档位（越小越大）单调上升');
-    const ratios = prob.slice(1).map((p, i) => p / prob[i]);
-    expect(Math.max(...ratios.map(r => Math.abs(r - E))) < 1e-12, tag + '相邻概率之比恒为 e');
-    if (!first) first = prob.slice();
-    else expect(prob.every((p, i) => p === first[i]), tag + '基础概率和另外两档逐位相同（难度不改基础公式）');
-  }
-  console.log('  ' + ref.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(3) + '%').join(' '));
-  expect(Math.abs(S - E * (Math.pow(E, 11) - 1) / (E - 1)) / S < 1e-14, '分母等于闭式解 e(e^11-1)/(e-1)');
-  expect(ref.slice(6).reduce((a, b) => a + b, 0) > 0.99, '最小的 5 档占 99% 以上');
+  expect(prob.length === 11, '11 档各有一个概率');
+  expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-15, '概率之和为 1');
+  expect(prob.every((p, i) => Math.abs(p - ref[i]) < 1e-18),
+    'P(k) = (e^(2k-1) + e^(2k)) / Σ_{i=1..22} e^i，k = 索引+1');
+  expect(prob.every((p, i) => i === 0 || prob[i - 1] < p), '概率随档位（越小越大）单调上升');
+  // 不看公式本身、只看数列形状：相邻两项的比恒为 e²
+  const want = E * E;
+  const ratios = prob.slice(1).map((p, i) => p / prob[i]);
+  const worst = Math.max(...ratios.map(r => Math.abs(r - want)));
+  expect(worst < 1e-12 * want, '相邻概率之比恒为 e²=' + want.toFixed(6) + '（最大误差 ' + worst.toExponential(2) + '）');
+  // 11 对分子加起来正好把分母的 22 项分完
+  const numSum = Array.from({ length: 11 }, (_, i) => Math.exp(2 * (i + 1) - 1) + Math.exp(2 * (i + 1))).reduce((a, b) => a + b, 0);
+  expect(Math.abs(numSum - denom) / denom < 1e-15, 'Σ(11 对分子) 正好等于分母 Σ_{i=1..22} e^i');
+  console.log('  ' + ref.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(4) + '%').join(' '));
+  expect(ref.slice(8).reduce((a, b) => a + b, 0) > 0.99, '最小的 3 档占 99% 以上');
 
   /* 逆累积分布：11 个区间的中点/下边界逐个钉死随机数核对（每次都先清空连出状态） */
   const realRandom = Math.random;
@@ -350,99 +326,93 @@ console.log('\n--- base P(k) = exp(k)/Σexp(i)（三档共用） ---');
     const lo = i === 0 ? 0 : cum[i - 1];
     const mid = lo + (cum[i] - lo) / 2;
     if (at(mid) !== i) { boundaryOk = false; bad = '区间中点 u=' + mid + ' 应得索引 ' + i; break; }
-    if (at(lo) !== i) { boundaryOk = false; bad = '下边界 u=' + lo + ' 应得索引 ' + i; break; }
+    // 边界处 randTier 会乘一个 total（≈1 但不是刚好 1），所以用 1e-9 的相对余量跨过边界
+    if (at(lo * (1 + 1e-9)) !== i) { boundaryOk = false; bad = '刚过下边界 u=' + lo * (1 + 1e-9) + ' 应得索引 ' + i; break; }
     if (i > 0 && at(lo * (1 - 1e-9)) !== i - 1) {
       boundaryOk = false; bad = 'u 刚好在 cum[' + (i - 1) + '] 之前应得索引 ' + (i - 1); break;
     }
   }
   expect(boundaryOk, 'u 落在哪个累积区间就返回哪一档' + (boundaryOk ? '' : '（' + bad + '）'));
 
-  /* 卡方：每抽一次之前都清空连出状态，于是每一次都是按基础分布抽的 */
+  /* 卡方：每抽一次之前都清空连出状态，于是每一次都是按基础分布抽的。
+     新公式下 #1~#7 的期望次数 < 1（#1 只有 0.0007 次），不能各占一格，
+     所以把最小的 7 档并成一个桶，剩下 #8~#11 各一格，共 5 格（df=4）。 */
   const N = 400000;
   const hits = new Array(11).fill(0);
   for (let k = 0; k < N; k++) { api().resetAntiRepeat(); hits[api().randTier()]++; }
+  const bins = [
+    { name: '#1~#7', obs: hits.slice(0, 7).reduce((a, b) => a + b, 0), exp: N * ref.slice(0, 7).reduce((a, b) => a + b, 0) },
+    { name: '#8', obs: hits[7], exp: N * ref[7] },
+    { name: '#9', obs: hits[8], exp: N * ref[8] },
+    { name: '#10', obs: hits[9], exp: N * ref[9] },
+    { name: '#11', obs: hits[10], exp: N * ref[10] }
+  ];
   let chi2 = 0;
-  for (let i = 0; i < 11; i++) {
-    const exp = N * ref[i];
-    chi2 += (hits[i] - exp) * (hits[i] - exp) / exp;
-  }
-  const maxDev = Math.max(...hits.map((h, i) => Math.abs(h - N * ref[i]) / Math.sqrt(N * ref[i])));
-  console.log('  抽 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=10，α=1e-6 临界 41.82），最大偏差 ' + maxDev.toFixed(2) + 'σ');
-  expect(chi2 < 41.82, '基础分布抽样符合公式（卡方 ' + chi2.toFixed(2) + '）');
-  expect(maxDev < 5, '每档抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
+  for (const b of bins) chi2 += (b.obs - b.exp) * (b.obs - b.exp) / b.exp;
+  const maxDev = Math.max(...bins.map(b => Math.abs(b.obs - b.exp) / Math.sqrt(b.exp)));
+  console.log('  ' + bins.map(b => b.name + ' 期望 ' + b.exp.toFixed(0) + ' 实测 ' + b.obs).join(' | '));
+  console.log('  抽 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=4，α=1e-6 临界 26.28），最大偏差 ' + maxDev.toFixed(2) + 'σ');
+  expect(chi2 < 26.28, '基础分布抽样符合公式（卡方 ' + chi2.toFixed(2) + '）');
+  expect(maxDev < 5, '每桶抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
 }
 
 /* ---------------- 避免连出 ---------------- */
-console.log('\n--- anti-repeat: P\'(k)=P(k)·T^(-n) ---');
+console.log('\n--- anti-repeat: P\'(k)=P(k)·T^(-n)，T = ' + api().ANTI_REPEAT_T + ' ---');
 {
   const realRandom = Math.random;
-  const base = () => api().TIER_PROB;
+  const B = api().TIER_PROB;
+  const T = api().ANTI_REPEAT_T;
+  expect(T === 1.1, '避免连出强度是固定常数 T = 1.1（不再跟难度绑定）');
 
-  for (const key of ['easy', 'normal', 'hard']) {
-    api().selectDifficulty(key);
-    const T = api().difficulty.antiT;
-    const tag = '[' + api().difficulty.label + ' T=' + T + '] ';
-    const B = base();
+  // 钉死随机数 => 一直取最后一档，连出计数 n 应该一路涨
+  api().resetAntiRepeat();
+  Math.random = () => 0.999999;
+  const seq = [];
+  for (let i = 0; i < 4; i++) seq.push(api().randTier());
+  Math.random = realRandom;
+  expect(seq.every(x => x === 10), '钉死随机数后连续抽到同一档（索引 10）');
+  expect(api().antiRepeat.n === 4 && api().antiRepeat.last === 10, '连出计数 n=4、last=10');
 
-    // 钉死随机数 => 一直取最后一档，连出计数 n 应该一路涨
-    api().resetAntiRepeat();
-    Math.random = () => 0.999999;
-    const seq = [];
-    for (let i = 0; i < 4; i++) seq.push(api().randTier());
-    Math.random = realRandom;
-    expect(seq.every(x => x === 10), tag + '钉死随机数后连续抽到同一档（索引 10）');
-    expect(api().antiRepeat.n === 4 && api().antiRepeat.last === 10, tag + '连出计数 n=4、last=10');
+  const p = api().dropProb();
+  const damp = Math.pow(T, -4);
+  const freed = B[10] * (1 - damp);
+  const restW = 1 - B[10];
+  expect(Math.abs(p[10] - B[10] * damp) < 1e-15,
+    'P\'(k) = P(k)·T^(-n)：' + (B[10] * damp * 100).toFixed(4) + '%（未修正 ' + (B[10] * 100).toFixed(4) + '%）');
+  expect(p.every((x, i) => i === 10 || Math.abs(x - B[i] * (1 + freed / restW)) < 1e-15),
+    '让出的概率按 e^i 的比例分给其余所有球');
+  expect(Math.abs(p.reduce((a, b) => a + b, 0) - 1) < 1e-14, '修正后仍是概率分布（和为 1）');
+  expect(p.every(x => x > 0), '修正后没有任何一档被压成 0');
+  console.log('  n=4 时 #11=' + (p[10] * 100).toFixed(4) + '%  #10=' + (p[9] * 100).toFixed(4) +
+    '%  #9=' + (p[8] * 100).toFixed(4) + '%（基础分别是 ' +
+    (B[10] * 100).toFixed(4) + '% / ' + (B[9] * 100).toFixed(4) + '% / ' + (B[8] * 100).toFixed(4) + '%）');
 
-    const p = api().dropProb();
-    const damp = Math.pow(T, -4);
-    const freed = B[10] * (1 - damp);
-    const restW = 1 - B[10];
-    expect(Math.abs(p[10] - B[10] * damp) < 1e-15,
-      tag + 'P\'(k) = P(k)·T^(-n)：' + (B[10] * damp * 100).toFixed(4) + '%（未修正 ' + (B[10] * 100).toFixed(3) + '%）');
-    expect(p.every((x, i) => i === 10 || Math.abs(x - B[i] * (1 + freed / restW)) < 1e-15),
-      tag + '让出的概率按 e^i 的比例分给其余所有球');
-    expect(Math.abs(p.reduce((a, b) => a + b, 0) - 1) < 1e-14, tag + '修正后仍是概率分布（和为 1）');
-    expect(p.every(x => x > 0), tag + '修正后没有任何一档被压成 0');
-    console.log('  ' + tag + 'n=4 时 #11=' + (p[10] * 100).toFixed(3) + '%  #10=' + (p[9] * 100).toFixed(3) +
-      '%  #9=' + (p[8] * 100).toFixed(3) + '%（基础分别是 ' +
-      (B[10] * 100).toFixed(3) + '% / ' + (B[9] * 100).toFixed(3) + '% / ' + (B[8] * 100).toFixed(3) + '%）');
-  }
-
-  // 连出越多压得越狠
-  api().selectDifficulty('hard');
-  const B = base(), T = api().difficulty.antiT;
+  // n=1 压到 1/T、n=2 压到 1/T²
   api().resetAntiRepeat();
   Math.random = () => 0.999999;
   const p1 = (api().randTier(), api().dropProb().slice());
   const p2 = (api().randTier(), api().dropProb().slice());
   Math.random = realRandom;
-  expect(p2[10] < p1[10] && Math.abs(p1[10] - B[10] / T) < 1e-15 && Math.abs(p2[10] - B[10] / (T * T)) < 1e-15,
-    'T=2.8 时 n=1 压到 1/T、n=2 压到 1/T²');
+  expect(Math.abs(p1[10] - B[10] / T) < 1e-15 && Math.abs(p2[10] - B[10] / (T * T)) < 1e-15,
+    'n=1 压到 1/T、n=2 压到 1/T²');
+
   api().resetAntiRepeat();
-  expect(api().dropProb().every((x, i) => x === B[i]), '清空连出状态后 dropProb() 就等于基础分布');
+  expect(api().dropProb().every((x, i) => Math.abs(x - B[i]) < 1e-15), '清空连出状态后 dropProb() 就等于基础分布');
 
-  // 经验验证：连出率应该随 T 单调下降
-  const repeatRate = (key, n) => {
-    api().selectDifficulty(key);
-    api().resetAntiRepeat();
-    let reps = 0, last = -1;
-    for (let i = 0; i < n; i++) { const t = api().randTier(); if (t === last) reps++; last = t; }
-    return reps / n;
-  };
-  const rEasy = repeatRate('easy', 60000), rNormal = repeatRate('normal', 60000), rHard = repeatRate('hard', 60000);
-  const rBase = B.reduce((a, p) => a + p * p, 0);
-  console.log('  理论「无修正」连出率 = ' + (rBase * 100).toFixed(1) + '%；实测 简单 ' +
-    (rEasy * 100).toFixed(1) + '% / 普通 ' + (rNormal * 100).toFixed(1) + '% / 困难 ' + (rHard * 100).toFixed(1) + '%');
-  expect(rHard < rNormal && rNormal < rEasy && rEasy < rBase,
-    '难度越高越不容易连续出同一颗球');
-
-  api().selectDifficulty('hard');
-  expect(api().difficulty.key === 'hard', '测试结束把难度放回默认的「困难」');
+  // 经验验证：连出率应该明显低于「完全不开」的 ΣP(k)²
+  const rBase = B.reduce((a, q) => a + q * q, 0);
+  api().resetAntiRepeat();
+  let reps = 0, last = -1;
+  const RN = 200000;
+  for (let i = 0; i < RN; i++) { const t = api().randTier(); if (t === last) reps++; last = t; }
+  const rObs = reps / RN;
+  console.log('  连出率：理论「无修正」= ' + (rBase * 100).toFixed(1) + '%，实测开了避免连出 = ' + (rObs * 100).toFixed(1) + '%');
+  expect(rObs < rBase - 0.05, '避免连出把连出率压下来了');
 
   if (gameRunning()) {
     const chips = byId.get('chain').children.filter(c => String(c.className).indexOf('drop') >= 0);
     console.log('  合成链高亮档位数 = ' + chips.length);
-    expect(chips.length === api().TIER_PROB.filter(p => p >= api().DROP_P_MIN).length,
+    expect(chips.length === api().TIER_PROB.filter(q => q >= api().DROP_P_MIN).length,
       '合成链高亮的档位数和基础概率表一致');
   }
 }
@@ -458,8 +428,7 @@ expect(byId.get('chain').children.length > 11, 'merge chain strip populated');
 
 const W = api().W, H = api().H, DANGER = api().DANGER_Y;
 expect(W === 514 && H === 700, '把框顶挪到虚线处再等比放大后，框是 514x700（纵向仍是 700）');
-expect(DANGER === api().difficulty.danger,
-  '警戒线 = 当前难度的值（' + api().difficulty.label + ' → ' + DANGER + 'px）');
+expect(DANGER === 52, '警戒线固定在框顶往下 52px（不再跟难度绑定）');
 expect(Math.abs((W / H) - (514 / 700)) < 1e-9, '框的宽高比 = 514/700');
 
 // 鼠标：在 stage 上按下即投
@@ -610,6 +579,106 @@ expect(api().score === 0, 'restart resets score');
 byId.get('backBtn').dispatch('click');
 expect(byId.get('selectScreen').hidden === false, 'back returns to school selection');
 expect(byId.get('gameScreen').hidden === true, 'game screen hidden after back');
+
+/* ---------------- 开局选项 ---------------- */
+console.log('\n--- 多一所四校 ---');
+{
+  byId.get('extraFourBtn').dispatch('click');
+  await startWith('shanghai-high');
+  const t = api().tiers;
+  const fours = t.filter(x => x.school.group === '四校').map(x => x.school.id);
+  expect(t.length === 11, 'extraFour: still 11 types');
+  expect(fours.length === 3, 'extraFour: chosen + 2 random 四校 (got ' + fours.length + ')');
+  expect(new Set(fours).size === 3, 'extraFour: the two picks are different schools');
+  expect(t[1].school.group === '四校' && t[2].school.group === '四校', 'extraFour: tier 1 & 2 are both 四校');
+  expect(t.filter(x => LEGACY.indexOf(x.school.group) >= 0).length === 4 &&
+    t.filter(x => x.school.group === '市重点').length === 4, 'extraFour: 4 所现有 + 4 所市重点（让出一个市重点名额）');
+  byId.get('extraFourBtn').dispatch('click');
+}
+
+console.log('\n--- 球大小滑块 ---');
+{
+  const seg = byId.get('sizeSeg'), label = byId.get('sizeLabel');
+  const [rail, labels] = seg.children;
+  const part = cls => rail.children.filter(c => c.className === cls);
+  const [fill] = part('range-fill'), [knob] = part('range-knob'), dots = part('range-dot');
+  const names = labels.children;
+  const on = () => dots.map(d => (d.classList.contains('on') ? 1 : 0)).join('');
+  const cur = () => names.findIndex(n => n.classList.contains('cur'));
+  const at = (l, k) => label.textContent === l && knob.style.left === fill.style.width && cur() === k;
+  // 桩的 rect 一律 left 0 / 宽 520：0 -> 最左，260 -> 中间，9999 -> 最右
+  const press = x => { seg.dispatch('pointerdown', { clientX: x }); seg.dispatch('pointerup', {}); };
+
+  expect(dots.length === 3 && names.length === 3 && !!fill && !!knob, 'rail has fill, 3 stops, knob; 3 labels');
+  expect(dots.map(d => d.style.left).join(' ') === '0% 50% 100%', 'stops spread evenly (' + dots.map(d => d.style.left) + ')');
+  expect(names.every((n, i) => n.style.left === dots[i].style.left), 'each label sits under its stop');
+  expect(at('标准', 0) && knob.style.left === '0%' && on() === '100', 'default: 标准, knob on the first stop');
+
+  press(9999);
+  await startWith('shanghai-high');
+  const pct = api().tiers.map(x => x.r * 200 / api().W);
+  expect(Math.abs(pct[0] - 54.4 * 1.2) < 0.01, 'rightmost stop = +20% (' + pct[0].toFixed(1) + '%)');
+  expect(Math.abs(pct[10] - 7.0 * 1.2) < 0.01, 'smallest scaled too (' + pct[10].toFixed(1) + '%)');
+  expect(at('特大 20%', 2) && knob.style.left === '100%' && on() === '111', 'knob + fill at the right end');
+  expect(seg.getAttribute('aria-valuenow') === '2' && seg.getAttribute('aria-valuetext') === '特大 20%',
+    'aria value tracks the stop');
+
+  press(260);
+  expect(at('大 10%', 1) && knob.style.left === '50%' && on() === '110', 'snaps to the middle stop');
+  press(380);                       // 按分段算会落到第 3 段，按最近停靠点应是中间
+  expect(at('大 10%', 1), 'snaps to the nearest stop, not the segment');
+
+  press(0);
+  await startWith('shanghai-high');
+  expect(Math.abs(api().tiers[0].r * 200 / api().W - 54.4) < 0.01, 'leftmost stop = 标准');
+
+  seg.dispatch('pointerdown', { clientX: 0 });
+  expect(seg.classList.contains('drag'), 'dragging starts on press');
+  seg.dispatch('pointermove', { clientX: 9999 });
+  expect(label.textContent === '特大 20%', 'drag follows the finger to right');
+  seg.dispatch('pointermove', { clientX: 0 });
+  expect(label.textContent === '标准', 'drag follows the finger back to left');
+  seg.dispatch('pointerup', {});
+  expect(!seg.classList.contains('drag'), 'drag released');
+  seg.dispatch('pointermove', { clientX: 9999 });
+  expect(label.textContent === '标准', 'moving after release does nothing');
+
+  const key = k => { let p = false; seg.dispatch('keydown', { key: k, preventDefault() { p = true; } }); return p; };
+  expect(key('ArrowRight') && label.textContent === '大 10%', 'ArrowRight steps up');
+  key('End');
+  expect(label.textContent === '特大 20%', 'End jumps to max');
+  key('ArrowRight');
+  expect(label.textContent === '特大 20%', 'clamped at max');
+  key('Home');
+  expect(label.textContent === '标准', 'Home jumps to min');
+  expect(!key('a'), 'other keys are ignored');
+}
+
+console.log('\n--- 三击调整投放上限 ---');
+{
+  const chipsNow = () => byId.get('chain').children.filter(c => (c.className || '').indexOf('chip') === 0);
+  const tap = (chip, n) => { for (let k = 0; k < n; k++) chip.dispatch('click'); };
+
+  await startWith('shanghai-high');
+  expect(chipsNow().length === 11, 'one chip per tier (' + chipsNow().length + ')');
+  expect(api().dropTop === 8, 'default cap = smallest 3 tiers (top=' + api().dropTop + ')');
+
+  tap(chipsNow()[0], 3);
+  expect(api().dropTop === 8, 'triple-tapping 球王 does nothing');
+  tap(chipsNow()[1], 3);
+  expect(api().dropTop === 8, 'triple-tapping a 四校 does nothing');
+  tap(chipsNow()[3], 2);
+  expect(api().dropTop === 8, 'two taps do nothing');
+
+  tap(chipsNow()[3], 3);
+  expect(api().dropTop === 3, 'triple tap raises the cap to that tier (top=' + api().dropTop + ')');
+  const marks = chipsNow().map(c => (c.className || '').indexOf('drop') >= 0);
+  expect(marks[3] && marks[10] && !marks[2], 'chain highlights tiers 3..10 only');
+
+  tap(chipsNow()[3], 3);
+  expect(api().dropTop === 8, 'triple tap again restores the default');
+  expect(chipsNow()[3].className.indexOf('drop') < 0, 'highlight cleared after restore');
+}
 
 console.log('\n--- randTier 按公式取档 ---');
 {

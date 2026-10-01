@@ -21,17 +21,17 @@ function setup(t) {
   return { env, request, payload, post, list, moderate, db: DB.sqlite };
 }
 
-// 完整流程：提交不可见 → 通过后公开 → 隐藏后不可见 → 可再次恢复。
-test('submission is private until approved, isolated per article, and hidden after rejection', async t => {
+// 完整流程：提交立即公开，按文章隔离，并兼容旧版状态管理。
+test('submission is public immediately, isolated per article, and supports legacy moderation', async t => {
   const { post, payload, list, moderate, request } = setup(t);
   assert.equal((await post(payload())).status, 201);
-  assert.deepEqual((await (await list()).json()).comments, []);
+  assert.equal((await (await list()).json()).comments.length, 1);
   const admin = await request('/admin/comments/list', { headers: { 'X-Comments-Key': KEY } });
   const [{ id }] = (await admin.json()).comments;
   assert.equal((await moderate(id, 'approved')).status, 200);
   const data = await (await list()).json();
   assert.equal(data.comments.length, 1);
-  assert.deepEqual(Object.keys(data.comments[0]).sort(), ['body', 'created_at', 'id', 'nickname']);
+  assert.deepEqual(Object.keys(data.comments[0]).sort(), ['body', 'created_at', 'id', 'nickname', 'parent_body', 'parent_id', 'parent_nickname']);
   assert.equal((await (await list('/posts/another/')).json()).comments.length, 0);
   await moderate(id, 'rejected');
   assert.equal((await (await list()).json()).comments.length, 0);
@@ -142,7 +142,7 @@ test('public pagination is bounded and skips pending comments', async t => {
 
 test('admin pagination and state validation', async t => {
   const { request, moderate, db } = setup(t);
-  const insert = db.prepare('INSERT INTO comments (request_id, article, nickname, body) VALUES (?, ?, ?, ?)');
+  const insert = db.prepare("INSERT INTO comments (request_id, article, nickname, body, status) VALUES (?, ?, ?, ?, 'approved')");
   for (let i = 0; i < 35; i++) insert.run(crypto.randomUUID(), ARTICLE, '读者', '留言正文');
   const call = path => request(path, { headers: { 'X-Comments-Key': KEY } });
   const first = await (await call('/admin/comments/list')).json();
@@ -165,4 +165,29 @@ test('admin UI exposes no secret and forbids framing', async t => {
   assert.equal(response.status, 200);
   assert.ok(response.headers.get('Content-Security-Policy').includes("frame-ancestors 'none'"));
   assert.ok(!(await response.text()).includes(KEY));
+});
+
+// 删除不能绕过管理鉴权，重试也不能恢复已清除的内容。
+test('admin deletion clears content and prevents retry resurrection', async t => {
+  const { request, post, payload, list, db, moderate } = setup(t);
+  const data = payload();
+  await post(data);
+  const remove = (id, key = KEY) => request('/admin/comments/delete', {
+    method: 'POST', headers: { 'X-Comments-Key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  assert.equal((await remove(1, 'wrong')).status, 401);
+  assert.equal((await (await list()).json()).comments.length, 1);
+  assert.equal((await request('/admin/comments/delete?id=1', { headers: { 'X-Comments-Key': KEY } })).status, 405);
+  assert.equal((await remove(-1)).status, 400);
+  assert.equal((await remove(999)).status, 404);
+  assert.equal((await remove(1)).status, 200);
+  assert.equal((await remove(1)).status, 200);
+  assert.equal((await (await list()).json()).comments.length, 0);
+  const row = db.prepare('SELECT * FROM comments WHERE id = 1').get();
+  assert.equal(row.body, ''); assert.equal(row.nickname, '');
+  assert.equal((await post(data)).status, 410);
+  assert.equal((await moderate(1, 'approved')).status, 404);
+  const deleted = await request('/admin/comments/list?status=rejected', { headers: { 'X-Comments-Key': KEY } });
+  assert.equal((await deleted.json()).comments.length, 0);
 });

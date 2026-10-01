@@ -1,0 +1,13 @@
+.search-filters { display:flex; flex-wrap:wrap; gap:16px; margin:16px 0; }
+.search-filters label { font-size:.85rem; display:flex; align-items:center; gap:8px; }
+.search-filters select,.search-filters button { padding:10px; font:inherit; max-width:100%; background:var(--color-bg,#fff); color:var(--color-text,#222); border:1px solid #bbb; }
+#search-status { font-size:.85rem; color:var(--color-text-secondary,#666); }
+.search-results a { display:block; padding:18px 0; border-bottom:1px solid var(--color-border,#ddd); overflow-wrap:anywhere; }
+.search-results h4 { margin:4px 0; font-size:1.1rem; }
+.search-results p { font-size:.85rem; line-height:1.7; margin:6px 0; }
+.search-results small { font-size:.75rem; }
+.search-overlay { padding-top:5vh; }
+.search-inner { max-height:90dvh; overflow-y:auto; padding-top:52px; padding-bottom:24px; box-sizing:border-box; }
+.search-close { top:4px; min-width:44px; min-height:44px; }
+.search-results a { color:var(--color-text,#222); }
+.search-overlay :focus-visible { outline:2px solid currentColor; outline-offset:3px; }

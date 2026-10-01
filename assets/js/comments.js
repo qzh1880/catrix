@@ -4,6 +4,8 @@
   // API 地址和文章路径由 Hugo 模板写入 data-* 属性。
   const root = document.getElementById('comments');
   if (!root) return;
+  const community = window.CatrixCommunity;
+  community?.configure(root.dataset.api.replace(/\/comments\/?$/, ''));
   const $ = id => document.getElementById(id);
   const form = $('comment-form'), fields = $('comment-fields'), send = $('comment-send');
   const body = $('comment-body'), nickname = $('comment-nickname');
@@ -44,6 +46,7 @@
     }
     item.append(text);
     const actions = document.createElement('div'); actions.className = 'comment-actions';
+    if (community) actions.append(community.likeButton('comment', comment.id));
     if (!comment.parent_id) {
       const answer = document.createElement('button'); answer.type = 'button'; answer.textContent = '回复';
       answer.addEventListener('click', () => {

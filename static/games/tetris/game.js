@@ -2,7 +2,10 @@
 (() => {
   'use strict';
   const { Game, SHAPES } = window.CatrixBlocks;
-  const game = new Game(), $ = id => document.getElementById(id);
+  let game = new Game();
+  const $ = id => document.getElementById(id);
+  const community = window.CatrixCommunity, rules = window.CatrixRankRules;
+  let session = null, log = [], ticks = 0, actionCount = 0, accumulator = 0, starting = false, sending = false, ranked = false;
   const canvas = $('board'), context = canvas.getContext('2d');
   const COLORS = { I:'#82bdc5', O:'#e4c870', T:'#b4a0ca', S:'#a4bc80', Z:'#d98272', J:'#819fc9', L:'#dfaa73' };
   const NAMES = { I:'长条', O:'正方形', T:'T形', S:'S形', Z:'Z形', J:'J形', L:'L形' };
@@ -80,6 +83,7 @@
         $('overlay-kicker').textContent = 'ONE MORE TRY'; $('overlay-title').textContent = '这一局，很不错。';
         $('overlay-description').textContent = `获得 ${game.score} 分，消除 ${game.lines} 行。`; $('start').textContent = '再来一局 ↗';
         announce(`游戏结束，得分 ${game.score}，消除 ${game.lines} 行。`);
+        if (ranked && session) { $('rank-result').hidden = false; $('rank-score').textContent = `本局 ${game.score} 分，消除 ${game.lines} 行。可填写昵称参与排名，或直接开始下一局。`; }
       }
       previousState = game.state;
     }
@@ -87,12 +91,36 @@
       previousPieces = game.pieces;
       if (game.lastClear) announce(`消除了 ${game.lastClear} 行！当前等级 ${game.level}。`);
     }
+    $('game-mode').disabled = starting || ['running','paused'].includes(game.state);
+    $('game-difficulty').disabled = starting || ranked || ['running','paused'].includes(game.state);
+    $('rank-time').hidden = !ranked;
+    if (ranked) $('rank-time').textContent = '排位剩余 ' + Math.ceil((rules.MAX_TICKS-ticks)*rules.STEP/1000) + ' 秒';
     dirty = false;
   }
   function clearRepeats() { repeats.clear(); }
-  function begin() {
-    restartPending = false; clearRepeats(); game.start(); previousPieces = 0;
-    announce('游戏开始。用方向键或下方按钮操作。'); dirty = true; canvas.focus({preventScroll:true});
+  async function begin() {
+    if (starting || sending) return;
+    starting = true; $('start').disabled = true; $('restart').disabled = true;
+    $('game-mode').disabled = true; $('game-difficulty').disabled = true;
+    pause();
+    try {
+      const mode = $('game-mode').value;
+      let nextSession = null;
+      if (mode === 'ranked') {
+        announce('正在准备排位对局…');
+        if (!await configReady) throw Error('排行榜暂不可用，请重试或选择休闲模式。');
+        nextSession = await community.request('rankings/start', {});
+        if (nextSession.version !== rules.VERSION) throw Error('游戏版本已更新，请刷新页面。');
+      }
+      session = nextSession; ranked = mode === 'ranked';
+      log = []; ticks = 0; actionCount = 0; accumulator = 0;
+      $('rank-result').hidden = true; $('rank-submit-status').textContent = ''; $('rank-submit-button').disabled = false;
+      game = new Game(ranked ? rules.seeded(session.seed) : Math.random, ranked ? 1 : ({easy:1.6,normal:1,hard:.6}[$('game-difficulty').value] || 1));
+      restartPending = false; clearRepeats(); game.start(); previousPieces = 0; previousState = '';
+      announce(ranked ? '排位开始，统一标准难度。结束后可选择参与排名。' : '休闲开始，本局不参与排名。');
+      canvas.focus({preventScroll:true});
+    } catch(error) { announce(error.message); }
+    finally {starting = false; $('start').disabled = false; $('restart').disabled = false; dirty = true;}
   }
   function pause() {
     if (game.state !== 'running') return;
@@ -101,8 +129,10 @@
   function resume() { game.resume(); restartPending = false; dirty = true; announce('继续游戏。'); canvas.focus({preventScroll:true}); }
   function act(action) {
     if (game.state !== 'running') return;
+    if (ranked) { log.push(action); actionCount++; }
     ({ left:() => game.move(-1), right:() => game.move(1), down:() => game.softDrop(),
       rotate:() => game.rotate(), reverse:() => game.rotate(-1), drop:() => game.hardDrop(), hold:() => game.hold() })[action]?.();
+    if (ranked && actionCount >= rules.MAX_ACTIONS) game.state = 'over';
     dirty = true;
   }
   $('start').addEventListener('click', () => game.state === 'paused' ? resume() : begin());
@@ -151,9 +181,58 @@
   function frame(now) {
     if (game.state === 'running') {
       for (const entry of repeats.values()) if (now >= entry.next) { act(entry.action); entry.next = now + 65; }
-      game.tick(now - lastTime); dirty = true;
+      // 固定步长让浏览器运行与服务端重放采用完全相同的计时规则。
+      accumulator += Math.min(Math.max(now-lastTime,0),100);
+      while (accumulator >= rules.STEP && game.state === 'running') {
+        accumulator -= rules.STEP; game.tick(rules.STEP);
+        if (ranked) {
+          ticks++; const last = log[log.length-1];
+          if (Array.isArray(last) && last[0] === 'tick') last[1]++; else log.push(['tick',1]);
+          if (ticks >= rules.MAX_TICKS) game.state = 'over';
+        }
+      }
+      dirty = true;
     } else clearRepeats();
     lastTime = now; if (dirty) render(); requestAnimationFrame(frame);
   }
+  const configReady = (async () => {
+    try {
+      const response = await fetch('../../community-config/index.json', { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw Error();
+      const config = await response.json(); community.configure(config.api); return !!config.api;
+    } catch { $('rank-status').textContent = '排行榜连接失败。休闲模式仍可使用。'; return false; }
+  })();
+  let boardRevision = 0;
+  async function loadBoard() {
+    const revision = ++boardRevision; $('rank-status').textContent = '正在读取榜单…';
+    try {
+      if (!await configReady) throw Error('排行榜尚未连接，休闲模式仍可使用。');
+      const data = await community.request('rankings?period=' + $('rank-period').value);
+      if (revision !== boardRevision) return;
+      $('rank-list').replaceChildren();
+      for (const item of data.items) {
+        const row = document.createElement('li'), name = document.createElement('span'), score = document.createElement('strong');
+        name.textContent = item.nickname; score.textContent = item.score + ' 分'; row.append(name, score); $('rank-list').append(row);
+      }
+      $('rank-status').textContent = data.items.length ? '展示前 50 名，分数相同时先提交的在前。' : '本榜暂时没有成绩，来成为第一位吧。';
+    } catch(error) { if(revision===boardRevision)$('rank-status').textContent=error.message; }
+  }
+  $('rank-refresh').addEventListener('click',loadBoard);$('rank-period').addEventListener('change',loadBoard);
+  $('game-mode').addEventListener('change',()=>{
+    const selected=$('game-mode').value==='ranked'; $('difficulty-label').hidden=selected;
+    $('mode-description').textContent=selected?'统一标准难度，最长 15 分钟一局。结束后自愿填写昵称参与排名。':'休闲模式不参与排名，可按自己的节奏选择难度。';
+    $('game-difficulty').disabled=selected;
+  });
+  $('rank-submit').addEventListener('submit',async event=>{
+    event.preventDefault(); if(sending||!session||!ranked||game.state!=='over')return;
+    sending=true;$('rank-submit-button').disabled=true;$('start').disabled=true;$('restart').disabled=true;
+    $('rank-submit-status').textContent='正在核验本局成绩…';
+    try {
+      const result=await community.request('rankings/submit',{sessionId:session.id,version:rules.VERSION,log,nickname:$('rank-name').value.trim()});
+      $('rank-submit-status').textContent='已入榜，核验得分 '+result.score+'。';await loadBoard();
+    } catch(error) { $('rank-submit-status').textContent=error.message+' 可以重试提交。';$('rank-submit-button').disabled=false; }
+    finally {sending=false;$('start').disabled=false;$('restart').disabled=false;}
+  });
+  loadBoard();
   render(); requestAnimationFrame(frame);
 })();

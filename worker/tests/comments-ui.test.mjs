@@ -18,6 +18,7 @@ function setup(fetch) {
   get('comments').dataset = { api: 'https://api.example/comments', article: '/posts/test/' };
   get('comment-body').value = '立即公开的留言'; get('comment-nickname').value = '读者';
   vm.runInNewContext(readFileSync(new URL('../../assets/js/comments.js', import.meta.url), 'utf8'), {
+    window: {},
     document: { getElementById: get, createElement: () => new Element() },
     fetch, URL, location: { href: 'https://catrix.net/posts/test/' },
     crypto, AbortController, setTimeout, clearTimeout

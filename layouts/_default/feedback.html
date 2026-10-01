@@ -1,0 +1,19 @@
+{{ define "main" }}
+{{ $css := resources.Get "css/community.css" | minify | fingerprint }}
+{{ $js := resources.Get "js/feedback.js" | minify | fingerprint }}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}">
+<main class="community-page" id="feedback-app" data-api="{{ replaceRE "/comments/?$" "" (.Site.Params.comments.apiURL | default "") }}">
+  <header><p class="community-eyebrow">CATRIX / 一起改进</p><h1>你希望网站怎样变好？</h1><div>{{ .Content }}</div></header>
+  <form id="feedback-form" class="feedback-form"><fieldset id="feedback-fields">
+    <label for="feedback-name">怎么称呼你</label><input id="feedback-name" maxlength="40" required autocomplete="nickname">
+    <label for="feedback-body">你的建议</label><textarea id="feedback-body" rows="4" minlength="2" maxlength="2000" required placeholder="比如：手机阅读时，我希望……"></textarea>
+    <p>提交后公开显示，请勿填写私人信息。点赞可取消，按本浏览器标识去重。</p><button type="submit">发布建议 ↗</button>
+  </fieldset></form>
+  <p id="feedback-status" role="status" aria-live="polite"></p>
+  <div class="feedback-heading"><h2>大家的想法</h2><span>点赞多的排在前面 · 同票最新优先</span><button id="feedback-refresh" type="button">刷新</button></div>
+  <div id="feedback-list"></div><nav class="feedback-pagination" aria-label="反馈分页"><button id="feedback-prev" type="button">上一页</button><span id="feedback-page"></span><button id="feedback-next" type="button">下一页</button></nav>
+  <details class="feedback-admin"><summary>管理员处理反馈</summary><label for="feedback-key">评论管理凭证</label><input id="feedback-key" type="password" autocomplete="off"><button id="feedback-admin-login" type="button">进入管理</button><button id="feedback-admin-logout" type="button" hidden>退出管理</button><p>凭证仅保存在当前页面内存中。</p></details>
+  <noscript>请启用 JavaScript 查看和提交反馈。</noscript>
+</main>
+<script src="{{ "js/community-client.js" | relURL }}?v=3" defer></script><script src="{{ $js.RelPermalink }}" defer></script>
+{{ end }}

@@ -2,7 +2,7 @@
 // 测试不会向线上网站发送请求，也不需要 Cloudflare 账号。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker from '../worker.js';
+import worker from '../comments-worker.js';
 import { validArticle } from '../comments.js';
 import { createDatabase } from './database.mjs';
 

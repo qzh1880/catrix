@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { dirname, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import worker from '../worker/worker.js';
+import worker from '../worker/comments-worker.js';
 import { createDatabase } from '../worker/tests/database.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,11 +33,16 @@ for (const [nickname, body] of [
 ]) {
   DB.sqlite.prepare("INSERT INTO comments (request_id, article, nickname, body, status) VALUES (?, ?, ?, ?, 'approved')").run(crypto.randomUUID(), article, nickname, body);
 }
+// 反馈示例只存在于本地内存数据库；重启预览会重新生成。
+for (const [name, body] of [['演示读者 · 林', '希望增加夜间阅读模式，晚上看文章更舒服。'], ['演示读者 · 阿夏', '想看到更多校园活动的照片和幕后故事。']]) {
+  DB.sqlite.prepare('INSERT INTO feedback(request_id,nickname,body) VALUES (?,?,?)').run(crypto.randomUUID(), name, body);
+}
+for (let i=0;i<3;i++) DB.sqlite.prepare("INSERT INTO community_likes(kind,target_id,voter) VALUES ('feedback',1,?)").run('local-demo-'+i);
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, origin);
-    if (url.pathname === '/comments' || url.pathname.startsWith('/admin/comments')) {
+    if (url.pathname.startsWith('/community/') || url.pathname === '/comments' || url.pathname.startsWith('/admin/comments')) {
       // 将 Node 请求转换为 Web Request，复用实际 Worker 处理代码。
       const headers = new Headers();
       for (const [name, value] of Object.entries(req.headers)) if (value) headers.set(name, Array.isArray(value) ? value.join(',') : value);
@@ -54,7 +59,7 @@ const server = createServer(async (req, res) => {
     if (file !== publicDir && !file.startsWith(publicDir + sep)) { res.writeHead(403); res.end(); return; }
     if (statSync(file).isDirectory()) file = resolve(file, 'index.html');
     let bytes = readFileSync(file);
-    if (extname(file) === '.html') bytes = Buffer.from(bytes.toString().replace('<body>', '<body><div style="padding:8px 16px;background:#edf3e7;color:#31432c;text-align:center;font:13px/1.6 system-ui">本地演示 · 示例留言仅用于预览，重启后清空</div>'));
+    if (extname(file) === '.html') bytes = Buffer.from(bytes.toString().replace('<body>', '<body><div style="padding:8px 16px;background:#edf3e7;color:#31432c;text-align:center;font:13px/1.6 system-ui">本地演示 · 评论、反馈与排行榜仅供预览，重启后清空</div>'));
     res.writeHead(200, { 'Content-Type': mime[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(req.method === 'HEAD' ? undefined : bytes);
   } catch { res.writeHead(404); res.end('Not found'); }

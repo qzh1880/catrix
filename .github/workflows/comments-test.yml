@@ -6,6 +6,10 @@ on:
       - 'worker/**'
       - 'assets/css/comments.css'
       - 'assets/js/**'
+      - 'static/js/community-client.js'
+      - 'static/games/tetris/**'
+      - 'content/feedback.md'
+      - 'content/community-config.md'
       - 'assets/css/search.css'
       - 'themes/blank-magazine/**'
       - 'layouts/**'
@@ -17,6 +21,10 @@ on:
       - 'worker/**'
       - 'assets/css/comments.css'
       - 'assets/js/**'
+      - 'static/js/community-client.js'
+      - 'static/games/tetris/**'
+      - 'content/feedback.md'
+      - 'content/community-config.md'
       - 'assets/css/search.css'
       - 'themes/blank-magazine/**'
       - 'layouts/**'
@@ -34,6 +42,6 @@ jobs:
         with:
           node-version: '24'
       # Node 24 内置 SQLite，测试不依赖线上 D1 和部署凭证。
-      - run: node --test worker/tests/*.test.mjs
+      - run: node --test worker/tests/*.test.mjs static/games/tetris/tests/*.test.mjs
       - name: Check frontend syntax
         run: node --check assets/js/comments.js

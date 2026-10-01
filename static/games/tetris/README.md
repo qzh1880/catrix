@@ -1,6 +1,6 @@
 # 俄罗斯方块 · 方块之间
 
-Catrix 的纯前端小游戏，主入口是网站 `/games/` 中的嵌入页面，也可打开 `/games/tetris/` 单独游玩。所有资源均位于本目录，无外部字体、图片、CDN、账号或后台依赖。直接打开 `index.html` 也可以玩。
+Catrix 的俄罗斯方块，从网站 `/games/` 的入口打开独立页面 `/games/tetris/`。休闲模式在浏览器本地运行；排位和排行榜需要网站的社区 API、Cloudflare Worker 与 D1 数据库，无需注册账号。请通过网站或本地预览服务器访问。
 
 ## 操作
 
@@ -31,4 +31,8 @@ node --test static/games/tetris/tests/engine.test.mjs
 hugo
 ```
 
-大厅模板为 `layouts/_default/games.html`，通过 `relURL` 兼容 GitHub Pages 子路径。`assets/js/games-embed.js` 只接收同源 iframe 发出的高度消息，并在游戏滚出视野时通知暂停。棋盘属于视觉游戏，屏幕阅读器可读取成绩和提示，但不提供非视觉棋盘替代玩法。
+大厅模板为 `layouts/_default/games.html`，通过 `relURL` 链接到独立游戏页面，不再加载 iframe。游戏通过 `../../community-config/index.json` 读取公开 API 地址，并加载 `static/js/community-client.js`。棋盘属于视觉游戏，屏幕阅读器可读取成绩和提示，但不提供非视觉棋盘替代玩法。
+
+## 模式与排行榜更新
+
+游戏现在从小游戏列表进入独立页面。休闲模式支持轻松、标准、挑战三档；排位模式统一标准规则，后端重放成绩后入榜。配置、规则、验证及部署步骤见 [社区与游戏更新](../../../docs/community-and-rankings.md)。

@@ -288,28 +288,27 @@ for (const pick of [['shanghai-high', 'chosen=上中（四校）'], ['qibao', 'c
 expect(api().tiers[1].school.group === '四校', 'tier1 位置上是那一所随机四校（本轮排序结果）');
 
 /* ---------------- 基础落球概率 ---------------- */
-console.log('\n--- base P(k) = (e^(2k-1)+e^(2k)) / Σ_{i=1..22} e^i ---');
+console.log('\n--- base q_k = e^(4k-0.15k²) / Σ_{j=1..11} e^(4j-0.15j²) ---');
 {
-  const E = Math.E;
-  const denom = Array.from({ length: 22 }, (_, i) => Math.exp(i + 1)).reduce((a, b) => a + b, 0);
-  const ref = Array.from({ length: 11 }, (_, i) => (Math.exp(2 * (i + 1) - 1) + Math.exp(2 * (i + 1))) / denom);
+  const sq = k => Math.exp(4.0 * k - 0.15 * k * k);
+  const denom = Array.from({ length: 11 }, (_, i) => sq(i + 1)).reduce((a, b) => a + b, 0);
+  const ref = Array.from({ length: 11 }, (_, i) => sq(i + 1) / denom);
   const prob = api().TIER_PROB;
 
   expect(prob.length === 11, '11 档各有一个概率');
   expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-15, '概率之和为 1');
   expect(prob.every((p, i) => Math.abs(p - ref[i]) < 1e-18),
-    'P(k) = (e^(2k-1) + e^(2k)) / Σ_{i=1..22} e^i，k = 索引+1');
+    'q_k = e^(4k-0.15k²) / Σ_{j=1..11} e^(4j-0.15j²)，k = 索引+1');
   expect(prob.every((p, i) => i === 0 || prob[i - 1] < p), '概率随档位（越小越大）单调上升');
-  // 不看公式本身、只看数列形状：相邻两项的比恒为 e²
-  const want = E * E;
-  const ratios = prob.slice(1).map((p, i) => p / prob[i]);
-  const worst = Math.max(...ratios.map(r => Math.abs(r - want)));
-  expect(worst < 1e-12 * want, '相邻概率之比恒为 e²=' + want.toFixed(6) + '（最大误差 ' + worst.toExponential(2) + '）');
-  // 11 对分子加起来正好把分母的 22 项分完
-  const numSum = Array.from({ length: 11 }, (_, i) => Math.exp(2 * (i + 1) - 1) + Math.exp(2 * (i + 1))).reduce((a, b) => a + b, 0);
-  expect(Math.abs(numSum - denom) / denom < 1e-15, 'Σ(11 对分子) 正好等于分母 Σ_{i=1..22} e^i');
-  console.log('  ' + ref.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(4) + '%').join(' '));
-  expect(ref.slice(8).reduce((a, b) => a + b, 0) > 0.99, '最小的 3 档占 99% 以上');
+  // 不看公式本身、只看数列形状：相邻两项之比恒为 e^(3.85 - 0.3k)
+  const want = prob.slice(1).map((_, i) => Math.exp(3.85 - 0.3 * (i + 1)));
+  const got = prob.slice(1).map((p, i) => p / prob[i]);
+  const worst = Math.max(...got.map((r, i) => Math.abs(r - want[i]) / want[i]));
+  expect(worst < 1e-12, '相邻比恒为 e^(3.85-0.3k)（' + got.map(r => r.toFixed(3)).join(' / ') +
+    '，最大相对误差 ' + worst.toExponential(2) + '）');
+  console.log('  ' + ref.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(6) + '%').join(' '));
+  expect(ref.slice(7).reduce((a, b) => a + b, 0) > 0.99, '最小的 4 档占 99% 以上');
+  expect(ref.filter(p => p >= api().DROP_P_MIN).length === 4, '概率 ≥1% 的正好是最小的 4 档（#8~#11）');
 
   /* 逆累积分布：11 个区间的中点/下边界逐个钉死随机数核对（每次都先清空连出状态） */
   const realRandom = Math.random;
@@ -335,13 +334,15 @@ console.log('\n--- base P(k) = (e^(2k-1)+e^(2k)) / Σ_{i=1..22} e^i ---');
   expect(boundaryOk, 'u 落在哪个累积区间就返回哪一档' + (boundaryOk ? '' : '（' + bad + '）'));
 
   /* 卡方：每抽一次之前都清空连出状态，于是每一次都是按基础分布抽的。
-     新公式下 #1~#7 的期望次数 < 1（#1 只有 0.0007 次），不能各占一格，
-     所以把最小的 7 档并成一个桶，剩下 #8~#11 各一格，共 5 格（df=4）。 */
+     #1~#5 的期望次数都 < 5（#1 只有 8e-5 次），不能各占一格，所以并成一个桶，
+     剩下 #6~#11 各一格，共 7 格（df=6）。 */
   const N = 400000;
   const hits = new Array(11).fill(0);
   for (let k = 0; k < N; k++) { api().resetAntiRepeat(); hits[api().randTier()]++; }
   const bins = [
-    { name: '#1~#7', obs: hits.slice(0, 7).reduce((a, b) => a + b, 0), exp: N * ref.slice(0, 7).reduce((a, b) => a + b, 0) },
+    { name: '#1~#5', obs: hits.slice(0, 5).reduce((a, b) => a + b, 0), exp: N * ref.slice(0, 5).reduce((a, b) => a + b, 0) },
+    { name: '#6', obs: hits[5], exp: N * ref[5] },
+    { name: '#7', obs: hits[6], exp: N * ref[6] },
     { name: '#8', obs: hits[7], exp: N * ref[7] },
     { name: '#9', obs: hits[8], exp: N * ref[8] },
     { name: '#10', obs: hits[9], exp: N * ref[9] },
@@ -351,8 +352,8 @@ console.log('\n--- base P(k) = (e^(2k-1)+e^(2k)) / Σ_{i=1..22} e^i ---');
   for (const b of bins) chi2 += (b.obs - b.exp) * (b.obs - b.exp) / b.exp;
   const maxDev = Math.max(...bins.map(b => Math.abs(b.obs - b.exp) / Math.sqrt(b.exp)));
   console.log('  ' + bins.map(b => b.name + ' 期望 ' + b.exp.toFixed(0) + ' 实测 ' + b.obs).join(' | '));
-  console.log('  抽 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=4，α=1e-6 临界 26.28），最大偏差 ' + maxDev.toFixed(2) + 'σ');
-  expect(chi2 < 26.28, '基础分布抽样符合公式（卡方 ' + chi2.toFixed(2) + '）');
+  console.log('  抽 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=6，α=1e-4 临界 27.86），最大偏差 ' + maxDev.toFixed(2) + 'σ');
+  expect(chi2 < 27.86, '基础分布抽样符合公式（卡方 ' + chi2.toFixed(2) + '）');
   expect(maxDev < 5, '每桶抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
 }
 
@@ -380,7 +381,7 @@ console.log('\n--- anti-repeat: P\'(k)=P(k)·T^(-n)，T = ' + api().ANTI_REPEAT_
   expect(Math.abs(p[10] - B[10] * damp) < 1e-15,
     'P\'(k) = P(k)·T^(-n)：' + (B[10] * damp * 100).toFixed(4) + '%（未修正 ' + (B[10] * 100).toFixed(4) + '%）');
   expect(p.every((x, i) => i === 10 || Math.abs(x - B[i] * (1 + freed / restW)) < 1e-15),
-    '让出的概率按 e^i 的比例分给其余所有球');
+    '让出的概率按基础权重的比例分给其余所有球');
   expect(Math.abs(p.reduce((a, b) => a + b, 0) - 1) < 1e-14, '修正后仍是概率分布（和为 1）');
   expect(p.every(x => x > 0), '修正后没有任何一档被压成 0');
   console.log('  n=4 时 #11=' + (p[10] * 100).toFixed(4) + '%  #10=' + (p[9] * 100).toFixed(4) +
@@ -661,14 +662,14 @@ console.log('\n--- 三击调整投放上限 ---');
 
   await startWith('shanghai-high');
   expect(chipsNow().length === 11, 'one chip per tier (' + chipsNow().length + ')');
-  expect(api().dropTop === 8, 'default cap = smallest 3 tiers (top=' + api().dropTop + ')');
+  expect(api().dropTop === 7, 'default cap = smallest 4 tiers (top=' + api().dropTop + ')');
 
   tap(chipsNow()[0], 3);
-  expect(api().dropTop === 8, 'triple-tapping 球王 does nothing');
+  expect(api().dropTop === 7, 'triple-tapping 球王 does nothing');
   tap(chipsNow()[1], 3);
-  expect(api().dropTop === 8, 'triple-tapping a 四校 does nothing');
+  expect(api().dropTop === 7, 'triple-tapping a 四校 does nothing');
   tap(chipsNow()[3], 2);
-  expect(api().dropTop === 8, 'two taps do nothing');
+  expect(api().dropTop === 7, 'two taps do nothing');
 
   tap(chipsNow()[3], 3);
   expect(api().dropTop === 3, 'triple tap raises the cap to that tier (top=' + api().dropTop + ')');
@@ -676,7 +677,7 @@ console.log('\n--- 三击调整投放上限 ---');
   expect(marks[3] && marks[10] && !marks[2], 'chain highlights tiers 3..10 only');
 
   tap(chipsNow()[3], 3);
-  expect(api().dropTop === 8, 'triple tap again restores the default');
+  expect(api().dropTop === 7, 'triple tap again restores the default');
   expect(chipsNow()[3].className.indexOf('drop') < 0, 'highlight cleared after restore');
 }
 

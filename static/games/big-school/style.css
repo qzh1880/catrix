@@ -96,6 +96,37 @@ body {
 
 .chip b { color: var(--ink); font-size: 14px; margin-left: 3px; }
 
+/* ---------------- 难度 ---------------- */
+.diff-row {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.diff-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+
+.diff-btn {
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1;
+  padding: 7px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s;
+}
+
+.diff-btn:hover { border-color: #b9b9b9; color: var(--ink); }
+.diff-btn.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.diff-tip { font-size: 11.5px; color: var(--muted); margin-left: 4px; }
+
 .grid {
   width: 100%;
   max-width: 780px;

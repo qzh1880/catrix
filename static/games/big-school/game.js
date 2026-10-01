@@ -51,18 +51,65 @@
   var TIER_PCT = [54.4, 41.0, 41.0, 34.4, 28.2, 24.5, 20.2, 15.7, 14.4, 10.6, 7.0];
   var TIER_COUNT = 11;
 
-  /* ---------------- 落球概率 ----------------
-   * 第 k 大球（k 从 1 数起，即 TIERS 索引 k-1）的出现概率：
+  /* ---------------- 难度 ----------------
+   * 基础落球概率公式**三档完全一样**，不随难度变：
    *     P(k) = exp(k) / Σ_{i=1..11} exp(i)
-   * 概率随 k 指数上升，所以实际能掉下来的基本是最小的几档：
-   * 7~11 档（索引 6~10）合计约 99.3%，1~6 档合计只有 0.67%。
+   * 难度改的是两样东西：
+   *   antiT  —— 「避免连出」的强度，见下面那段注释。T 越大越不容易连续出同一颗球。
+   *   danger —— 警戒线离框顶多少像素，越小可用高度越高。
+   * 实测（同一套机器人、每 0.34s 掉一颗，21 局取中位数）见 README 的难度表。
    */
-  var TIER_PROB = (function () {
+  var DIFFICULTY = {
+    easy:   { key: 'easy',   label: '简单', antiT: 1.15, danger: 52,
+              tip: '很少连着出同一颗球，一局能玩很久' },
+    normal: { key: 'normal', label: '普通', antiT: 1.80, danger: 80,
+              tip: '连着出同一颗球会明显变难，可用高度也矮一点' },
+    hard:   { key: 'hard',   label: '困难', antiT: 2.80, danger: 105,
+              tip: '几乎不会连出，堆到框顶很快就死' }
+  };
+  var DIFF_ORDER = ['easy', 'normal', 'hard'];
+  var difficulty = DIFFICULTY.hard;    // 默认困难
+
+  /* ---------------- 落球概率 ----------------
+   * 基础概率固定：第 k 大球（k 从 1 数起，即 TIERS 索引 k-1）出现概率
+   *     P(k) = exp(k) / Σ_{i=1..11} exp(i)
+   * 概率随 k 指数上升，所以能掉下来的基本是最小的几档，7~11 档合计约 99.3%。
+   */
+  var BASE_PROB = (function () {
     var raw = [], sum = 0, k, w;
     for (k = 1; k <= TIER_COUNT; k++) { w = Math.exp(k); raw.push(w); sum += w; }
     return raw.map(function (x) { return x / sum; });
   })();
   var DROP_P_MIN = 0.01;      // 概率 ≥1% 的档位在合成链里高亮成「可投放」
+
+  /* ---------------- 避免连出 ----------------
+   * 设上一颗掉的是第 k 大球、而且已经连续掉了 n 颗，那么这一颗还是它的概率变成
+   *     P'(k) = P(k) · T^(-n)
+   * 让出来的 P(k)·(1 - T^(-n)) 按 e^i 的权重比例（也就是基础概率的比例）
+   * 分给其余所有球 i ≠ k：
+   *     P'(i) = P(i) + P(k)(1 - T^(-n)) · e^i / Σ_{j≠k} e^j
+   * 于是 P' 仍然是一个概率分布（和为 1），而且 n 越大越难再出同一颗球。
+   * T = 1 就退化成没开这个机制。
+   */
+  var ANTI_REPEAT = { last: -1, n: 0 };
+
+  function resetAntiRepeat() { ANTI_REPEAT.last = -1; ANTI_REPEAT.n = 0; }
+
+  /* 当前这一颗的实际分布（基础概率 + 避免连出修正） */
+  function dropProb() {
+    var T = difficulty.antiT;
+    var last = ANTI_REPEAT.last, n = ANTI_REPEAT.n;
+    if (last < 0 || n <= 0 || T === 1) return BASE_PROB;
+    var damp = Math.pow(T, -n);
+    var out = BASE_PROB.slice();
+    var freed = BASE_PROB[last] * (1 - damp);
+    var restW = 1 - BASE_PROB[last];
+    out[last] = BASE_PROB[last] * damp;
+    for (var i = 0; i < out.length; i++) {
+      if (i !== last) out[i] = BASE_PROB[i] * (1 + freed / restW);
+    }
+    return out;
+  }
 
   /* ---------------- 场地参数 ----------------
    * 以前是 420 × 700 的框，警戒虚线画在 y=128，上面 128px 是纯死区。
@@ -74,10 +121,10 @@
   var H = 700;
   var BOX_SCALE = 700 / 572;           // 572 = 原来 700 高的框减去 128 的死区
   var W = Math.round(420 * BOX_SCALE); // 514
-  /* 警戒线：框顶往下 52px（约等于最大的可投放球的半径）。
-     之前贴着框顶（2px）时，刚性天花板会让球堆顶停在离顶几像素的地方，
+  /* 警戒线：框顶往下 dangerY 像素，由难度决定（简单 52 / 普通 70 / 困难 95）。
+     早先贴框顶（2px）时，刚性天花板会让球堆顶停在离顶几像素的地方，
      永远进不了那 2px 的判定带，于是「看着顶到顶了却死不了」。 */
-  var DANGER_Y = 52;
+  var dangerY = difficulty.danger;
   var DROP_PAD = 4;                   // 球出现时贴着框顶：y = r + DROP_PAD
   var COOLDOWN = 0.34;
   var FIXED = 1 / 120;
@@ -96,6 +143,7 @@
   var chainEl = $('chain'), overlay = $('overlay');
   var ovTitle = $('ovTitle'), ovText = $('ovText');
   var shareModal = $('shareModal'), sharePreview = $('sharePreview'), toastEl = $('toast');
+  var diffTipEl = $('diffTip');
 
   /* ---------------- 状态 ---------------- */
   var IMAGES = {};
@@ -124,6 +172,13 @@
   var soundOn = true;
 
   try { best = parseInt(localStorage.getItem('bigschool_best') || '0', 10) || 0; } catch (e) { best = 0; }
+  try {
+    var savedDiff = localStorage.getItem('bigschool_diff');
+    if (savedDiff && DIFFICULTY[savedDiff]) {
+      difficulty = DIFFICULTY[savedDiff];
+      dangerY = difficulty.danger;
+    }
+  } catch (e) { /* 无所谓 */ }
 
   /* ============================================================
    * 图片预加载
@@ -136,6 +191,34 @@
         im.src = 'logos/' + s.id + '.png';
       });
     }));
+  }
+
+  /* ============================================================
+   * 难度
+   * ============================================================ */
+  function diffBtnEl(key) { return $('diff' + key.charAt(0).toUpperCase() + key.slice(1)); }
+
+  function selectDifficulty(key) {
+    if (!DIFFICULTY[key]) return;
+    difficulty = DIFFICULTY[key];
+    dangerY = difficulty.danger;
+    resetAntiRepeat();
+    try { localStorage.setItem('bigschool_diff', key); } catch (e) { /* 无所谓 */ }
+    DIFF_ORDER.forEach(function (k) {
+      var el = diffBtnEl(k);
+      if (el) el.classList.toggle('on', k === key);
+    });
+    updateDiffTip();
+    updateStartBtn();
+    updateHint();
+  }
+
+  function updateDiffTip() {
+    if (!diffTipEl) return;
+    var T = difficulty.antiT;
+    diffTipEl.textContent = difficulty.label + '：' + difficulty.tip +
+      '（避免连出 T=' + T + '，连出第 n 颗时概率 ×' + T + '^(-n)；警戒线离框顶 ' +
+      difficulty.danger + 'px）';
   }
 
   /* ============================================================
@@ -181,7 +264,10 @@
 
   function updateHint() {
     poolHint.textContent = '每局 11 档：你选的学校当最大球，再随机配 1 所四校、4 所现有学校' +
-      '（上实 / 八大 / 进才）和 5 所市重点。落球概率按 exp(k)/Σexp(i) 给，越大的球越难掉出来。';
+      '（上实 / 八大 / 进才）和 5 所市重点。基础落球概率 P(k) = exp(k)/Σexp(i)，越大的球越难掉出来；' +
+      '另外开了「避免连出」：连着出同一颗球时，下一颗还是它（第 k 大）的概率乘 T^(-n)，' +
+      '让出来的概率按 e^i 的比例分给其余所有球。当前难度「' + difficulty.label +
+      '」的 T = ' + difficulty.antiT + '。';
   }
 
   function refreshBest() {
@@ -304,6 +390,9 @@
   }
 
   function reallyStart() {
+    // 难度可能在选校界面被改过，这里再对齐一次（警戒线 / 避免连出计数）
+    dangerY = difficulty.danger;
+    resetAntiRepeat();
     buildTiers();
 
     world = new P.World(W, H);
@@ -341,18 +430,25 @@
     rafId = requestAnimationFrame(frame);
   }
 
-  /* 按 P(k) = exp(k) / Σ exp(i) 抽下一颗要投放的球（返回 TIERS 索引） */
+  /* 按 P(k) = exp(k/T) / Σ exp(i/T) 抽下一颗要投放的球（返回 TIERS 索引） */
+  /* 抽下一颗要投放的球（返回 TIERS 索引）：
+     基础概率 exp(k)/Σexp(i) 叠加「避免连出」修正，然后按累积分布取档，
+     取完更新「上一颗是谁、连了几颗」。 */
   function randTier() {
-    var r = Math.random(), acc = 0;
-    for (var i = 0; i < TIER_PROB.length; i++) {
-      acc += TIER_PROB[i];
-      if (r < acc) return i;
+    var p = dropProb();
+    var r = Math.random(), acc = 0, pick = p.length - 1;
+    for (var i = 0; i < p.length; i++) {
+      acc += p[i];
+      if (r < acc) { pick = i; break; }
     }
-    return TIER_PROB.length - 1;
+    if (pick === ANTI_REPEAT.last) ANTI_REPEAT.n++;
+    else { ANTI_REPEAT.last = pick; ANTI_REPEAT.n = 1; }
+    return pick;
   }
 
+  /* 合成链高亮用的是「基础概率」，避免连出只影响当下这一颗，不改变哪些档位整体可投放 */
   function isDroppable(i) {
-    return (TIER_PROB[i] || 0) >= DROP_P_MIN;
+    return (BASE_PROB[i] || 0) >= DROP_P_MIN;
   }
 
   function renderChain() {
@@ -568,7 +664,7 @@
     var danger = false;
     for (var i = 0; i < world.bodies.length; i++) {
       var b = world.bodies[i];
-      if (b.age > 1.1 && b.y - b.r < DANGER_Y) { danger = true; break; }
+      if (b.age > 1.1 && b.y - b.r < dangerY) { danger = true; break; }
     }
     if (danger) {
       overTimer += dt;
@@ -619,28 +715,27 @@
     ctx.restore();
   }
 
-  /* 警戒线 = DANGER_Y，线以上到框顶这一条是溢出区 */
-  var WARN_H = DANGER_Y + 46;
-
+  /* 警戒线画在 dangerY 处，线以上到框顶这一条是溢出区 */
   function drawDanger() {
     var a = 0.2 + warnLevel * 0.65;
+    var warnH = dangerY + 46;
     ctx.save();
     ctx.setLineDash([8, 7]);
     ctx.lineWidth = 1 + warnLevel * 1.2;
     ctx.strokeStyle = 'rgba(224,49,49,' + a + ')';
     ctx.beginPath();
-    ctx.moveTo(0, DANGER_Y + 0.5);
-    ctx.lineTo(W, DANGER_Y + 0.5);
+    ctx.moveTo(0, dangerY + 0.5);
+    ctx.lineTo(W, dangerY + 0.5);
     ctx.stroke();
     ctx.restore();
 
     if (warnLevel > 0.05) {
       ctx.save();
-      var g = ctx.createLinearGradient(0, 0, 0, WARN_H);
+      var g = ctx.createLinearGradient(0, 0, 0, warnH);
       g.addColorStop(0, 'rgba(224,49,49,' + (warnLevel * 0.14) + ')');
       g.addColorStop(1, 'rgba(224,49,49,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, WARN_H);
+      ctx.fillRect(0, 0, W, warnH);
       ctx.restore();
     }
   }
@@ -832,7 +927,7 @@
       ? '我在《合成大 · 学校》里把【' + goal + '】合出来了！'
       : '我在《合成大 · 学校》里拿了 ';
     var tail = won ? '' : '本局球王是' + goal + '，';
-    return head + score + ' 分（最高 ' + best + ' 分）。' + tail +
+    return head + score + ' 分（最高 ' + best + ' 分 · 难度' + difficulty.label + '）。' + tail +
       '你能合到哪一所？来玩：' + SHARE_URL;
   }
 
@@ -923,8 +1018,12 @@
   /* ============================================================
    * 启动
    * ============================================================ */
+  DIFF_ORDER.forEach(function (k) {
+    var el = diffBtnEl(k);
+    if (el) el.addEventListener('click', function () { selectDifficulty(k); });
+  });
+  selectDifficulty(difficulty.key);
   refreshBest();
-  updateHint();
   renderGrid();
   var ready = preload();
 
@@ -932,13 +1031,21 @@
     get tiers() { return TIERS; },
     get world() { return world; },
     get score() { return score; },
+    get TIER_PROB() { return BASE_PROB; },      // 基础概率表（与难度无关）
+    get dropProb() { return dropProb; },        // 当前这一颗的实际分布
+    get antiRepeat() { return { last: ANTI_REPEAT.last, n: ANTI_REPEAT.n }; },
+    resetAntiRepeat: resetAntiRepeat,
+    get DANGER_Y() { return dangerY; },
+    get difficulty() { return difficulty; },
+    DIFFICULTY: DIFFICULTY,
+    DIFF_ORDER: DIFF_ORDER,
+    selectDifficulty: selectDifficulty,
     SCHOOLS: SCHOOLS,
     TIER_PCT: TIER_PCT,
-    TIER_PROB: TIER_PROB,
     DROP_P_MIN: DROP_P_MIN,
     SHARE_URL: SHARE_URL,
     shareText: shareText,
     randTier: randTier,            // 暴露出来给测试做分布抽样
-    W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY
+    W: W, H: H, DROP_PAD: DROP_PAD, dropY: dropY
   };
 })();

@@ -362,7 +362,7 @@ console.log('\n--- anti-repeat: P\'(k)=P(k)·T^(-n)，T = ' + api().ANTI_REPEAT_
   const realRandom = Math.random;
   const B = api().TIER_PROB;
   const T = api().ANTI_REPEAT_T;
-  expect(T === 1.1, '避免连出强度是固定常数 T = 1.1（不再跟难度绑定）');
+  expect(T === 1.8, '避免连出强度是固定常数 T = 1.8（不再跟难度绑定）');
 
   // 钉死随机数 => 一直取最后一档，连出计数 n 应该一路涨
   api().resetAntiRepeat();

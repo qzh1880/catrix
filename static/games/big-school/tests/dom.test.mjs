@@ -196,6 +196,14 @@ expect(['sfls', 'shnu', 'weiyu', 'caoyang', 'songjiang', 'fengxian', 'shixi', 's
 expect(ALL.filter(s => s.group === '市重点').length === 17, '市重点恰好 17 所');
 expect(ALL.filter(s => s.group === '四校').length === 4, '四校还是 4 所');
 
+/* ---------------- 难度功能已移除 ---------------- */
+{
+  const html = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');
+  expect(!/diffEasy|diffNormal|diffHard|diffTip/.test(html), '选校界面已经没有难度按钮');
+  expect(api().DIFFICULTY === undefined && api().selectDifficulty === undefined,
+    'window.__bigschool 上已经没有难度相关的 API');
+}
+
 // 每所学校的校徽文件都得真实存在，而且和 SCHOOLS 顺序一一对应
 {
   const missing = ALL.filter(s => !fs.existsSync(path.join(DIR, 'logos', s.id + '.png')));
@@ -279,70 +287,134 @@ for (const pick of [['shanghai-high', 'chosen=上中（四校）'], ['qibao', 'c
 }
 expect(api().tiers[1].school.group === '四校', 'tier1 位置上是那一所随机四校（本轮排序结果）');
 
-/* ---------------- 落球概率 ---------------- */
-console.log('\n--- drop probability P(k)=exp(k)/Σexp(i) ---');
+/* ---------------- 基础落球概率 ---------------- */
+console.log('\n--- base P(k) = (e^(2k-1)+e^(2k)) / Σ_{i=1..22} e^i ---');
 {
-  const prob = api().TIER_PROB;
   const E = Math.E;
-  // 分子 e^k（k = 1..11，k 是「第几大」，对应 TIERS 索引 k-1）
-  const num = Array.from({ length: 11 }, (_, i) => Math.exp(i + 1));
-  const S = num.reduce((a, b) => a + b, 0);
+  const denom = Array.from({ length: 22 }, (_, i) => Math.exp(i + 1)).reduce((a, b) => a + b, 0);
+  const ref = Array.from({ length: 11 }, (_, i) => (Math.exp(2 * (i + 1) - 1) + Math.exp(2 * (i + 1))) / denom);
+  const prob = api().TIER_PROB;
 
   expect(prob.length === 11, '11 档各有一个概率');
   expect(Math.abs(prob.reduce((a, b) => a + b, 0) - 1) < 1e-15, '概率之和为 1');
-  expect(prob.every((p, i) => Math.abs(p - num[i] / S) < 1e-18), 'P(k) = exp(k)/Σexp(i)，k = 索引+1');
+  expect(prob.every((p, i) => Math.abs(p - ref[i]) < 1e-18),
+    'P(k) = (e^(2k-1) + e^(2k)) / Σ_{i=1..22} e^i，k = 索引+1');
   expect(prob.every((p, i) => i === 0 || prob[i - 1] < p), '概率随档位（越小越大）单调上升');
-  // 不看公式本身、只看这个数列的形状：相邻两项的比必须恒等于 e
+  // 不看公式本身、只看数列形状：相邻两项的比恒为 e²
+  const want = E * E;
   const ratios = prob.slice(1).map((p, i) => p / prob[i]);
-  expect(ratios.every(r => Math.abs(r - E) < 1e-12),
-    '相邻概率之比恒为 e（P(k+1)/P(k) = e，最大误差 ' +
-    Math.max(...ratios.map(r => Math.abs(r - E))).toExponential(2) + '）');
-  // 闭式解：Σ_{i=1..11} e^i = e(e^11-1)/(e-1)
-  const Sclosed = E * (Math.pow(E, 11) - 1) / (E - 1);
-  expect(Math.abs(S - Sclosed) / S < 1e-14, '分母等于闭式解 e(e^11-1)/(e-1)');
-  console.log('  ' + prob.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(3) + '%').join(' '));
+  const worst = Math.max(...ratios.map(r => Math.abs(r - want)));
+  expect(worst < 1e-12 * want, '相邻概率之比恒为 e²=' + want.toFixed(6) + '（最大误差 ' + worst.toExponential(2) + '）');
+  // 11 对分子加起来正好把分母的 22 项分完
+  const numSum = Array.from({ length: 11 }, (_, i) => Math.exp(2 * (i + 1) - 1) + Math.exp(2 * (i + 1))).reduce((a, b) => a + b, 0);
+  expect(Math.abs(numSum - denom) / denom < 1e-15, 'Σ(11 对分子) 正好等于分母 Σ_{i=1..22} e^i');
+  console.log('  ' + ref.map((p, i) => '#' + (i + 1) + '=' + (p * 100).toFixed(4) + '%').join(' '));
+  expect(ref.slice(8).reduce((a, b) => a + b, 0) > 0.99, '最小的 3 档占 99% 以上');
 
-  const droppable = prob.filter(p => p >= api().DROP_P_MIN).length;
-  expect(droppable === 5, '按 1% 阈值高亮出来的可投放档位是 5 个');
-  expect(prob.slice(6).reduce((a, b) => a + b, 0) > 0.99, '最小的 5 档占了 99% 以上的概率');
-
-  if (gameRunning()) {
-    const chips = byId.get('chain').children.filter(c => String(c.className).indexOf('drop') >= 0);
-    expect(chips.length === 5, '合成链里高亮的正好是 5 档 (got ' + chips.length + ')');
-  }
-
-  /* (a) 取档用的逆累积分布：边界逐个精确核对 */
+  /* 逆累积分布：11 个区间的中点/下边界逐个钉死随机数核对（每次都先清空连出状态） */
   const realRandom = Math.random;
-  const cum = [];
-  prob.reduce((a, p) => (cum.push(a + p), a + p), 0);
-  const at = (u) => { Math.random = () => u; const r = api().randTier(); Math.random = realRandom; return r; };
-  let boundaryOk = true, badBoundary = '';
+  const at = (u) => {
+    api().resetAntiRepeat();
+    Math.random = () => u;
+    const r = api().randTier();
+    Math.random = realRandom;
+    return r;
+  };
+  const cum = []; ref.reduce((a, p) => (cum.push(a + p), a + p), 0);
+  let boundaryOk = true, bad = '';
   for (let i = 0; i < 11; i++) {
     const lo = i === 0 ? 0 : cum[i - 1];
     const mid = lo + (cum[i] - lo) / 2;
-    if (at(mid) !== i) { boundaryOk = false; badBoundary = '区间中点 u=' + mid + ' 应得索引 ' + i + '，实得 ' + at(mid); break; }
-    if (at(lo) !== i) { boundaryOk = false; badBoundary = '下边界 u=' + lo + ' 应得索引 ' + i + '，实得 ' + at(lo); break; }
+    if (at(mid) !== i) { boundaryOk = false; bad = '区间中点 u=' + mid + ' 应得索引 ' + i; break; }
+    // 边界处 randTier 会乘一个 total（≈1 但不是刚好 1），所以用 1e-9 的相对余量跨过边界
+    if (at(lo * (1 + 1e-9)) !== i) { boundaryOk = false; bad = '刚过下边界 u=' + lo * (1 + 1e-9) + ' 应得索引 ' + i; break; }
     if (i > 0 && at(lo * (1 - 1e-9)) !== i - 1) {
-      boundaryOk = false; badBoundary = 'u 刚好在 cum[' + (i - 1) + '] 之前应得索引 ' + (i - 1); break;
+      boundaryOk = false; bad = 'u 刚好在 cum[' + (i - 1) + '] 之前应得索引 ' + (i - 1); break;
     }
   }
-  expect(boundaryOk, 'u 落在哪个累积区间就返回哪一档' + (boundaryOk ? '' : '（' + badBoundary + '）'));
+  expect(boundaryOk, 'u 落在哪个累积区间就返回哪一档' + (boundaryOk ? '' : '（' + bad + '）'));
 
-  /* (b) 统计检验：抽 40 万次，做卡方拟合优度检验 */
+  /* 卡方：每抽一次之前都清空连出状态，于是每一次都是按基础分布抽的。
+     新公式下 #1~#7 的期望次数 < 1（#1 只有 0.0007 次），不能各占一格，
+     所以把最小的 7 档并成一个桶，剩下 #8~#11 各一格，共 5 格（df=4）。 */
   const N = 400000;
   const hits = new Array(11).fill(0);
-  for (let k = 0; k < N; k++) hits[api().randTier()]++;
+  for (let k = 0; k < N; k++) { api().resetAntiRepeat(); hits[api().randTier()]++; }
+  const bins = [
+    { name: '#1~#7', obs: hits.slice(0, 7).reduce((a, b) => a + b, 0), exp: N * ref.slice(0, 7).reduce((a, b) => a + b, 0) },
+    { name: '#8', obs: hits[7], exp: N * ref[7] },
+    { name: '#9', obs: hits[8], exp: N * ref[8] },
+    { name: '#10', obs: hits[9], exp: N * ref[9] },
+    { name: '#11', obs: hits[10], exp: N * ref[10] }
+  ];
   let chi2 = 0;
-  for (let i = 0; i < 11; i++) {
-    const exp = N * prob[i];
-    chi2 += (hits[i] - exp) * (hits[i] - exp) / exp;
+  for (const b of bins) chi2 += (b.obs - b.exp) * (b.obs - b.exp) / b.exp;
+  const maxDev = Math.max(...bins.map(b => Math.abs(b.obs - b.exp) / Math.sqrt(b.exp)));
+  console.log('  ' + bins.map(b => b.name + ' 期望 ' + b.exp.toFixed(0) + ' 实测 ' + b.obs).join(' | '));
+  console.log('  抽 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=4，α=1e-6 临界 26.28），最大偏差 ' + maxDev.toFixed(2) + 'σ');
+  expect(chi2 < 26.28, '基础分布抽样符合公式（卡方 ' + chi2.toFixed(2) + '）');
+  expect(maxDev < 5, '每桶抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
+}
+
+/* ---------------- 避免连出 ---------------- */
+console.log('\n--- anti-repeat: P\'(k)=P(k)·T^(-n)，T = ' + api().ANTI_REPEAT_T + ' ---');
+{
+  const realRandom = Math.random;
+  const B = api().TIER_PROB;
+  const T = api().ANTI_REPEAT_T;
+  expect(T === 1.1, '避免连出强度是固定常数 T = 1.1（不再跟难度绑定）');
+
+  // 钉死随机数 => 一直取最后一档，连出计数 n 应该一路涨
+  api().resetAntiRepeat();
+  Math.random = () => 0.999999;
+  const seq = [];
+  for (let i = 0; i < 4; i++) seq.push(api().randTier());
+  Math.random = realRandom;
+  expect(seq.every(x => x === 10), '钉死随机数后连续抽到同一档（索引 10）');
+  expect(api().antiRepeat.n === 4 && api().antiRepeat.last === 10, '连出计数 n=4、last=10');
+
+  const p = api().dropProb();
+  const damp = Math.pow(T, -4);
+  const freed = B[10] * (1 - damp);
+  const restW = 1 - B[10];
+  expect(Math.abs(p[10] - B[10] * damp) < 1e-15,
+    'P\'(k) = P(k)·T^(-n)：' + (B[10] * damp * 100).toFixed(4) + '%（未修正 ' + (B[10] * 100).toFixed(4) + '%）');
+  expect(p.every((x, i) => i === 10 || Math.abs(x - B[i] * (1 + freed / restW)) < 1e-15),
+    '让出的概率按 e^i 的比例分给其余所有球');
+  expect(Math.abs(p.reduce((a, b) => a + b, 0) - 1) < 1e-14, '修正后仍是概率分布（和为 1）');
+  expect(p.every(x => x > 0), '修正后没有任何一档被压成 0');
+  console.log('  n=4 时 #11=' + (p[10] * 100).toFixed(4) + '%  #10=' + (p[9] * 100).toFixed(4) +
+    '%  #9=' + (p[8] * 100).toFixed(4) + '%（基础分别是 ' +
+    (B[10] * 100).toFixed(4) + '% / ' + (B[9] * 100).toFixed(4) + '% / ' + (B[8] * 100).toFixed(4) + '%）');
+
+  // n=1 压到 1/T、n=2 压到 1/T²
+  api().resetAntiRepeat();
+  Math.random = () => 0.999999;
+  const p1 = (api().randTier(), api().dropProb().slice());
+  const p2 = (api().randTier(), api().dropProb().slice());
+  Math.random = realRandom;
+  expect(Math.abs(p1[10] - B[10] / T) < 1e-15 && Math.abs(p2[10] - B[10] / (T * T)) < 1e-15,
+    'n=1 压到 1/T、n=2 压到 1/T²');
+
+  api().resetAntiRepeat();
+  expect(api().dropProb().every((x, i) => Math.abs(x - B[i]) < 1e-15), '清空连出状态后 dropProb() 就等于基础分布');
+
+  // 经验验证：连出率应该明显低于「完全不开」的 ΣP(k)²
+  const rBase = B.reduce((a, q) => a + q * q, 0);
+  api().resetAntiRepeat();
+  let reps = 0, last = -1;
+  const RN = 200000;
+  for (let i = 0; i < RN; i++) { const t = api().randTier(); if (t === last) reps++; last = t; }
+  const rObs = reps / RN;
+  console.log('  连出率：理论「无修正」= ' + (rBase * 100).toFixed(1) + '%，实测开了避免连出 = ' + (rObs * 100).toFixed(1) + '%');
+  expect(rObs < rBase - 0.05, '避免连出把连出率压下来了');
+
+  if (gameRunning()) {
+    const chips = byId.get('chain').children.filter(c => String(c.className).indexOf('drop') >= 0);
+    console.log('  合成链高亮档位数 = ' + chips.length);
+    expect(chips.length === api().TIER_PROB.filter(q => q >= api().DROP_P_MIN).length,
+      '合成链高亮的档位数和基础概率表一致');
   }
-  // df = 10，α = 1e-6 的临界值约 41.8；通过则说明抽样分布与公式一致
-  console.log('  抽样 ' + N + ' 次：卡方 = ' + chi2.toFixed(2) + '（df=10，α=1e-6 临界值 41.82）');
-  console.log('  实测 ' + hits.map((h, i) => '#' + (i + 1) + '=' + (h / N * 100).toFixed(3) + '%').join(' '));
-  expect(chi2 < 41.82, '抽样分布符合 P(k)=exp(k)/Σexp(i)（卡方 ' + chi2.toFixed(2) + '）');
-  const maxDev = Math.max(...hits.map((h, i) => Math.abs(h - N * prob[i]) / Math.sqrt(N * prob[i])));
-  expect(maxDev < 5, '每一档的抽样偏差都在 5σ 以内（最大 ' + maxDev.toFixed(2) + 'σ）');
 }
 
 function gameRunning() { return byId.get('gameScreen').hidden === false; }
@@ -356,7 +428,7 @@ expect(byId.get('chain').children.length > 11, 'merge chain strip populated');
 
 const W = api().W, H = api().H, DANGER = api().DANGER_Y;
 expect(W === 514 && H === 700, '把框顶挪到虚线处再等比放大后，框是 514x700（纵向仍是 700）');
-expect(DANGER === 52, '警戒线在框顶往下 52px（DANGER_Y=' + DANGER + '）');
+expect(DANGER === 52, '警戒线固定在框顶往下 52px（不再跟难度绑定）');
 expect(Math.abs((W / H) - (514 / 700)) < 1e-9, '框的宽高比 = 514/700');
 
 // 鼠标：在 stage 上按下即投
@@ -589,14 +661,14 @@ console.log('\n--- 三击调整投放上限 ---');
 
   await startWith('shanghai-high');
   expect(chipsNow().length === 11, 'one chip per tier (' + chipsNow().length + ')');
-  expect(api().dropTop === 6, 'default cap = smallest 5 tiers (top=' + api().dropTop + ')');
+  expect(api().dropTop === 8, 'default cap = smallest 3 tiers (top=' + api().dropTop + ')');
 
   tap(chipsNow()[0], 3);
-  expect(api().dropTop === 6, 'triple-tapping 球王 does nothing');
+  expect(api().dropTop === 8, 'triple-tapping 球王 does nothing');
   tap(chipsNow()[1], 3);
-  expect(api().dropTop === 6, 'triple-tapping a 四校 does nothing');
+  expect(api().dropTop === 8, 'triple-tapping a 四校 does nothing');
   tap(chipsNow()[3], 2);
-  expect(api().dropTop === 6, 'two taps do nothing');
+  expect(api().dropTop === 8, 'two taps do nothing');
 
   tap(chipsNow()[3], 3);
   expect(api().dropTop === 3, 'triple tap raises the cap to that tier (top=' + api().dropTop + ')');
@@ -604,7 +676,7 @@ console.log('\n--- 三击调整投放上限 ---');
   expect(marks[3] && marks[10] && !marks[2], 'chain highlights tiers 3..10 only');
 
   tap(chipsNow()[3], 3);
-  expect(api().dropTop === 6, 'triple tap again restores the default');
+  expect(api().dropTop === 8, 'triple tap again restores the default');
   expect(chipsNow()[3].className.indexOf('drop') < 0, 'highlight cleared after restore');
 }
 

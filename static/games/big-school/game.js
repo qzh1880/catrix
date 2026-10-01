@@ -53,16 +53,61 @@
 
   /* ---------------- 落球概率 ----------------
    * 第 k 大球（k 从 1 数起，即 TIERS 索引 k-1）的出现概率：
-   *     P(k) = exp(k) / Σ_{i=1..11} exp(i)
-   * 概率随 k 指数上升，所以实际能掉下来的基本是最小的几档：
-   * 7~11 档（索引 6~10）合计约 99.3%，1~6 档合计只有 0.67%。
+   *     P(k) = (e^(2k-1) + e^(2k)) / Σ_{i=1..22} e^i
+   * 分母那 22 项正好被 k=1..11 的 11 对 (2k-1, 2k) 分完，所以加起来是 1。
+   * 相邻两档之比恒为 e² ≈ 7.389（比原来的 e 陡得多），小球占绝对多数：
+   * 第 11 档约 86.5%、第 10 档约 11.7%、第 9 档只有 1.58%。
    */
   var TIER_PROB = (function () {
-    var raw = [], sum = 0, k, w;
-    for (k = 1; k <= TIER_COUNT; k++) { w = Math.exp(k); raw.push(w); sum += w; }
-    return raw.map(function (x) { return x / sum; });
+    var raw = [], k, i, denom = 0;
+    for (k = 1; k <= TIER_COUNT; k++) raw.push(Math.exp(2 * k - 1) + Math.exp(2 * k));
+    for (i = 1; i <= 2 * TIER_COUNT; i++) denom += Math.exp(i);
+    return raw.map(function (x) { return x / denom; });
   })();
   var DROP_P_MIN = 0.01;      // 概率 ≥1% 的档位在合成链里高亮成「可投放」
+
+  /* ---------------- 避免连出 ----------------
+   * 设上一颗掉的是第 k 大球、而且已经连续掉了 n 颗，那么这一颗还是它的概率变成
+   *     P'(k) = P(k) · T^(-n)
+   * 让出来的 P(k)·(1 - T^(-n)) 按 e^i 的权重比例（也就是基础概率的比例）
+   * 分给其余所有球 i ≠ k：
+   *     P'(i) = P(i) + P(k)(1 - T^(-n)) · e^i / Σ_{j≠k} e^j
+   * 于是 P' 仍然是一个概率分布（和为 1），而且越连出越难再抽到它。
+   * T 是个固定常数（最早那一版给的 1.1）；T = 1 就退化成没开这个机制。
+   */
+  var ANTI_REPEAT_T = 1.1;
+  var ANTI_REPEAT = { last: -1, n: 0 };
+
+  function resetAntiRepeat() { ANTI_REPEAT.last = -1; ANTI_REPEAT.n = 0; }
+
+  /* 把「避免连出」叠在任意权重函数 base 上，返回一个新的权重函数 */
+  function withAntiRepeat(base, last) {
+    var prev = ANTI_REPEAT.last, n = ANTI_REPEAT.n;
+    if (prev < 0 || n <= 0 || ANTI_REPEAT_T === 1) return base;
+    var wPrev = base(prev);
+    if (!(wPrev > 0)) return base;
+    var total = 0;
+    for (var i = 0; i <= last; i++) total += base(i);
+    var restW = total - wPrev;
+    if (!(restW > 0)) return base;
+    var damp = Math.pow(ANTI_REPEAT_T, -n);
+    var factor = 1 + wPrev * (1 - damp) / restW;
+    return function (i) { return i === prev ? wPrev * damp : base(i) * factor; };
+  }
+
+  /* 当前这一颗的实际分布（基础权重 + 避免连出修正，已归一化；给测试用） */
+  function dropProb() {
+    var last = TIERS.length - 1;
+    if (last < 0) return [];
+    var base = spanTop < 0
+      ? function (i) { return TIER_PROB[i]; }
+      : function (i) { return i < spanTop ? 0 : Math.pow(DROP_RARE, last - i); };
+    var w = withAntiRepeat(base, last);
+    var total = 0, out = [];
+    for (var i = 0; i <= last; i++) total += w(i);
+    for (var j = 0; j <= last; j++) out.push(w(j) / total);
+    return out;
+  }
 
   /* ---------------- 场地参数 ----------------
    * 以前是 420 × 700 的框，警戒虚线画在 y=128，上面 128px 是纯死区。
@@ -207,7 +252,9 @@
     poolHint.textContent = '每局 11 档：你选的学校当最大球，再随机配 ' +
       (extraFour ? '2 所四校、4 所现有学校（上实 / 八大 / 进才）和 4 所市重点' :
         '1 所四校、4 所现有学校（上实 / 八大 / 进才）和 5 所市重点') +
-      '。落球概率按 exp(k)/Σexp(i) 给，越大的球越难掉出来。';
+      '。落球概率按 P(k) = (e^(2k-1)+e^(2k)) / Σ_{i=1}^{22} e^i 给，越大的球越难掉出来；' +
+      '另外开了「避免连出」：连着出同一颗球时，下一颗还是它的概率乘 T^(-n)（T = ' +
+      ANTI_REPEAT_T + '），让出来的概率按 e^i 的比例分给其余所有球。';
   }
 
   function refreshBest() {
@@ -397,6 +444,7 @@
     M.tilt = M.sx = M.sy = M.smx = M.smy = M.dcx = M.dcy = 0;
     M.bi = 0;                                       // 重新校准「什么叫水平」
     heldX = W / 2;
+    resetAntiRepeat();
     heldTier = randTier();
     spanTop = -1;
     taps.i = -1;
@@ -427,21 +475,24 @@
     return TIER_PROB.length - 1;
   }
 
-  /* 默认按 P(k) = exp(k) / Σ exp(i) 抽；三击放宽后只在 [上限, 最小档] 里抽，
-   * 越大越稀有（按 DROP_RARE 几何衰减，比 1/e 平缓，放宽了才真能掉出大球） */
+  /* 默认按 P(k) = (e^(2k-1)+e^(2k)) / Σ e^i 抽；三击放宽后只在 [上限, 最小档] 里抽，
+   * 越大越稀有（按 DROP_RARE 几何衰减）。两种情况都再叠一层「避免连出」。 */
   function randTier() {
     var last = TIERS.length - 1, k;
-    var w = spanTop < 0
+    var base = spanTop < 0
       ? function (i) { return TIER_PROB[i]; }
       : function (i) { return i < spanTop ? 0 : Math.pow(DROP_RARE, last - i); };
+    var w = withAntiRepeat(base, last);
     var total = 0;
     for (k = 0; k <= last; k++) total += w(k);
-    var r = Math.random() * total, acc = 0;
+    var r = Math.random() * total, acc = 0, pick = last;
     for (k = 0; k < last; k++) {
       acc += w(k);
-      if (r < acc) return k;
+      if (r < acc) { pick = k; break; }
     }
-    return last;
+    if (pick === ANTI_REPEAT.last) ANTI_REPEAT.n++;
+    else { ANTI_REPEAT.last = pick; ANTI_REPEAT.n = 1; }
+    return pick;
   }
 
   function isDroppable(i) {
@@ -1193,6 +1244,10 @@
     SHARE_URL: SHARE_URL,
     shareText: shareText,
     randTier: randTier,            // 暴露出来给测试做分布抽样
+    dropProb: dropProb,
+    ANTI_REPEAT_T: ANTI_REPEAT_T,
+    get antiRepeat() { return { last: ANTI_REPEAT.last, n: ANTI_REPEAT.n }; },
+    resetAntiRepeat: resetAntiRepeat,
     W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY,
     get dropTop() { return dropTop(); },
     motion: M, cam: cam, kick: kick

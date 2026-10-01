@@ -80,10 +80,22 @@
   var DANGER_Y = 52;
   var DROP_PAD = 4;                   // 球出现时贴着框顶：y = r + DROP_PAD
   var COOLDOWN = 0.34;
+  var DROP_RARE = 0.62;       // 三击放宽上限后每往上一档的概率衰减系数
+  var TAP_GAP = 600;          // 连点三下的最大间隔（毫秒）
   var FIXED = 1 / 120;
 
   /* 某一档球「待投放」时的球心 y：贴着框顶 */
   function dropY(tier) { return tier.r + DROP_PAD; }
+
+  /* ---------------- 开局选项 ----------------
+   * 球大小：离散 3 档（标准 / 大 10% / 特大 20%），整体缩放全部球的半径。
+   * 多一所四校：第二大、第三大各随机抽一所四校（默认只抽一所当次大球）。
+   */
+  var SIZES = [
+    { scale: 1,   name: '标准',     short: '标准' },
+    { scale: 1.1, name: '大 10%',   short: '大' },
+    { scale: 1.2, name: '特大 20%', short: '特大' }
+  ];
 
   /* ---------------- DOM ---------------- */
   var $ = function (id) { return document.getElementById(id); };
@@ -96,6 +108,8 @@
   var chainEl = $('chain'), overlay = $('overlay');
   var ovTitle = $('ovTitle'), ovText = $('ovText');
   var shareModal = $('shareModal'), sharePreview = $('sharePreview'), toastEl = $('toast');
+  var sizeSeg = $('sizeSeg'), sizeLabel = $('sizeLabel');
+  var extraFourBtn = $('extraFourBtn');
 
   /* ---------------- 状态 ---------------- */
   var IMAGES = {};
@@ -116,12 +130,17 @@
   var dragging = false;
   var particles = [];
   var popups = [];
-  var shake = 0;
   var acc = 0;
   var last = 0;
   var rafId = 0;
-  var viewScale = 1;
+  var starting = false;
+  var sizeStep = 0;
+  var extraFour = false;
+  var spanTop = -1;
+  var taps = { i: -1, n: 0, t: 0 };
   var soundOn = true;
+  var paused = false;
+  var toastTimer = 0;
 
   try { best = parseInt(localStorage.getItem('bigschool_best') || '0', 10) || 0; } catch (e) { best = 0; }
 
@@ -160,6 +179,11 @@
     updateStartBtn();
   }
 
+  function findSchool(id) {
+    for (var i = 0; i < SCHOOLS.length; i++) if (SCHOOLS[i].id === id) return SCHOOLS[i];
+    return null;
+  }
+
   function selectSchool(id) {
     chosenId = id;
     Array.prototype.forEach.call(gridEl.children, function (c) {
@@ -169,7 +193,7 @@
   }
 
   function updateStartBtn() {
-    var s = SCHOOLS.filter(function (x) { return x.id === chosenId; })[0];
+    var s = findSchool(chosenId);
     if (!s) {
       startBtn.disabled = true;
       startBtn.textContent = '先选一所学校';
@@ -180,13 +204,63 @@
   }
 
   function updateHint() {
-    poolHint.textContent = '每局 11 档：你选的学校当最大球，再随机配 1 所四校、4 所现有学校' +
-      '（上实 / 八大 / 进才）和 5 所市重点。落球概率按 exp(k)/Σexp(i) 给，越大的球越难掉出来。';
+    poolHint.textContent = '每局 11 档：你选的学校当最大球，再随机配 ' +
+      (extraFour ? '2 所四校、4 所现有学校（上实 / 八大 / 进才）和 4 所市重点' :
+        '1 所四校、4 所现有学校（上实 / 八大 / 进才）和 5 所市重点') +
+      '。落球概率按 exp(k)/Σexp(i) 给，越大的球越难掉出来。';
   }
 
   function refreshBest() {
     bestScoreEl.textContent = best;
     bestVal.textContent = best;
+  }
+
+  /* ---------------- 球大小：离散滑块 ----------------
+   * 轨道和标签行左右都内缩半个旋钮；停靠点、旋钮、填色、标签全按同一个百分比 k/(n-1) 定位，
+   * 所以任何宽度下都对得齐，不需要额外的补丁。
+   */
+  var sizeUi = null;
+
+  function stopPct(k) { return k / (SIZES.length - 1) * 100 + '%'; }
+
+  function renderSizeSlider() {
+    var el = function (tag, cls, parent) {
+      var e = document.createElement(tag);
+      e.className = cls;
+      parent.appendChild(e);
+      return e;
+    };
+    var rail = el('div', 'range-rail', sizeSeg);
+    var labels = el('div', 'range-labels', sizeSeg);
+    sizeUi = { rail: rail, fill: el('span', 'range-fill', rail), dots: [], names: [] };
+    SIZES.forEach(function (s, i) {
+      var dot = el('i', 'range-dot', rail);
+      var name = el('span', 'range-name', labels);
+      dot.style.left = name.style.left = stopPct(i);
+      name.textContent = s.short;
+      sizeUi.dots.push(dot);
+      sizeUi.names.push(name);
+    });
+    sizeUi.knob = el('span', 'range-knob', rail);
+    sizeSeg.setAttribute('aria-valuemin', 0);
+    sizeSeg.setAttribute('aria-valuemax', SIZES.length - 1);
+    setSizeStep(sizeStep);
+  }
+
+  function setSizeStep(k) {
+    sizeStep = clamp(k, 0, SIZES.length - 1);
+    sizeUi.fill.style.width = sizeUi.knob.style.left = stopPct(sizeStep);
+    sizeUi.dots.forEach(function (d, i) { d.classList.toggle('on', i <= sizeStep); });
+    sizeUi.names.forEach(function (n, i) { n.classList.toggle('cur', i === sizeStep); });
+    sizeLabel.textContent = SIZES[sizeStep].name;
+    sizeSeg.setAttribute('aria-valuenow', sizeStep);
+    sizeSeg.setAttribute('aria-valuetext', SIZES[sizeStep].name);
+  }
+
+  /* 吸附到最近的停靠点 */
+  function pickSizeStep(e) {
+    var r = sizeUi.rail.getBoundingClientRect();
+    setSizeStep(Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * (SIZES.length - 1)));
   }
 
   /* ============================================================
@@ -206,25 +280,20 @@
    * 除选中的球王固定占第 0 档外，其余 10 所按 SCHOOLS 的默认大小顺序排列。
    */
   function buildTierSchools() {
-    var chosen = SCHOOLS.filter(function (s) { return s.id === chosenId; })[0];
+    var chosen = findSchool(chosenId);
     if (!chosen) return [];
+    var from = function (test) {
+      return SCHOOLS.filter(function (s) { return s.id !== chosenId && test(s.group); });
+    };
+    var fourN = extraFour ? 2 : 1;             // 开了「多一所四校」就多抽一所，名额从市重点里让
 
-    // 1 所四校（选中的是四校就换一所）
-    var four = pickRandom(SCHOOLS.filter(function (s) {
-      return s.group === '四校' && s.id !== chosenId;
-    }), 1);
-
-    // 现有球里 4 所（四校以外的老名单：上海实验学校 / 八大 / 进才）
-    var legacy = pickRandom(SCHOOLS.filter(function (s) {
-      return s.group !== '四校' && s.group !== '市重点' && s.id !== chosenId;
-    }), 4);
-
-    // 新增市重点里 5 所
-    var fresh = pickRandom(SCHOOLS.filter(function (s) {
-      return s.group === '市重点' && s.id !== chosenId;
-    }), 5);
-
-    var rest = four.concat(legacy, fresh);
+    var rest = [].concat(
+      pickRandom(from(function (g) { return g === '四校'; }), fourN),
+      // 现有球：四校以外的老名单（上海实验学校 / 八大 / 进才）
+      pickRandom(from(function (g) { return g !== '四校' && g !== '市重点'; }), 4),
+      pickRandom(from(function (g) { return g === '市重点'; }), 6 - fourN)
+    );
+    // 除球王外按默认大小排，四校在 SCHOOLS 最前，所以抽到的四校正好是第二、第三大
     rest.sort(function (a, b) { return SCHOOLS.indexOf(a) - SCHOOLS.indexOf(b); });
     return [chosen].concat(rest);
   }
@@ -237,7 +306,7 @@
       return {
         school: s,
         index: i,
-        r: W * TIER_PCT[i] / 200,          // 直径占池宽 pct% -> 半径
+        r: W * TIER_PCT[i] / 200 * SIZES[sizeStep].scale,   // 直径占池宽 pct% -> 半径
         color: s.color,
         img: IMAGES[s.id]
       };
@@ -299,11 +368,16 @@
    * 开局
    * ============================================================ */
   function startGame() {
-    if (!chosenId) return;
-    ready.then(function () { reallyStart(); });
+    if (!chosenId || starting) return;
+    starting = true;
+    enableMotion();                 // 留在点击的同步栈里（iOS 要用户手势）
+    ready.then(function () {
+      starting = false;
+      beginRound();
+    });
   }
 
-  function reallyStart() {
+  function beginRound() {
     buildTiers();
 
     world = new P.World(W, H);
@@ -316,12 +390,17 @@
     cooldown = 0;
     acc = 0;
     last = 0;
-    shake = 0;
     dragging = false;
     particles = [];
     popups = [];
+    cam.x = cam.y = cam.vx = cam.vy = cam.r = cam.vr = 0;
+    M.tilt = M.sx = M.sy = M.smx = M.smy = M.dcx = M.dcy = 0;
+    M.bi = 0;                                       // 重新校准「什么叫水平」
     heldX = W / 2;
     heldTier = randTier();
+    spanTop = -1;
+    taps.i = -1;
+    taps.n = 0;
 
     selectScreen.hidden = true;
     gameScreen.hidden = false;
@@ -341,18 +420,45 @@
     rafId = requestAnimationFrame(frame);
   }
 
-  /* 按 P(k) = exp(k) / Σ exp(i) 抽下一颗要投放的球（返回 TIERS 索引） */
-  function randTier() {
-    var r = Math.random(), acc = 0;
-    for (var i = 0; i < TIER_PROB.length; i++) {
-      acc += TIER_PROB[i];
-      if (r < acc) return i;
-    }
+  /* 可投放的上限档位：默认是概率 ≥ DROP_P_MIN 的最大一档；三击某校后放宽到它那一档 */
+  function dropTop() {
+    if (spanTop >= 0) return spanTop;
+    for (var i = 0; i < TIER_PROB.length; i++) if (TIER_PROB[i] >= DROP_P_MIN) return i;
     return TIER_PROB.length - 1;
   }
 
+  /* 默认按 P(k) = exp(k) / Σ exp(i) 抽；三击放宽后只在 [上限, 最小档] 里抽，
+   * 越大越稀有（按 DROP_RARE 几何衰减，比 1/e 平缓，放宽了才真能掉出大球） */
+  function randTier() {
+    var last = TIERS.length - 1, k;
+    var w = spanTop < 0
+      ? function (i) { return TIER_PROB[i]; }
+      : function (i) { return i < spanTop ? 0 : Math.pow(DROP_RARE, last - i); };
+    var total = 0;
+    for (k = 0; k <= last; k++) total += w(k);
+    var r = Math.random() * total, acc = 0;
+    for (k = 0; k < last; k++) {
+      acc += w(k);
+      if (r < acc) return k;
+    }
+    return last;
+  }
+
   function isDroppable(i) {
-    return (TIER_PROB[i] || 0) >= DROP_P_MIN;
+    return i >= dropTop();
+  }
+
+  /* 连点三下链条上的某所学校：把它的档位设成投放上限，再点三下还原 */
+  function chipTap(i) {
+    var now = Date.now();
+    if (taps.i === i && now - taps.t < TAP_GAP) taps.n++;
+    else { taps.i = i; taps.n = 1; }
+    taps.t = now;
+    if (taps.n < 3) return;
+    taps.n = 0;
+    if (i < (extraFour ? 3 : 2)) return;      // 球王和四校不给放宽
+    spanTop = spanTop === i ? -1 : i;
+    renderChain();
   }
 
   function renderChain() {
@@ -369,7 +475,8 @@
       var sz = Math.round(14 + 16 * (1 - i / (TIERS.length - 1)));
       chip.innerHTML = '<img src="logos/' + t.school.id + '.png" width="' + sz + '" height="' + sz + '" alt="">' +
         '<span class="cn">' + t.school.name + '</span>';
-      chip.title = t.school.name;
+      chip.title = t.school.name + '（连点三下调整投放上限）';
+      chip.addEventListener('click', function () { chipTap(i); });
       chainEl.appendChild(chip);
     });
   }
@@ -423,7 +530,7 @@
         addScore(300, mx, my);
         burst(mx, my, TIERS[0].color, 34, 420);
         ring(mx, my, TIERS[0].r * 0.8, TIERS[0].color);
-        shake = Math.max(shake, 13);
+        kick(13);
         sfx(0, 0.5);
         continue;
       }
@@ -441,7 +548,7 @@
       addScore(SCORE[t], mx, my);
       burst(mx, my, info.color, Math.min(26, 8 + nt * 1.6), 150 + info.r * 5);
       ring(mx, my, info.r * 0.6, info.color);
-      shake = Math.max(shake, Math.min(9, 1.5 + info.r * 0.07));
+      kick(Math.min(9, 1.5 + info.r * 0.07));
       sfx(t, Math.min(0.4, 0.08 + (TIERS.length - t) * 0.02));
 
       if (nt === 0 && !won) {
@@ -511,6 +618,116 @@
   }
 
   /* ============================================================
+   * 体感：手机不是惯性系，球除了重力还受一个惯性力 -a（a = 手机加速度）。
+   * 所以「重力歪了」和「球被甩出去」是同一个 g_eff = 重力 - a 的两张脸：
+   * 低频（姿态）-> 重力方向，高频（线性加速度）-> 甩动。
+   * 估出 g_eff 整块交给物理引擎当重力；镜头抖动也由同一个力驱动一根弹簧，
+   * 不单独写一套（合成冲击踢的也是这根弹簧）。
+   * ============================================================ */
+  var G0 = 2600, DEG = Math.PI / 180;
+  var M = {
+    on: 0, gcx: 0, acx: 0, acy: 0, dcx: 0, dcy: 0, smx: 0, smy: 0,
+    lpx: 0, lpy: 0, lpi: 0, base: 0, bi: 0, tilt: 0, tx: 0, ty: G0, sx: 0, sy: 0
+  };
+  var cam = { x: 0, y: 0, vx: 0, vy: 0, r: 0, vr: 0 };
+
+  function lp(c, t, tau, dt) { return c + (t - c) * (1 - Math.exp(-dt / tau)); }
+
+  /* 软膝：小输入迟钝、大输入饱和 */
+  function knee(v, d, s) {
+    var m = Math.abs(v) - d;
+    if (m <= 0) return 0;
+    var t = Math.min(1, m / s);
+    return (v < 0 ? -1 : 1) * t * t;
+  }
+
+  /* 设备坐标（x 右、y 上）-> 画布坐标（y 下），按屏幕旋转重映射 */
+  function scrRad() {
+    var a = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle
+      : (typeof window.orientation === 'number' ? window.orientation : 0);
+    return a * DEG;
+  }
+  function toCX(x, y) { var a = scrRad(); return x * Math.cos(a) - y * Math.sin(a); }
+  function toCY(x, y) { var a = scrRad(); return -(x * Math.sin(a) + y * Math.cos(a)); }
+
+  function onOrient(e) {                            // 低频：重力方向
+    if (e.beta == null && e.gamma == null) return;
+    var b = (e.beta || 0) * DEG, g = (e.gamma || 0) * DEG;
+    M.gcx = toCX(Math.cos(b) * Math.sin(g), -Math.sin(b));
+  }
+
+  function onMotion(e) {                            // 高频：线性加速度（m/s²）
+    var a = e.acceleration, ix, iy;
+    if (a && a.x != null && a.y != null) { ix = a.x; iy = a.y; }
+    else {
+      var g = e.accelerationIncludingGravity;       // 系统没给就自己减重力
+      if (!g || g.x == null || g.y == null) return;
+      if (!M.lpi) { M.lpx = g.x; M.lpy = g.y; M.lpi = 1; }
+      ix = g.x - M.lpx; iy = g.y - M.lpy;
+      M.lpx += (g.x - M.lpx) * 0.06; M.lpy += (g.y - M.lpy) * 0.06;
+    }
+    M.acx = toCX(ix, iy); M.acy = toCY(ix, iy);
+  }
+
+  /* iOS 13+ 必须在用户手势里要权限，所以挂在「开始游戏」的点击上 */
+  function enableMotion() {
+    if (M.on) return;
+    var OE = window.DeviceOrientationEvent, ME = window.DeviceMotionEvent;
+    if (!OE && !ME) return;
+    var go = function () {
+      if (M.on) return;
+      M.on = 1;
+      window.addEventListener('deviceorientation', onOrient);
+      window.addEventListener('devicemotion', onMotion);
+    };
+    if (!(OE && OE.requestPermission) && !(ME && ME.requestPermission)) { go(); return; }
+    var ask = function (C) {
+      try { return C && C.requestPermission ? C.requestPermission() : Promise.resolve('na'); }
+      catch (x) { return Promise.resolve('na'); }
+    };
+    Promise.all([ask(OE), ask(ME)]).then(function (r) {
+      if (r.indexOf('granted') >= 0) go();
+    })['catch'](function () { });
+  }
+
+  /* 传感器 -> g_eff（画布坐标，y 向下） */
+  function motionUpdate(dt) {
+    if (!M.bi) { M.base = M.gcx; M.bi = 1; }        // 开局把当前握持姿势当水平
+    else M.base = lp(M.base, M.gcx, 3, dt);
+    M.tilt = lp(M.tilt, knee(M.gcx - M.base, 0.04, 0.45) * 15 * DEG, 0.09, dt);
+    M.tx = G0 * Math.sin(M.tilt);
+    M.ty = G0 * Math.cos(M.tilt);
+
+    M.dcx = lp(M.dcx, M.acx, 1.2, dt);              // 去直流：零偏不会把球慢慢推走
+    M.dcy = lp(M.dcy, M.acy, 1.2, dt);
+    var rx = M.acx - M.dcx, ry = M.acy - M.dcy, mag = Math.sqrt(rx * rx + ry * ry);
+    var amp = mag > 0.35 ? Math.pow(Math.min(1, (mag - 0.35) / 14), 1.1) * 9000 / mag : 0;
+    M.smx = lp(M.smx, -rx * amp, 0.035, dt);        // 惯性力 = -a
+    M.smy = lp(M.smy, -ry * amp, 0.035, dt);
+    M.sx = M.smx; M.sy = M.smy;
+  }
+
+  /* 镜头：一根弹簧，被同一个惯性力驱动 */
+  function camStep(dt) {
+    var dx = (-M.sx + M.tx * 0.25) / G0, dy = (-M.sy + (M.ty - G0) * 0.25) / G0;
+    spring('x', 'vx', dx * 42000, 31.4, 0.42, 28, dt);
+    spring('y', 'vy', dy * 42000, 31.4, 0.42, 28, dt);
+    spring('r', 'vr', dx * 40, 25.1, 0.5, 0.045, dt);
+  }
+  function spring(pk, vk, drive, w, z, max, dt) {
+    cam[vk] += (-w * w * cam[pk] - 2 * z * w * cam[vk] + drive) * dt;
+    cam[pk] += cam[vk] * dt;
+    if (cam[pk] > max) { cam[pk] = max; cam[vk] *= 0.5; }
+    else if (cam[pk] < -max) { cam[pk] = -max; cam[vk] *= 0.5; }
+  }
+  function kick(m) {                                // 合成冲击踢同一根弹簧
+    var a = Math.random() * Math.PI * 2;
+    cam.vx += Math.cos(a) * m * 26;
+    cam.vy += Math.sin(a) * m * 22 - m * 6;
+    cam.vr += (Math.random() - 0.5) * m * 0.004;
+  }
+
+  /* ============================================================
    * 主循环
    * ============================================================ */
   function frame(t) {
@@ -525,6 +742,16 @@
   }
 
   function update(dt) {
+    if (!paused) {
+      motionUpdate(dt);
+      camStep(dt);
+      // 有效重力 = 重力 - 手机加速度；往上最多托到 -1000，别把球甩出池子
+      world.gravity = Math.max(-1000, M.ty + M.sy);
+      world.gravityX = M.tx + M.sx;
+      // 流化：滚阻随有效重量走。失重时法向力为 0，球才滑得动、堆才会重新码放
+      world.rollDamp = 0.045 * clamp(world.gravity / G0, 0, 1);
+    }
+
     if (cooldown > 0) cooldown = Math.max(0, cooldown - dt);
 
     if (!gameOver && !paused) {
@@ -548,7 +775,7 @@
         p.vy += 900 * dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.vx *= 0.98;
+        p.vx *= Math.pow(0.98, dt * 60);
       } else {
         p.r = p.r0 + (p.r1 - p.r0) * (1 - p.life / p.max);
       }
@@ -560,8 +787,6 @@
       q.y -= 42 * dt;
       if (q.life <= 0) popups.splice(j, 1);
     }
-
-    if (shake > 0) shake = Math.max(0, shake - dt * 42);
   }
 
   function checkOver(dt) {
@@ -603,8 +828,13 @@
    * ============================================================ */
   function render() {
     ctx.save();
-    if (shake > 0.2) {
-      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    if (Math.abs(cam.x) > 0.05 || Math.abs(cam.y) > 0.05 || Math.abs(cam.r) > 2e-4) {
+      ctx.translate(cam.x, cam.y);
+      if (Math.abs(cam.r) > 2e-4) {
+        ctx.translate(W / 2, H / 2);
+        ctx.rotate(cam.r);
+        ctx.translate(-W / 2, -H / 2);
+      }
     }
 
     ctx.fillStyle = '#ffffff';
@@ -724,7 +954,6 @@
     var rect = stageEl.getBoundingClientRect();
     if (rect.width < 10 || rect.height < 10) return;
     var s = Math.min((rect.width - 4) / W, (rect.height - 4) / H);
-    viewScale = s;
     var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     cvs.style.width = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';
@@ -739,7 +968,7 @@
   /* 把任意指针位置映射到棋盘坐标；超出边界就夹到边界 */
   function boardX(e) {
     var r = cvs.getBoundingClientRect();
-    return clamp((e.clientX - r.left) / (viewScale || 1), 0, W);
+    return clamp((e.clientX - r.left) / r.width * W, 0, W);
   }
 
   function isUiTarget(e) {
@@ -793,8 +1022,33 @@
   /* ============================================================
    * 绑定
    * ============================================================ */
+  /* 档位条：按下即选，按住左右拖也跟手（指针捕获保证拖出条外也收得到 move） */
+  sizeSeg.addEventListener('pointerdown', function (e) {
+    sizeSeg.classList.add('drag');
+    if (sizeSeg.setPointerCapture) sizeSeg.setPointerCapture(e.pointerId);
+    pickSizeStep(e);
+  });
+  sizeSeg.addEventListener('pointermove', function (e) {
+    if (sizeSeg.classList.contains('drag')) pickSizeStep(e);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (t) {
+    sizeSeg.addEventListener(t, function () { sizeSeg.classList.remove('drag'); });
+  });
+  sizeSeg.addEventListener('keydown', function (e) {
+    var d = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key];
+    if (e.key === 'Home') d = -sizeStep;
+    if (e.key === 'End') d = SIZES.length - 1 - sizeStep;
+    if (d === undefined) return;
+    e.preventDefault();
+    setSizeStep(sizeStep + d);
+  });
+  extraFourBtn.addEventListener('click', function () {
+    extraFour = !extraFour;
+    extraFourBtn.classList.toggle('on', extraFour);
+    updateHint();
+  });
   startBtn.addEventListener('click', startGame);
-  $('restartBtn').addEventListener('click', function () { startGame(); });
+  $('restartBtn').addEventListener('click', startGame);
   $('backBtn').addEventListener('click', backToSelect);
   $('ovAgain').addEventListener('click', function () {
     if (gameOver) { startGame(); } else { overlay.hidden = true; }
@@ -811,10 +1065,9 @@
   shareModal.addEventListener('click', function (e) { if (e.target === shareModal) closeShare(); });
   $('shSystem').addEventListener('click', systemShare);
   $('shCopy').addEventListener('click', copyShare);
-  $('shQQ').addEventListener('click', function () { shareTo('qq'); });
-  $('shQzone').addEventListener('click', function () { shareTo('qzone'); });
-  $('shWeibo').addEventListener('click', function () { shareTo('weibo'); });
-  $('shBili').addEventListener('click', function () { shareTo('bili'); });
+  [['shQQ', 'qq'], ['shQzone', 'qzone'], ['shWeibo', 'weibo'], ['shBili', 'bili']].forEach(function (p) {
+    $(p[0]).addEventListener('click', function () { shareTo(p[1]); });
+  });
 
   /* ============================================================
    * 分享
@@ -822,8 +1075,6 @@
    * 手机上「系统分享」会调起系统面板（里面有微信、朋友圈、QQ、B站）；
    * 桌面端走各家的网页分享入口，微信/朋友圈只能复制文案自己粘。
    * ============================================================ */
-  var toastTimer = 0;
-  var paused = false;
   var SHARE_URL = 'https://catrix.net/games/big-school';
 
   function shareText() {
@@ -902,15 +1153,17 @@
     copyShare();
   }
 
+  var SHARE_ENDPOINT = {
+    qq: 'https://connect.qq.com/widget/shareqq/index.html',
+    qzone: 'https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey'
+  };
+
   function shareTo(kind) {
     var t = shareText();
     var url = SHARE_URL;          // 用站点上的固定地址，file:// 打开时也分享得出去
     var enc = encodeURIComponent;
-    var title = enc('合成大 · 学校');
-    if (kind === 'qq') {
-      openUrl('https://connect.qq.com/widget/shareqq/index.html?title=' + title + '&summary=' + enc(t) + '&url=' + enc(url));
-    } else if (kind === 'qzone') {
-      openUrl('https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?title=' + title + '&summary=' + enc(t) + '&url=' + enc(url));
+    if (SHARE_ENDPOINT[kind]) {
+      openUrl(SHARE_ENDPOINT[kind] + '?title=' + enc('合成大 · 学校') + '&summary=' + enc(t) + '&url=' + enc(url));
     } else if (kind === 'weibo') {
       openUrl('https://service.weibo.com/share/share.php?title=' + enc(t));
     } else if (kind === 'bili') {
@@ -926,6 +1179,7 @@
   refreshBest();
   updateHint();
   renderGrid();
+  renderSizeSlider();
   var ready = preload();
 
   window.__bigschool = {
@@ -939,6 +1193,8 @@
     SHARE_URL: SHARE_URL,
     shareText: shareText,
     randTier: randTier,            // 暴露出来给测试做分布抽样
-    W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY
+    W: W, H: H, DANGER_Y: DANGER_Y, DROP_PAD: DROP_PAD, dropY: dropY,
+    get dropTop() { return dropTop(); },
+    motion: M, cam: cam, kick: kick
   };
 })();

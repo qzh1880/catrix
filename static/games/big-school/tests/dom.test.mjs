@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = path.join(HERE, '..');
 const html = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');
+const css = fs.readFileSync(path.join(DIR, 'style.css'), 'utf8');
 
 let fails = 0;
 const expect = (c, m) => { console.log((c ? '  \u2713 ' : '  \u2717 FAIL: ') + m); if (!c) fails++; };
@@ -44,7 +45,10 @@ function makeEl(tag, id) {
     id: id || '',
     children: [],
     dataset: {},
-    style: {},
+    style: { setProperty(k, v) { this[k] = String(v); } },
+    attrs: {},
+    setAttribute(k, v) { this.attrs[k] = String(v); },
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
     parentNode: null,
     width: 0, height: 0,
     textContent: '', title: '', src: '', alt: '', type: '',
@@ -503,6 +507,106 @@ expect(api().score === 0, 'restart resets score');
 byId.get('backBtn').dispatch('click');
 expect(byId.get('selectScreen').hidden === false, 'back returns to school selection');
 expect(byId.get('gameScreen').hidden === true, 'game screen hidden after back');
+
+/* ---------------- 开局选项 ---------------- */
+console.log('\n--- 多一所四校 ---');
+{
+  byId.get('extraFourBtn').dispatch('click');
+  await startWith('shanghai-high');
+  const t = api().tiers;
+  const fours = t.filter(x => x.school.group === '四校').map(x => x.school.id);
+  expect(t.length === 11, 'extraFour: still 11 types');
+  expect(fours.length === 3, 'extraFour: chosen + 2 random 四校 (got ' + fours.length + ')');
+  expect(new Set(fours).size === 3, 'extraFour: the two picks are different schools');
+  expect(t[1].school.group === '四校' && t[2].school.group === '四校', 'extraFour: tier 1 & 2 are both 四校');
+  expect(t.filter(x => LEGACY.indexOf(x.school.group) >= 0).length === 4 &&
+    t.filter(x => x.school.group === '市重点').length === 4, 'extraFour: 4 所现有 + 4 所市重点（让出一个市重点名额）');
+  byId.get('extraFourBtn').dispatch('click');
+}
+
+console.log('\n--- 球大小滑块 ---');
+{
+  const seg = byId.get('sizeSeg'), label = byId.get('sizeLabel');
+  const [rail, labels] = seg.children;
+  const part = cls => rail.children.filter(c => c.className === cls);
+  const [fill] = part('range-fill'), [knob] = part('range-knob'), dots = part('range-dot');
+  const names = labels.children;
+  const on = () => dots.map(d => (d.classList.contains('on') ? 1 : 0)).join('');
+  const cur = () => names.findIndex(n => n.classList.contains('cur'));
+  const at = (l, k) => label.textContent === l && knob.style.left === fill.style.width && cur() === k;
+  // 桩的 rect 一律 left 0 / 宽 520：0 -> 最左，260 -> 中间，9999 -> 最右
+  const press = x => { seg.dispatch('pointerdown', { clientX: x }); seg.dispatch('pointerup', {}); };
+
+  expect(dots.length === 3 && names.length === 3 && !!fill && !!knob, 'rail has fill, 3 stops, knob; 3 labels');
+  expect(dots.map(d => d.style.left).join(' ') === '0% 50% 100%', 'stops spread evenly (' + dots.map(d => d.style.left) + ')');
+  expect(names.every((n, i) => n.style.left === dots[i].style.left), 'each label sits under its stop');
+  expect(at('标准', 0) && knob.style.left === '0%' && on() === '100', 'default: 标准, knob on the first stop');
+
+  press(9999);
+  await startWith('shanghai-high');
+  const pct = api().tiers.map(x => x.r * 200 / api().W);
+  expect(Math.abs(pct[0] - 54.4 * 1.2) < 0.01, 'rightmost stop = +20% (' + pct[0].toFixed(1) + '%)');
+  expect(Math.abs(pct[10] - 7.0 * 1.2) < 0.01, 'smallest scaled too (' + pct[10].toFixed(1) + '%)');
+  expect(at('特大 20%', 2) && knob.style.left === '100%' && on() === '111', 'knob + fill at the right end');
+  expect(seg.getAttribute('aria-valuenow') === '2' && seg.getAttribute('aria-valuetext') === '特大 20%',
+    'aria value tracks the stop');
+
+  press(260);
+  expect(at('大 10%', 1) && knob.style.left === '50%' && on() === '110', 'snaps to the middle stop');
+  press(380);                       // 按分段算会落到第 3 段，按最近停靠点应是中间
+  expect(at('大 10%', 1), 'snaps to the nearest stop, not the segment');
+
+  press(0);
+  await startWith('shanghai-high');
+  expect(Math.abs(api().tiers[0].r * 200 / api().W - 54.4) < 0.01, 'leftmost stop = 标准');
+
+  seg.dispatch('pointerdown', { clientX: 0 });
+  expect(seg.classList.contains('drag'), 'dragging starts on press');
+  seg.dispatch('pointermove', { clientX: 9999 });
+  expect(label.textContent === '特大 20%', 'drag follows the finger to right');
+  seg.dispatch('pointermove', { clientX: 0 });
+  expect(label.textContent === '标准', 'drag follows the finger back to left');
+  seg.dispatch('pointerup', {});
+  expect(!seg.classList.contains('drag'), 'drag released');
+  seg.dispatch('pointermove', { clientX: 9999 });
+  expect(label.textContent === '标准', 'moving after release does nothing');
+
+  const key = k => { let p = false; seg.dispatch('keydown', { key: k, preventDefault() { p = true; } }); return p; };
+  expect(key('ArrowRight') && label.textContent === '大 10%', 'ArrowRight steps up');
+  key('End');
+  expect(label.textContent === '特大 20%', 'End jumps to max');
+  key('ArrowRight');
+  expect(label.textContent === '特大 20%', 'clamped at max');
+  key('Home');
+  expect(label.textContent === '标准', 'Home jumps to min');
+  expect(!key('a'), 'other keys are ignored');
+}
+
+console.log('\n--- 三击调整投放上限 ---');
+{
+  const chipsNow = () => byId.get('chain').children.filter(c => (c.className || '').indexOf('chip') === 0);
+  const tap = (chip, n) => { for (let k = 0; k < n; k++) chip.dispatch('click'); };
+
+  await startWith('shanghai-high');
+  expect(chipsNow().length === 11, 'one chip per tier (' + chipsNow().length + ')');
+  expect(api().dropTop === 6, 'default cap = smallest 5 tiers (top=' + api().dropTop + ')');
+
+  tap(chipsNow()[0], 3);
+  expect(api().dropTop === 6, 'triple-tapping 球王 does nothing');
+  tap(chipsNow()[1], 3);
+  expect(api().dropTop === 6, 'triple-tapping a 四校 does nothing');
+  tap(chipsNow()[3], 2);
+  expect(api().dropTop === 6, 'two taps do nothing');
+
+  tap(chipsNow()[3], 3);
+  expect(api().dropTop === 3, 'triple tap raises the cap to that tier (top=' + api().dropTop + ')');
+  const marks = chipsNow().map(c => (c.className || '').indexOf('drop') >= 0);
+  expect(marks[3] && marks[10] && !marks[2], 'chain highlights tiers 3..10 only');
+
+  tap(chipsNow()[3], 3);
+  expect(api().dropTop === 6, 'triple tap again restores the default');
+  expect(chipsNow()[3].className.indexOf('drop') < 0, 'highlight cleared after restore');
+}
 
 console.log('\n--- randTier 按公式取档 ---');
 {

@@ -166,6 +166,139 @@ body {
 
 .actions { margin-top: 20px; }
 
+/* ---------------- 开局选项 ---------------- */
+.opts {
+  width: 100%;
+  max-width: 780px;
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.opt {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.opt-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.opt-head span { font-size: 12px; color: var(--muted); }
+.opt-head b { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* 离散滑块（参考 Codex 思考深度）：细轨道 + 停靠点 + 旋钮，下面一行档位名。
+   .range-rail 与 .range-labels 左右都内缩半个旋钮（9px），
+   停靠点、旋钮、填色、标签都按同一个百分比定位，任何宽度下都对得齐。 */
+.range {
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+  padding: 2px 0;
+}
+
+.range-rail {
+  position: relative;
+  height: 18px;
+  margin: 0 9px;
+}
+
+.range-rail::before,
+.range-fill {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 999px;
+}
+
+.range-rail::before { right: 0; background: var(--line); }
+
+.range-fill {
+  width: 0;
+  background: var(--ink);
+  transition: width .18s cubic-bezier(.32, .72, 0, 1);
+}
+
+.range-dot {
+  position: absolute;
+  top: 50%;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--line);
+  transform: translate(-50%, -50%);
+  transition: border-color .18s;
+}
+
+.range-dot.on { border-color: var(--ink); }
+
+.range-knob {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .14);
+  transform: translate(-50%, -50%);
+  transition: left .18s cubic-bezier(.32, .72, 0, 1), transform .12s ease, box-shadow .12s;
+}
+
+.range.drag .range-knob { transform: translate(-50%, -50%) scale(1.12); }
+.range:focus-visible .range-knob { box-shadow: 0 0 0 4px rgba(17, 17, 17, .14); }
+
+.range-labels {
+  position: relative;
+  height: 16px;
+  margin: 8px 9px 0;
+}
+
+.range-name {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color .18s;
+}
+
+.range-name.cur { color: var(--ink); font-weight: 600; }
+
+.opt-toggle {
+  flex: 0 0 auto;
+  width: 186px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font: inherit;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+
+.opt-toggle em { font-style: normal; font-size: 10.5px; color: var(--muted); }
+.opt-toggle.on { border-color: var(--line-strong); background: var(--soft); }
+.opt-toggle.on em { color: var(--ink); }
+
 .btn {
   font: inherit;
   font-weight: 500;
@@ -317,6 +450,7 @@ body {
   padding: 0;
   border: 0;
   opacity: .45;
+  cursor: pointer;
 }
 
 .chain .chip.drop { opacity: 1; }

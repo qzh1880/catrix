@@ -3,11 +3,12 @@
 {{- range $pages -}}
   {{- $item := dict
     "title" .Title
-    "permalink" .Permalink
+    "permalink" .RelPermalink
     "section" .Section
     "date" (.Date.Format "2006-01-02")
-    "summary" (.Summary | plainify)
-    "content" (.Plain | truncate 2000)
+    "summary" (.Summary | plainify | htmlUnescape)
+    "content" (.Plain | htmlUnescape)
+    "author" (.Params.author | default "")
     "tags" (.Params.tags | default slice)
     "categories" (.Params.categories | default slice)
     "cover" (.Params.cover | default "")

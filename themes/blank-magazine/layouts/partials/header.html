@@ -89,12 +89,14 @@
 </div>
 
 <!-- Search Overlay -->
-<div class="search-overlay" id="search-overlay">
+<div class="search-overlay" id="search-overlay" role="dialog" aria-modal="true" aria-label="站内搜索" aria-hidden="true" data-index="{{ "index.json" | relURL }}">
   <div class="search-inner">
     <button class="search-close" aria-label="关闭搜索" onclick="closeSearch()">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
-    <input type="text" class="search-input" placeholder="搜索文章..." id="search-input" autocomplete="off">
+    <input type="text" class="search-input" aria-label="搜索标题、正文、作者或标签" placeholder="搜索标题、正文、作者或标签…" id="search-input" autocomplete="off">
+    <div class="search-filters"><label>标签 <select id="search-tag"><option value="">全部标签</option></select></label><label>期数 <select id="search-category"><option value="">全部期数</option></select></label><button type="button" id="search-retry" hidden>重新加载</button></div>
+    <p id="search-status" role="status" aria-live="polite">输入关键词，或选择标签、期数。</p>
     <div class="search-results" id="search-results"></div>
   </div>
 </div>
@@ -109,11 +111,15 @@
   }
   function openSearch() {
     document.getElementById('search-overlay').classList.add('open');
+    document.getElementById('search-overlay').setAttribute('aria-hidden', 'false');
+    document.getElementById('search-input').dispatchEvent(new Event('search-open'));
     document.body.style.overflow = 'hidden';
     setTimeout(function() { document.getElementById('search-input').focus(); }, 100);
   }
   function closeSearch() {
     document.getElementById('search-overlay').classList.remove('open');
+    document.getElementById('search-overlay').setAttribute('aria-hidden', 'true');
+    document.querySelector('.search-toggle').focus();
     document.body.style.overflow = '';
   }
   
@@ -146,3 +152,10 @@
     }
   });
 </script>
+{{ $searchCSS := resources.Get "css/search.css" | minify | fingerprint }}
+<link rel="stylesheet" href="{{ $searchCSS.RelPermalink }}">
+
+{{ $searchEngine := resources.Get "js/search-engine.js" | minify | fingerprint }}
+{{ $searchScript := resources.Get "js/search.js" | minify | fingerprint }}
+<script src="{{ $searchEngine.RelPermalink }}" defer></script>
+<script src="{{ $searchScript.RelPermalink }}" defer></script>

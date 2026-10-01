@@ -73,9 +73,9 @@
    * 分给其余所有球 i ≠ k：
    *     P'(i) = P(i) + P(k)(1 - T^(-n)) · e^i / Σ_{j≠k} e^j
    * 于是 P' 仍然是一个概率分布（和为 1），而且越连出越难再抽到它。
-   * T 是个固定常数（最早那一版给的 1.1）；T = 1 就退化成没开这个机制。
+   * T 是个固定常数（现在是 1.8）；T = 1 就退化成没开这个机制。
    */
-  var ANTI_REPEAT_T = 1.1;
+  var ANTI_REPEAT_T = 1.8;
   var ANTI_REPEAT = { last: -1, n: 0 };
 
   function resetAntiRepeat() { ANTI_REPEAT.last = -1; ANTI_REPEAT.n = 0; }

@@ -33,10 +33,7 @@ enableRobotsTXT = true
     url = "/categories/"
     weight = 3
 
-  [[menu.main]]
-    name = "相册"
-    url = "/gallery/"
-    weight = 4
+
   [[menu.main]]
     name = "标签"
     url = "/tags/"

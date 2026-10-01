@@ -4,6 +4,7 @@ draft: false
 title: "涅槃重生：评古斯塔夫·马勒《c小调第二交响曲“复活”》"
 author: "岳"
 categories: ["Sep.2026"]
+tags: ["艺术"]
 description: 当尘世的喧嚣归于沉寂，灵魂便在幽暗的深渊里发出第一声叩问。那是对存在的凝视，对消亡的抗辩。在有限的呼吸与无限的静默之间，有一道光缓缓裂开混沌，将破碎的、挣扎的、渴望永生的一切，温柔地托起。听，那不是终结，那是复活。
 featured: true
 showRelated: false

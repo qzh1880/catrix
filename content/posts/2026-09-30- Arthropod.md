@@ -6,6 +6,7 @@ author: "金块"
 categories: ["Sep.2026"]
 description: Arthropod Origins:Integrating Paleontological and Molecular Evidence
 comments: true
+tags: ["生命科学"]
 featured: true
 showRelated: false
 cover: 'https://media.catrix.net/FAYUTU.png'

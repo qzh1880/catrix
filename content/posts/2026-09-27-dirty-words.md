@@ -6,6 +6,7 @@ author: "linearcat"
 categories: ["Sep.2026"]
 description: 多年以后，科学家把鲁迅复活了，他急切地去观看百年后的学校是什么样，却久久无法解释“国骂”为何广泛普及到了中小学生口中。 
 featured: true
+tags: ["社会"]
 showRelated: false
 cover: 'https://media.catrix.net/Cassius_Marcellus_Coolidge_-_Poker_Game_(1894).png'
 ---

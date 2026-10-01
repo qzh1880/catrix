@@ -75,4 +75,4 @@ block  = [['$$', '$$']]
 # GitHub Pages 提供前端文件，不能直接执行仓库中的 Worker 代码。
 [params.comments]
   enabled = false
-  apiURL = ""
+  apiURL = "https://comments-api.catrix.net"

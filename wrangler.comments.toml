@@ -1,0 +1,15 @@
+name = "catrix-comments"
+main = "worker/comments-worker.js"
+compatibility_date = "2026-09-28"
+workers_dev = true
+
+[vars]
+COMMENTS_ALLOWED_ORIGINS = "https://catrix.net"
+COMMENTS_RATE_LIMIT = "20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "catrix-comments"
+database_id = "d7f8543f-6f5f-409a-8212-4c477b376761" 
+migrations_dir = "worker/migrations"
+

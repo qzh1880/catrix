@@ -7,7 +7,9 @@
 
   const community = window.CatrixCommunity;
   if (community) {
-    community.configure(app.dataset.api);
+    // 规范化 API 根路径
+    const baseApi = (app.dataset.api || '').replace(/\/+(comments\/?|feedback\/?)?$/, '');
+    community.configure(baseApi);
   }
 
   const form = $('discuss-form');
@@ -30,6 +32,9 @@
   const adminLoginBtn = $('discuss-admin-login');
   const adminLogoutBtn = $('discuss-admin-logout');
 
+  // 绑定专属的 article 标识，保证后端能按讨论区分隔离数据
+  const articlePath = app.dataset.article || '/discuss/';
+
   let page = 1;
   let revision = 0;
   let adminKey = '';
@@ -43,30 +48,17 @@
     }
   }
 
-  // 使用 CatrixCommunity 统一的 request 方案（与 feedback.js 保持一致）
-  async function apiRequest(path, options = {}, headers = {}) {
-    if (community && typeof community.request === 'function') {
-      return await community.request(path, options, headers);
-    }
-
-    const baseUrl = (app.dataset.api || '').replace(/\/+$/, '');
-    const url = `\({baseUrl}/\){path.replace(/^\/+/, '')}`;
+  // 匹配 comments.js 的原生 Fetch 通信逻辑
+  async function api(url, options = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
-
     try {
       const response = await fetch(url, {
-        method: options.method || (options.body ? 'POST' : 'GET'),
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        },
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        ...options,
         credentials: 'omit',
         cache: 'no-store',
         signal: controller.signal
       });
-
       const data = await response.json().catch(() => null);
       if (!response.ok || !data) {
         throw new Error(data?.error || '服务暂时不可用，请稍后再试。');
@@ -91,37 +83,153 @@
     replyTargetName.textContent = '';
   }
 
-  function createFloorItem(item) {
+  function createFloorItem(comment) {
     const floorDiv = document.createElement('article');
-    floorDiv.className = 'feedback-item';
-    floorDiv.id = `discuss-${item.id}`;
+    floorDiv.className = 'feedback-item comment-floor';
+    floorDiv.id = `discuss-${comment.id}`;
+
+    const header = document.createElement('header');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.gap = '8px';
 
     const name = document.createElement('strong');
-    name.textContent = item.nickname || '匿名';
+    name.textContent = comment.nickname || '匿名';
 
     const time = document.createElement('time');
-    time.textContent = new Date(item.created_at || item.createdAt).toLocaleDateString('zh-CN');
+    time.dateTime = comment.created_at;
+    time.textContent = new Date(comment.created_at).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    header.append(name, time);
 
     const text = document.createElement('p');
-    text.textContent = item.body || item.content;
+    text.textContent = comment.body;
+
+    floorDiv.append(header);
+
+    if (comment.parent_id) {
+      const context = document.createElement('p');
+      context.className = 'comment-reply-context';
+      context.style.fontSize = '0.85rem';
+      context.style.color = 'var(--color-text-secondary, #666)';
+      context.style.margin = '4px 0 8px 0';
+      context.textContent = comment.parent_nickname 
+        ? `回复 \({comment.parent_nickname}：\){comment.parent_body}` 
+        : '回复的原留言已删除或不可见';
+      floorDiv.append(context);
+    }
+
+    floorDiv.append(text);
 
     const actions = document.createElement('div');
     actions.className = 'feedback-actions';
+    actions.style.display = 'flex';
+    actions.style.gap = '12px';
+    actions.style.alignItems = 'center';
+    actions.style.marginTop = '8px';
 
     if (community) {
-      actions.append(community.likeButton('feedback', item.id, () => load()));
+      actions.append(community.likeButton('comment', comment.id));
     }
 
+    if (!comment.parent_id) {
+      const replyBtn = document.createElement('button');
+      replyBtn.type = 'button';
+      replyBtn.style.borderRadius = '0';
+      replyBtn.textContent = '回复';
+      replyBtn.addEventListener('click', () => {
+        if (busy) return;
+        setReplyTarget(comment.id, comment.nickname || '匿名');
+      });
+      actions.append(replyBtn);
+    }
+
+    // 举报模块
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = '举报';
+    const reportForm = document.createElement('form');
+    reportForm.className = 'comment-report-form';
+
+    const label = document.createElement('label');
+    label.textContent = '举报原因 ';
+    const reason = document.createElement('select');
+    reason.setAttribute('aria-label', '举报原因');
+
+    [
+      ['spam', '广告刷屏'],
+      ['abuse', '辱骂攻击'],
+      ['privacy', '泄露隐私'],
+      ['other', '其他不当内容']
+    ].forEach(([val, title]) => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = title;
+      reason.append(opt);
+    });
+
+    label.append(reason);
+    const reportSubmit = document.createElement('button');
+    reportSubmit.type = 'submit';
+    reportSubmit.style.borderRadius = '0';
+    reportSubmit.textContent = '提交举报';
+    const reportResult = document.createElement('p');
+    reportResult.setAttribute('role', 'status');
+
+    let reporting = false;
+    reportForm.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      if (reporting) return;
+      reporting = true;
+      reportSubmit.disabled = true;
+      reportResult.textContent = '正在提交举报…';
+      try {
+        const res = await api(app.dataset.api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'report',
+            id: comment.id,
+            article: articlePath,
+            reason: reason.value
+          })
+        });
+        reportResult.textContent = res.message || '举报已收到，等待管理员处理。';
+      } catch (err) {
+        reportResult.textContent = err.message;
+      } finally {
+        reporting = false;
+        reportSubmit.disabled = false;
+      }
+    });
+
+    reportForm.append(label, reportSubmit, reportResult);
+    details.append(summary, reportForm);
+    actions.append(details);
+
+    // 管理员删除控制
     if (adminKey) {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.style.borderRadius = '0';
-      removeBtn.textContent = '删除建议';
+      removeBtn.textContent = '删除讨论';
       removeBtn.addEventListener('click', async () => {
-        if (!confirm('删除这条建议？正文及昵称将清除，无法恢复。')) return;
+        if (!confirm('确定删除这条讨论？正文及关联回复将一并清除。')) return;
         removeBtn.disabled = true;
         try {
-          await apiRequest('admin/delete-feedback', { id: item.id }, { 'X-Comments-Key': adminKey });
+          const deleteApiUrl = new URL('admin/delete-comment', app.dataset.api).href;
+          await api(deleteApiUrl, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Comments-Key': adminKey 
+            },
+            body: JSON.stringify({ id: comment.id, article: articlePath })
+          });
           await load();
         } catch (err) {
           notice(err.message);
@@ -131,32 +239,36 @@
       actions.append(removeBtn);
     }
 
-    floorDiv.append(name, time, text, actions);
+    floorDiv.append(actions);
     return floorDiv;
   }
 
   async function load() {
     const current = ++revision;
-    notice('正在读取建议…');
+    notice('正在读取讨论内容…');
 
     try {
-      // 访问 feedback 接口获取数据
-      const data = await apiRequest(`feedback?page=${page}`);
+      // 按照 comments 格式使用 URL query 传递 article 与 page
+      const url = new URL(app.dataset.api, location.href);
+      url.searchParams.set('article', articlePath);
+      url.searchParams.set('page', page);
+
+      const data = await api(url);
 
       if (current !== revision) return;
 
       list.replaceChildren();
 
-      const items = data.items || [];
-      for (const item of items) {
+      const comments = data.comments || [];
+      for (const item of comments) {
         list.append(createFloorItem(item));
       }
 
       prevBtn.disabled = page === 1;
-      nextBtn.disabled = !data.more;
+      nextBtn.disabled = !data.more && !data.next;
       pageEl.textContent = `第 ${page} 页`;
-      countBadge.textContent = `${items.length} 条`;
-      notice(items.length ? '' : '还没有建议，欢迎留下第一个想法。');
+      countBadge.textContent = `${data.total || comments.length} 条讨论`;
+      notice(comments.length ? '' : '还没有讨论，欢迎留下第一个想法。');
     } catch (err) {
       if (current === revision) {
         notice(err.message + ' 可点击刷新重试。');
@@ -168,11 +280,13 @@
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
-    if (busy) return;
+    if (busy || !form.reportValidity()) return;
 
     const payload = {
+      article: articlePath,
       nickname: nickname.value.trim(),
-      body: body.value.trim()
+      body: body.value.trim(),
+      parentId: parentIdInput.value || null
     };
 
     if (!payload.nickname || payload.body.length < 2) {
@@ -188,11 +302,15 @@
 
     busy = true;
     fields.disabled = true;
-    notice('正在发布…');
+    notice('正在发布讨论…');
 
     try {
-      // 提交到 feedback 端点
-      await apiRequest('feedback', { ...payload, requestId });
+      // 提交到通用 POST 终点，后端通过 payload 内的 article 进行落库分类
+      await api(app.dataset.api, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, requestId })
+      });
 
       body.value = '';
       lastPayload = '';
@@ -200,7 +318,7 @@
       clearReplyTarget();
       page = 1;
       await load();
-      notice('讨论已发布，感谢你的反馈。');
+      notice('讨论已发布，感谢你的参与。');
     } catch (err) {
       notice(err.message);
     } finally {
@@ -227,7 +345,10 @@
     const key = adminKeyInput.value.trim();
     adminKeyInput.value = '';
     try {
-      await apiRequest('admin/check', {}, { 'X-Comments-Key': key });
+      const checkApiUrl = new URL('admin/check', app.dataset.api).href;
+      await api(checkApiUrl, {
+        headers: { 'X-Comments-Key': key }
+      });
       adminKey = key;
       adminLogoutBtn.hidden = false;
       await load();

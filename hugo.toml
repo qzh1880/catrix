@@ -4,7 +4,7 @@
 baseURL = "https://catrix.net/"
 languageCode = "zh-cn"
 defaultContentLanguage = "zh"
-title = "[catrix]"
+title = "[catrix] 杂志"
 theme = "blank-magazine"
 enableRobotsTXT = true
 

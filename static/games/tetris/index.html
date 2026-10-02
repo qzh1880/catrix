@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f5f3eb">
   <title>俄罗斯方块 · Catrix</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="engine.js" defer></script>
-  <script src="game.js" defer></script>
+  <link rel="stylesheet" href="style.css?v=20261002">
+  <script src="engine.js?v=20261002" defer></script>
+  <script src="rules.js?v=20261002" defer></script>
+  <script src="../../js/community-client.js?v=3" defer></script>
+  <script src="game.js?v=20261002" defer></script>
 </head>
 <body>
   <main class="game-shell" aria-labelledby="title">
@@ -15,7 +17,13 @@
       <div><p class="eyebrow"><span class="brand-mark" aria-hidden="true">▦</span> CATRIX PLAY / 01</p><h1 id="title">方块之间<span>俄罗斯方块</span></h1></div>
       <span class="status-pill" id="state-label">准备开始</span>
     </header>
-    <p class="intro">让纷乱落定，给下一块留点空间。</p>
+    <p class="intro">让纷乱落定，给下一块留点空间。 <a href="../">返回游乐场 ↗</a></p>
+    <section class="mode-panel" aria-label="游戏模式">
+      <label for="game-mode">模式<select id="game-mode"><option value="casual">休闲模式</option><option value="ranked">排位模式</option></select></label>
+      <label for="game-difficulty" id="difficulty-label">难度<select id="game-difficulty"><option value="easy">轻松</option><option value="normal" selected>标准</option><option value="hard">挑战</option></select></label>
+      <p id="mode-description">休闲模式不参与排名，可按自己的节奏选择难度。</p>
+      <p id="rank-time" hidden>排位限时 15 分钟</p>
+    </section>
     <section class="scoreboard" aria-label="游戏成绩">
       <div><span>本局得分</span><strong id="score">0</strong></div>
       <div><span>消除行数</span><strong id="lines">0</strong></div>
@@ -46,8 +54,10 @@
       <button type="button" data-action="drop" class="drop-button" aria-label="直接落到底部" disabled>⤓<span>落到底</span></button>
     </section>
     <p id="announcement" class="announcement" role="status" aria-live="polite">点击开始，或按 Enter 开始游戏。</p>
-    <details class="instructions"><summary>玩法与键盘操作 <span aria-hidden="true">＋</span></summary><div><p>左右移动方块，填满整行即可消除。堆到顶部则结束。暂存方块每次落定后可使用一次。</p><p><kbd>←</kbd> <kbd>→</kbd> 移动 · <kbd>↑</kbd> / <kbd>X</kbd> 顺时针旋转 · <kbd>Z</kbd> 逆时针旋转<br><kbd>↓</kbd> 加速下落 · <kbd>空格</kbd> 落到底 · <kbd>C</kbd> 暂存 · <kbd>P</kbd> / <kbd>Esc</kbd> 暂停</p><p>消除 1 / 2 / 3 / 4 行分别获得 100 / 300 / 500 / 800 × 当前等级分。最高分仅保存在当前浏览器。</p></div></details>
-    <footer><span>TAKE A BREAK. MAKE SOME SPACE.</span><span>纯前端 · 无需登录</span></footer>
+    <section id="rank-result" class="rank-result" hidden><h2>把这一局留在榜上</h2><p id="rank-score"></p><form id="rank-submit"><label for="rank-name">排行榜昵称</label><input id="rank-name" maxlength="24" required placeholder="输入昵称，可选择不提交"><button id="rank-submit-button" type="submit">参与排名 ↗</button></form><p id="rank-submit-status" role="status"></p></section>
+    <section class="leaderboard"><header><h2>方块排行榜</h2><select id="rank-period" aria-label="榜单周期"><option value="week">周榜</option><option value="month">月榜</option><option value="all">总榜</option></select><button id="rank-refresh" type="button">刷新</button></header><p>北京时间周一及每月 1 日开始统计。每个浏览器标识在各榜展示最高分；昵称无需注册。</p><p id="rank-status" role="status"></p><ol id="rank-list"></ol></section>
+    <details class="instructions"><summary>玩法与键盘操作 <span aria-hidden="true">＋</span></summary><div><p>左右移动方块，填满整行即可消除。堆到顶部则结束。暂存方块每次落定后可使用一次。</p><p><kbd>←</kbd> <kbd>→</kbd> 移动 · <kbd>↑</kbd> / <kbd>X</kbd> 顺时针旋转 · <kbd>Z</kbd> 逆时针旋转<br><kbd>↓</kbd> 加速下落 · <kbd>空格</kbd> 落到底 · <kbd>C</kbd> 暂存 · <kbd>P</kbd> / <kbd>Esc</kbd> 暂停</p><p>消除 1 / 2 / 3 / 4 行分别获得 100 / 300 / 500 / 800 × 当前等级分。本机最高分保存在浏览器；排位成绩在你选择报名后保存到排行榜。</p></div></details>
+    <footer><span>TAKE A BREAK. MAKE SOME SPACE.</span><span>无需注册 · 排位需联网</span></footer>
     <noscript><p>请启用 JavaScript 后开始游戏。</p></noscript>
   </main>
 </body>

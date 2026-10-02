@@ -1,13 +1,11 @@
 {{ define "main" }}
 {{ $css := resources.Get "css/games.css" | minify | fingerprint }}
-{{ $js := resources.Get "js/games-embed.js" | minify | fingerprint }}
+
 <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
 <div class="games-hub">
   <header class="games-heading"><p>CATRIX / PLAYROOM</p><h1>课间游乐场</h1><div>{{ .Content }}</div></header>
-  <div class="game-section-heading"><h2>01 / 俄罗斯方块</h2><a href="{{ "games/tetris/" | relURL }}" target="_blank" rel="noopener">单独打开 ↗</a></div>
-  {{/* 独立静态游戏可直接托管于 GitHub Pages；同源消息用于自适应高度和暂停。 */}}
-  <iframe class="tetris-frame" id="tetris-frame" src="{{ "games/tetris/" | relURL }}" title="俄罗斯方块小游戏" height="1100" loading="lazy"></iframe>
+  <a class="other-game tetris-entry" href="{{ "games/tetris/" | relURL }}"><span class="other-game-number">01</span><div><h2>俄罗斯方块</h2><p>排位挑战周榜、月榜与总榜；休闲模式选择适合自己的难度。</p><span>进入游戏 ↗</span></div></a>
   <a class="other-game" href="{{ "games/big-school/" | relURL }}"><span class="other-game-number">02</span><div><h2>合成大学校</h2><p>选择你的学校，让相同校徽碰撞、合成。</p></div><span aria-hidden="true">↗</span></a>
 </div>
-<script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer></script>
+
 {{ end }}

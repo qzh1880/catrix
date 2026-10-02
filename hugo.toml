@@ -76,3 +76,9 @@ block  = [['$$', '$$']]
 [params.comments]
   enabled = true
   apiURL = "https://comments-api.catrix.net/comments"
+
+[[menu.main]]
+  name = "网站反馈"
+  parent = "more"
+  url = "/feedback/"
+  weight = 4

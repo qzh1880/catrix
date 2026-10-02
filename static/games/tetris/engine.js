@@ -9,7 +9,7 @@
   };
   const TYPES = Object.keys(SHAPES);
   class Game {
-    constructor(random = Math.random) { this.random = random; this.reset(); }
+    constructor(random = Math.random, speed = 1) { this.random = random; this.speed = speed; this.reset(); }
     reset() {
       this.board = Array.from({ length: 20 }, () => Array(10).fill(null));
       this.queue = []; this.bag = []; this.current = null; this.held = null;
@@ -114,7 +114,7 @@
       // 限制单帧时间差，切换标签页或电脑卡顿后不会瞬间补落很多格。
       const dt = Math.min(Math.max(elapsed, 0), 100);
       this.fallTime += dt;
-      const interval = Math.max(80, 850 * Math.pow(.8, this.level - 1));
+      const interval = Math.max(80, 850 * this.speed * Math.pow(.8, this.level - 1));
       while (this.fallTime >= interval) {
         this.fallTime -= interval;
         if (this.fits(this.current, this.current.x, this.current.y + 1)) this.current.y++;

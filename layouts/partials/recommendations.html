@@ -1,0 +1,19 @@
+{{/* 推荐使用明确的编辑元数据，不根据正文猜测主题；排除当前文章。 */}}
+{{ if and (eq .Section "posts") (ne .Params.recommendations false) }}
+{{ $current := . }}{{ $ranked := slice }}
+{{ range where .Site.RegularPages "Section" "posts" }}
+  {{ if ne .RelPermalink $current.RelPermalink }}
+    {{ $score := 0 }}{{ $reason := "继续阅读" }}
+    {{ if intersect (.Params.categories | default slice) ($current.Params.categories | default slice) }}{{ $score = 1 }}{{ $reason = "同一期内容" }}{{ end }}
+    {{ if and .Params.author (eq .Params.author $current.Params.author) }}{{ $score = add $score 3 }}{{ $reason = "同一作者" }}{{ end }}
+    {{ $tags := intersect (.Params.tags | default slice) ($current.Params.tags | default slice) }}
+    {{ if $tags }}{{ $score = add $score (mul 10 (len $tags)) }}{{ $reason = printf "相同标签 · %s" (delimit $tags " / ") }}{{ end }}
+    {{ $ranked = $ranked | append (dict "page" . "reason" $reason "rank" (add (mul $score 1000000000000) .Date.Unix)) }}
+  {{ end }}
+{{ end }}
+{{ with first 3 (sort $ranked "rank" "desc") }}
+<section class="article-recommendations" aria-labelledby="recommended-title"><h2 id="recommended-title">接着读点什么</h2><div class="recommendation-grid">
+{{ range . }}<a class="recommendation-card" href="{{ .page.RelPermalink }}"><small>{{ .reason }}</small><h3>{{ .page.Title }}</h3><p>{{ .page.Description | default (.page.Summary | plainify) | truncate 100 }}</p><span>{{ .page.Params.author }} · {{ .page.Date.Format "2006.01.02" }}</span></a>{{ end }}
+</div></section>
+<style>.article-recommendations{margin:48px 0;border-top:1px solid #dedfd8;padding-top:28px}.article-recommendations h2{font-size:1.25rem}.recommendation-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.recommendation-card{display:block;background:#f6f6f0;padding:20px;color:inherit;overflow-wrap:anywhere}.recommendation-card h3{font-size:1.05rem;line-height:1.6;margin:10px 0}.recommendation-card small,.recommendation-card span{font-size:.75rem;color:#62715c}.recommendation-card p{font-size:.85rem;line-height:1.8}@media(max-width:680px){.recommendation-grid{grid-template-columns:1fr}}</style>
+{{ end }}{{ end }}

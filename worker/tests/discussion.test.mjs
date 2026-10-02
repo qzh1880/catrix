@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker from '../worker.js';
+import worker from '../comments-worker.js';
 import { createDatabase } from './database.mjs';
 import { createRequire } from 'node:module';
 const { search } = createRequire(import.meta.url)('../../assets/js/search-engine.js');

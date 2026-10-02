@@ -50,3 +50,5 @@
 .comment-report-form select { display:block; max-width:100%; margin:8px 0; padding:10px; font:inherit; }
 .comment-item .comment-reply-context { border-left:2px solid #abb7a3; padding-left:12px; color:var(--color-text-secondary,#62665d); font-size:.8rem; }
 #comment-reply { margin:0 0 16px; } #comment-reply-label { overflow-wrap:anywhere; }
+
+.article-comments .like-button[aria-pressed="true"] { background:#39563e; color:white; }

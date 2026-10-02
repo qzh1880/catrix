@@ -52,17 +52,20 @@
   var TIER_COUNT = 11;
 
   /* ---------------- 落球概率 ----------------
-   * 第 k 大球（k 从 1 数起，即 TIERS 索引 k-1）的出现概率：
-   *     P(k) = (e^(2k-1) + e^(2k)) / Σ_{i=1..22} e^i
-   * 分母那 22 项正好被 k=1..11 的 11 对 (2k-1, 2k) 分完，所以加起来是 1。
-   * 相邻两档之比恒为 e² ≈ 7.389（比原来的 e 陡得多），小球占绝对多数：
-   * 第 11 档约 86.5%、第 10 档约 11.7%、第 9 档只有 1.58%。
+   * 第 k 大球（k 从 1 数起，即 TIERS 索引 k-1）的基础概率：
+   *     q_k = e^(4.0k - 0.15k²) / Σ_{j=1..11} e^(4.0j - 0.15j²)
+   * 指数是条开口向下的抛物线（顶点在 k≈13.3），所以在 1..11 上单调递增、但越来越平：
+   * 相邻两档之比 = e^(3.85 - 0.3k)，从 34.8 一路降到 2.34 —— 小球占多数、大球也不会彻底绝迹。
+   * 实测分布：第 11 档 62.47%、第 10 档 26.70%、第 9 档 8.45%、第 8 档 1.98%，第 1 档只有 2e-10。
    */
   var TIER_PROB = (function () {
     var raw = [], k, i, denom = 0;
-    for (k = 1; k <= TIER_COUNT; k++) raw.push(Math.exp(2 * k - 1) + Math.exp(2 * k));
-    for (i = 1; i <= 2 * TIER_COUNT; i++) denom += Math.exp(i);
-    return raw.map(function (x) { return x / denom; });
+    for (k = 1; k <= TIER_COUNT; k++) {
+      var x = 4.0 * k - 0.15 * k * k;
+      raw.push(Math.exp(x));
+      denom += Math.exp(x);
+    }
+    return raw.map(function (w) { return w / denom; });
   })();
   var DROP_P_MIN = 0.01;      // 概率 ≥1% 的档位在合成链里高亮成「可投放」
 

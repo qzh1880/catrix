@@ -30,8 +30,6 @@
   const adminLoginBtn = $('discuss-admin-login');
   const adminLogoutBtn = $('discuss-admin-logout');
 
-  const articlePath = app.dataset.article || '/discuss/';
-
   let page = 1;
   let revision = 0;
   let adminKey = '';
@@ -45,21 +43,30 @@
     }
   }
 
-  // 统一的 API 请求处理
-  async function api(path, options = {}) {
+  // 使用 CatrixCommunity 统一的 request 方案（与 feedback.js 保持一致）
+  async function apiRequest(path, options = {}, headers = {}) {
+    if (community && typeof community.request === 'function') {
+      return await community.request(path, options, headers);
+    }
+
+    const baseUrl = (app.dataset.api || '').replace(/\/+$/, '');
+    const url = `\({baseUrl}/\){path.replace(/^\/+/, '')}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      const baseUrl = (app.dataset.api || '').replace(/\/+$/, '');
-      const cleanPath = path ? path.replace(/^\/+/, '') : '';
-      const url = cleanPath ? `\({baseUrl}/\){cleanPath}` : baseUrl;
 
+    try {
       const response = await fetch(url, {
-        ...options,
+        method: options.method || (options.body ? 'POST' : 'GET'),
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
         credentials: 'omit',
         cache: 'no-store',
         signal: controller.signal
       });
+
       const data = await response.json().catch(() => null);
       if (!response.ok || !data) {
         throw new Error(data?.error || '服务暂时不可用，请稍后再试。');
@@ -86,145 +93,35 @@
 
   function createFloorItem(item) {
     const floorDiv = document.createElement('article');
-    floorDiv.className = 'feedback-item comment-floor';
+    floorDiv.className = 'feedback-item';
     floorDiv.id = `discuss-${item.id}`;
-
-    const header = document.createElement('header');
-    header.style.display = 'flex';
-    header.style.alignItems = 'center';
-    header.style.gap = '8px';
 
     const name = document.createElement('strong');
     name.textContent = item.nickname || '匿名';
 
     const time = document.createElement('time');
-    time.textContent = new Date(item.created_at || item.createdAt).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    header.append(name, time);
+    time.textContent = new Date(item.created_at || item.createdAt).toLocaleDateString('zh-CN');
 
     const text = document.createElement('p');
     text.textContent = item.body || item.content;
 
-    floorDiv.append(header);
-
-    if (item.parent_id) {
-      const context = document.createElement('p');
-      context.className = 'comment-reply-context';
-      context.style.fontSize = '0.85rem';
-      context.style.color = 'var(--color-text-secondary, #666)';
-      context.style.margin = '4px 0 8px 0';
-      context.textContent = item.parent_nickname 
-        ? `回复 \({item.parent_nickname}：\){item.parent_body}` 
-        : '回复的原留言已删除或不可见';
-      floorDiv.append(context);
-    }
-
-    floorDiv.append(text);
-
     const actions = document.createElement('div');
     actions.className = 'feedback-actions';
-    actions.style.display = 'flex';
-    actions.style.gap = '12px';
-    actions.style.alignItems = 'center';
-    actions.style.marginTop = '8px';
 
     if (community) {
-      actions.append(community.likeButton('comment', item.id, () => load()));
+      actions.append(community.likeButton('feedback', item.id, () => load()));
     }
-
-    const replyBtn = document.createElement('button');
-    replyBtn.type = 'button';
-    replyBtn.style.borderRadius = '0';
-    replyBtn.textContent = '回复';
-    replyBtn.addEventListener('click', () => {
-      if (busy) return;
-      setReplyTarget(item.id, item.nickname || '匿名');
-    });
-    actions.append(replyBtn);
-
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    summary.textContent = '举报';
-    const reportForm = document.createElement('form');
-    reportForm.className = 'comment-report-form';
-
-    const label = document.createElement('label');
-    label.textContent = '举报原因 ';
-    const reason = document.createElement('select');
-    reason.setAttribute('aria-label', '举报原因');
-
-    [
-      ['spam', '广告刷屏'],
-      ['abuse', '辱骂攻击'],
-      ['privacy', '泄露隐私'],
-      ['other', '其他不当内容']
-    ].forEach(([val, title]) => {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = title;
-      reason.append(opt);
-    });
-
-    label.append(reason);
-    const reportSubmit = document.createElement('button');
-    reportSubmit.type = 'submit';
-    reportSubmit.style.borderRadius = '0';
-    reportSubmit.textContent = '提交举报';
-    const reportResult = document.createElement('p');
-    reportResult.setAttribute('role', 'status');
-
-    let reporting = false;
-    reportForm.addEventListener('submit', async ev => {
-      ev.preventDefault();
-      if (reporting) return;
-      reporting = true;
-      reportSubmit.disabled = true;
-      reportResult.textContent = '正在提交举报…';
-      try {
-        const res = await api('', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'report',
-            id: item.id,
-            article: articlePath,
-            reason: reason.value
-          })
-        });
-        reportResult.textContent = res.message || '举报已收到，等待管理员处理。';
-      } catch (err) {
-        reportResult.textContent = err.message;
-      } finally {
-        reporting = false;
-        reportSubmit.disabled = false;
-      }
-    });
-
-    reportForm.append(label, reportSubmit, reportResult);
-    details.append(summary, reportForm);
-    actions.append(details);
 
     if (adminKey) {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.style.borderRadius = '0';
-      removeBtn.textContent = '删除讨论';
+      removeBtn.textContent = '删除建议';
       removeBtn.addEventListener('click', async () => {
-        if (!confirm('确定删除这条讨论？正文及关联回复将一并清除。')) return;
+        if (!confirm('删除这条建议？正文及昵称将清除，无法恢复。')) return;
         removeBtn.disabled = true;
         try {
-          await api('admin/delete-comment', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'X-Comments-Key': adminKey 
-            },
-            body: JSON.stringify({ id: item.id, article: articlePath })
-          });
+          await apiRequest('admin/delete-feedback', { id: item.id }, { 'X-Comments-Key': adminKey });
           await load();
         } catch (err) {
           notice(err.message);
@@ -234,33 +131,32 @@
       actions.append(removeBtn);
     }
 
-    floorDiv.append(actions);
+    floorDiv.append(name, time, text, actions);
     return floorDiv;
   }
 
   async function load() {
     const current = ++revision;
-    notice('正在读取讨论内容…');
+    notice('正在读取建议…');
 
     try {
-      // 通过 comments 接口读取特定 article (/discuss/) 的留言列表
-      const endpoint = `comments?article=\({encodeURIComponent(articlePath)}&page=\){page}`;
-      const data = await api(endpoint);
+      // 访问 feedback 接口获取数据
+      const data = await apiRequest(`feedback?page=${page}`);
 
       if (current !== revision) return;
 
       list.replaceChildren();
 
-      const items = data.comments || data.items || [];
+      const items = data.items || [];
       for (const item of items) {
         list.append(createFloorItem(item));
       }
 
       prevBtn.disabled = page === 1;
-      nextBtn.disabled = !data.more && !data.next;
+      nextBtn.disabled = !data.more;
       pageEl.textContent = `第 ${page} 页`;
-      countBadge.textContent = `${data.total || items.length} 条讨论`;
-      notice(items.length ? '' : '还没有讨论，欢迎留下第一个想法。');
+      countBadge.textContent = `${items.length} 条`;
+      notice(items.length ? '' : '还没有建议，欢迎留下第一个想法。');
     } catch (err) {
       if (current === revision) {
         notice(err.message + ' 可点击刷新重试。');
@@ -272,13 +168,11 @@
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
-    if (busy || !form.reportValidity()) return;
+    if (busy) return;
 
     const payload = {
-      article: articlePath,
       nickname: nickname.value.trim(),
-      body: body.value.trim(),
-      parentId: parentIdInput.value || null
+      body: body.value.trim()
     };
 
     if (!payload.nickname || payload.body.length < 2) {
@@ -294,15 +188,11 @@
 
     busy = true;
     fields.disabled = true;
-    notice('正在发布讨论…');
+    notice('正在发布…');
 
     try {
-      // 提交到根 API Endpoint (文章/讨论通用 POST 接口)
-      await api('', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, requestId })
-      });
+      // 提交到 feedback 端点
+      await apiRequest('feedback', { ...payload, requestId });
 
       body.value = '';
       lastPayload = '';
@@ -310,7 +200,7 @@
       clearReplyTarget();
       page = 1;
       await load();
-      notice('讨论已发布，感谢你的参与。');
+      notice('讨论已发布，感谢你的反馈。');
     } catch (err) {
       notice(err.message);
     } finally {
@@ -337,9 +227,7 @@
     const key = adminKeyInput.value.trim();
     adminKeyInput.value = '';
     try {
-      await api('admin/check', {
-        headers: { 'X-Comments-Key': key }
-      });
+      await apiRequest('admin/check', {}, { 'X-Comments-Key': key });
       adminKey = key;
       adminLogoutBtn.hidden = false;
       await load();

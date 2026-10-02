@@ -45,13 +45,14 @@
     }
   }
 
-  async function api(endpoint, options = {}) {
+  // 统一的 API 请求处理
+  async function api(path, options = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const url = endpoint.startsWith('http') 
-        ? endpoint 
-        : `\({app.dataset.api.replace(/\/\)/, '')}/${endpoint.replace(/^\//, '')}`;
+      const baseUrl = (app.dataset.api || '').replace(/\/+$/, '');
+      const cleanPath = path ? path.replace(/^\/+/, '') : '';
+      const url = cleanPath ? `\({baseUrl}/\){cleanPath}` : baseUrl;
 
       const response = await fetch(url, {
         ...options,
@@ -242,6 +243,7 @@
     notice('正在读取讨论内容…');
 
     try {
+      // 通过 comments 接口读取特定 article (/discuss/) 的留言列表
       const endpoint = `comments?article=\({encodeURIComponent(articlePath)}&page=\){page}`;
       const data = await api(endpoint);
 
@@ -295,6 +297,7 @@
     notice('正在发布讨论…');
 
     try {
+      // 提交到根 API Endpoint (文章/讨论通用 POST 接口)
       await api('', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

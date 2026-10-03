@@ -38,7 +38,7 @@ for (const [name, body] of [['演示读者 · 林', '希望增加夜间阅读模
   DB.sqlite.prepare('INSERT INTO feedback(request_id,nickname,body) VALUES (?,?,?)').run(crypto.randomUUID(), name, body);
 }
 for (let i=0;i<3;i++) DB.sqlite.prepare("INSERT INTO community_likes(kind,target_id,voter) VALUES ('feedback',1,?)").run('local-demo-'+i);
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, origin);

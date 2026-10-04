@@ -1,5 +1,6 @@
 // 社区交互共享匿名浏览器标识。昵称不是账号；清理存储会重置标识。
 (() => {
+  if(window.CatrixCommunity)return;
   let visitor;
   try { visitor=localStorage.getItem('catrix.visitor.v1'); if(!/^[0-9a-f-]{36}$/i.test(visitor||'')) {visitor=crypto.randomUUID();localStorage.setItem('catrix.visitor.v1',visitor);} }
   catch { visitor=crypto.randomUUID(); }
@@ -28,5 +29,5 @@
     button.addEventListener('click',async()=>{button.disabled=true;try{const result=await request('like',{kind,id,liked:!liked});update(result);onChange?.();}catch(error){button.textContent=error.message;button.disabled=false;}});
     return button;
   }
-  window.CatrixCommunity={request,likeButton,configure:value=>{base=String(value||'').replace(/\/$/,'');}};
+  window.CatrixCommunity={request,likeButton,visitor,configure:value=>{base=String(value||'').replace(/\/$/,'');}};
 })();

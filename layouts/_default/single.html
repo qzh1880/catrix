@@ -80,6 +80,7 @@
     {{ end }}
     
     {{/* 评论区的开关、资源和表单集中在 partial 中，方便单独维护。 */}}
+    {{ partial "article-like.html" . }}
     {{ partial "comments.html" . }}
 
     {{ partial "recommendations.html" . }}

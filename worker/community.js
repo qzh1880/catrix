@@ -1,3 +1,5 @@
+import { validArticle } from './comments.js';
+import { minesBoard, minesAction } from './mines.js';
 import { replay, periodStart, rules } from './rankings.js';
 
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -31,6 +33,12 @@ export async function handleCommunity(request,env,url=new URL(request.url)) {
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...cors,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, X-Comments-Key'}});
     if(!env.DB||!env.COMMENTS_RATE_SALT||env.COMMENTS_RATE_SALT.length<32)return reply({error:'服务尚未配置完整。'},503);
     if(request.method==='GET') {
+      if(url.pathname==='/community/mines/rankings')return reply(await minesBoard(env.DB,url.searchParams.get('level')||'easy'));
+      if(url.pathname==='/community/article-like'){
+        const article=url.searchParams.get('article');if(!validArticle(article))return reply({error:'文章路径不正确。'},400);
+        const visitor=url.searchParams.get('visitor');const voter=uuid(visitor)?await digest(`${env.COMMENTS_RATE_SALT}:visitor:${visitor}`):'';
+        const row=await env.DB.prepare('SELECT COUNT(*) AS likes,MAX(CASE WHEN voter=? THEN 1 ELSE 0 END) AS liked FROM article_likes WHERE article=?').bind(voter,article).first();return reply(row);
+      }
       if(url.pathname==='/community/feedback') {
         const page=Number(url.searchParams.get('page')||1);
         if(!Number.isSafeInteger(page)||page<1||page>10000)return reply({error:'页码不正确。'},400);
@@ -66,6 +74,19 @@ export async function handleCommunity(request,env,url=new URL(request.url)) {
     }
     if(!uuid(data.visitor))return reply({error:'浏览器标识不正确，请刷新重试。'},400);
     const player=await digest(`${env.COMMENTS_RATE_SALT}:visitor:${data.visitor}`);
+    if(url.pathname.startsWith('/community/mines/')){
+      const action=url.pathname.slice('/community/mines/'.length);
+      if(!['start','reveal','chord','state','submit'].includes(action))return reply({error:'接口不存在。'},404);
+      await limit(request,env,'mines-'+action,action==='start'?40:action==='submit'?30:3000);
+      return reply(await minesAction(env.DB,action,data,player));
+    }
+    if(url.pathname==='/community/article-like'){
+      if(!validArticle(data.article)||typeof data.liked!=='boolean')return reply({error:'文章点赞参数不正确。'},400);
+      await limit(request,env,'article-like',100);
+      if(data.liked)await env.DB.prepare('INSERT INTO article_likes VALUES (?,?) ON CONFLICT DO NOTHING').bind(data.article,player).run();
+      else await env.DB.prepare('DELETE FROM article_likes WHERE article=? AND voter=?').bind(data.article,player).run();
+      const row=await env.DB.prepare('SELECT COUNT(*) AS likes FROM article_likes WHERE article=?').bind(data.article).first();return reply({...row,liked:data.liked});
+    }
     if(url.pathname==='/community/like') {
       if(!['comment','feedback'].includes(data.kind)||!Number.isSafeInteger(data.id)||data.id<1||typeof data.liked!=='boolean')return reply({error:'点赞参数不正确。'},400);
       await limit(request,env,'likes',100);

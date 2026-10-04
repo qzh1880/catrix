@@ -82,3 +82,10 @@ block  = [['$$', '$$']]
   parent = "more"
   url = "/feedback/"
   weight = 4
+
+[[menu.main]]
+  name = "讨论区"
+  parent = "more"
+  url = "/discuss/"
+  weight = 5
+

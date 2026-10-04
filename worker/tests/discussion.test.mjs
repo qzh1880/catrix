@@ -90,3 +90,69 @@ test('search covers full text, author, tags, issue and multiple keywords', () =>
   assert.equal(search(index, 'Lin', '随笔').length, 0);
   assert.equal(search(index, '')[0], index[1]);
 });
+
+test('discuss page supports posting, page-based pagination, replies, and community deletion', async t => {
+  const { call, env } = setup(t);
+  const DISCUSS = '/discuss/';
+
+  // 1. 发布讨论
+  const res1 = await call('/comments', {
+    article: DISCUSS,
+    nickname: '讨论发起人',
+    body: '欢迎来到 CATRIX 讨论区！',
+    requestId: crypto.randomUUID()
+  });
+  assert.equal(res1.status, 201);
+
+  // 2. 分页读取 (使用 page 参数)
+  const listRes = await call(`/comments?article=${encodeURIComponent(DISCUSS)}&page=1`);
+  assert.equal(listRes.status, 200);
+  const listData = await listRes.json();
+  assert.equal(listData.comments.length, 1);
+  assert.equal(listData.total, 1);
+  assert.equal(listData.page, 1);
+  assert.equal(listData.more, false);
+  const firstId = listData.comments[0].id;
+
+  // 3. 回复讨论 (单层回复)
+  const replyRes = await call('/comments', {
+    article: DISCUSS,
+    nickname: '回复者',
+    body: '我也很赞同这个想法。',
+    parentId: firstId,
+    requestId: crypto.randomUUID()
+  });
+  assert.equal(replyRes.status, 201);
+
+  const listRes2 = await call(`/comments?article=${encodeURIComponent(DISCUSS)}&page=1`);
+  const listData2 = await listRes2.json();
+  assert.equal(listData2.total, 2);
+  const replyItem = listData2.comments.find(c => c.parent_id === firstId);
+  assert.ok(replyItem);
+  assert.equal(replyItem.parent_nickname, '讨论发起人');
+
+  // 4. 点赞
+  const visitor = crypto.randomUUID();
+  const likeRes = await call('/community/like', {
+    kind: 'comment',
+    id: firstId,
+    liked: true,
+    visitor
+  });
+  assert.equal(likeRes.status, 200);
+  assert.equal((await likeRes.json()).likes, 1);
+
+  // 5. 管理员删除讨论 (通过 community/admin/delete-comment)
+  const delWithoutKey = await call('/community/admin/delete-comment', { id: firstId });
+  assert.equal(delWithoutKey.status, 401);
+
+  const delWithKey = await call('/community/admin/delete-comment', { id: firstId }, KEY);
+  assert.equal(delWithKey.status, 200);
+  assert.equal((await delWithKey.json()).ok, true);
+
+  // 再次读取：被删除的讨论不再显示
+  const listRes3 = await call(`/comments?article=${encodeURIComponent(DISCUSS)}&page=1`);
+  const listData3 = await listRes3.json();
+  assert.equal(listData3.comments.some(c => c.id === firstId), false);
+});
+

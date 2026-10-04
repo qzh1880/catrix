@@ -156,6 +156,8 @@ test('admin pagination and state validation', async t => {
 test('article identifiers only accept canonical article paths', () => {
   assert.equal(validArticle(ARTICLE), true);
   assert.equal(validArticle('/posts/%E4%BD%A0%E5%A5%BD/'), true);
+  assert.equal(validArticle('/discuss/'), true);
+  assert.equal(validArticle('/discuss'), true);
   for (const value of ['/about/', '/posts/../', '/posts/a/?x=1', '/posts/a/#x', '//example/posts/a/', '/posts/a', null]) assert.equal(validArticle(value), false);
 });
 

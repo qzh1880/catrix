@@ -63,12 +63,17 @@ export async function handleCommunity(request,env,url=new URL(request.url)) {
     if(!allowed)return reply({error:'请从网站页面操作。'},403);
     const data=await read(request);
     // 管理删除复用评论管理密钥，不向前端公开任何凭证。
-    if(['/community/admin/delete-feedback','/community/admin/check'].includes(url.pathname)) {
+    if(['/community/admin/delete-feedback','/community/admin/delete-comment','/community/admin/check'].includes(url.pathname)) {
       const key=request.headers.get('X-Comments-Key')||'';
       if(!env.COMMENTS_ADMIN_KEY||env.COMMENTS_ADMIN_KEY.length<32)return reply({error:'管理服务未配置。'},503);
       if(await digest(key)!==await digest(env.COMMENTS_ADMIN_KEY))return reply({error:'管理凭证不正确。'},401);
       if(url.pathname==='/community/admin/check')return reply({ok:true});
       if(!Number.isSafeInteger(data.id)||data.id<1)return reply({error:'编号不正确。'},400);
+      if(url.pathname==='/community/admin/delete-comment') {
+        const result=await env.DB.prepare("UPDATE comments SET nickname='',body='',status='rejected' WHERE id=?").bind(data.id).run();
+        await env.DB.prepare("UPDATE comment_reports SET status='resolved' WHERE comment_id=?").bind(data.id).run();
+        return result.meta.changes?reply({ok:true}):reply({error:'评论不存在。'},404);
+      }
       const result=await env.DB.prepare("UPDATE feedback SET nickname='',body='',deleted=1 WHERE id=?").bind(data.id).run();
       return result.meta.changes?reply({ok:true}):reply({error:'反馈不存在。'},404);
     }

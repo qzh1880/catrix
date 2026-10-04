@@ -16,10 +16,10 @@ function origins(env) {
 }
 
 // 以文章路径关联留言，不使用域名、查询参数或锚点。
-// 此处只校验默认的单层 /posts/<slug>/ 格式，不验证文章是否真实存在。
+// 此处只校验默认的单层 /posts/<slug>/ 格式及讨论区 /discuss/，不验证文章是否真实存在。
 export function validArticle(value) {
   return typeof value === "string" && value.length <= 500 &&
-    /^\/posts\/(?:[A-Za-z0-9_~-]|%[A-Fa-f0-9]{2})+\/$/.test(value);
+    (/^\/posts\/(?:[A-Za-z0-9_~-]|%[A-Fa-f0-9]{2})+\/$/.test(value) || value === "/discuss/" || value === "/discuss");
 }
 
 async function readJson(request) {
@@ -155,8 +155,24 @@ export async function handleComments(request, env, url = new URL(request.url)) {
     }
     if (request.method === "GET") {
       // 公开查询在 SQL 层限制为 approved，绝不把待审核留言交给前端自行过滤。
-      const article = url.searchParams.get("article");
+      let article = url.searchParams.get("article");
+      if (article === "/discuss") article = "/discuss/";
       if (!validArticle(article)) return reply({ error: "文章地址不正确。" }, 400);
+      const pageParam = url.searchParams.get("page");
+      if (pageParam !== null) {
+        const page = Number(pageParam);
+        if (!/^\d+$/.test(pageParam) || !Number.isSafeInteger(page) || page < 1 || page > 10000) {
+          throw { status: 400, message: "分页参数不正确。" };
+        }
+        const offset = (page - 1) * 20;
+        const rows = (await env.DB.prepare(
+          "SELECT c.id, c.nickname, c.body, c.created_at, c.parent_id, CASE WHEN p.status = 'approved' AND p.body != '' THEN p.nickname ELSE NULL END AS parent_nickname, CASE WHEN p.status = 'approved' AND p.body != '' THEN substr(p.body, 1, 120) ELSE NULL END AS parent_body FROM comments c LEFT JOIN comments p ON p.id = c.parent_id WHERE c.article = ? AND c.status = 'approved' AND c.body != '' ORDER BY c.id DESC LIMIT 21 OFFSET ?"
+        ).bind(article, offset).all()).results;
+        const totalRow = await env.DB.prepare(
+          "SELECT COUNT(*) AS total FROM comments WHERE article = ? AND status = 'approved' AND body != ''"
+        ).bind(article).first();
+        return reply({ comments: rows.slice(0, 20), more: rows.length > 20, page, total: totalRow?.total ?? 0, next: rows.length > 20 ? rows[19].id : null });
+      }
       const rows = (await env.DB.prepare(
         "SELECT c.id, c.nickname, c.body, c.created_at, c.parent_id, CASE WHEN p.status = 'approved' AND p.body != '' THEN p.nickname ELSE NULL END AS parent_nickname, CASE WHEN p.status = 'approved' AND p.body != '' THEN substr(p.body, 1, 120) ELSE NULL END AS parent_body FROM comments c LEFT JOIN comments p ON p.id = c.parent_id WHERE c.article = ? AND c.status = 'approved' AND c.id < ? ORDER BY c.id DESC LIMIT 21"
       ).bind(article, beforeId(url)).all()).results;
@@ -165,6 +181,7 @@ export async function handleComments(request, env, url = new URL(request.url)) {
     if (request.method !== "POST") return reply({ error: "请求方法不正确。" }, 405, { Allow: "GET, POST, OPTIONS" });
     if (!allowed) return reply({ error: "请从网站文章页提交评论。" }, 403);
     const data = await readJson(request);
+    if (data.article === "/discuss") data.article = "/discuss/";
     if (data.action === 'report') return await reportComment(request, env, data, reply);
     if (data.action && data.action !== 'comment') return reply({ error: '请求操作不正确。' }, 400);
     const parentId = data.parentId ?? null;

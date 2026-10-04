@@ -38,6 +38,14 @@ for (const [name, body] of [['演示读者 · 林', '希望增加夜间阅读模
   DB.sqlite.prepare('INSERT INTO feedback(request_id,nickname,body) VALUES (?,?,?)').run(crypto.randomUUID(), name, body);
 }
 for (let i=0;i<3;i++) DB.sqlite.prepare("INSERT INTO community_likes(kind,target_id,voter) VALUES ('feedback',1,?)").run('local-demo-'+i);
+// 讨论区示例只存在于本地内存数据库
+for (const [name, body] of [
+  ['讨论发起人 · 小白', '欢迎来到 CATRIX 开放讨论区！大家对杂志社最近的选题或校园活动有什么想法？'],
+  ['读者 · 晨曦', '希望能看到更多高中生摄影作品和社团故事的分享！']
+]) {
+  DB.sqlite.prepare("INSERT INTO comments (request_id, article, nickname, body, status) VALUES (?, '/discuss/', ?, ?, 'approved')").run(crypto.randomUUID(), name, body);
+}
+for (let i=0;i<2;i++) DB.sqlite.prepare("INSERT INTO community_likes(kind,target_id,voter) VALUES ('comment',3,?)").run('local-discuss-demo-'+i);
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const server = createServer(async (req, res) => {
   try {
@@ -67,6 +75,7 @@ const server = createServer(async (req, res) => {
 // 仅监听本机，避免局域网其他设备访问使用演示凭证的后台。
 server.listen(port, '127.0.0.1', () => {
   console.log(`Preview: ${origin}${article}#comments`);
+  console.log(`Discuss: ${origin}/discuss/`);
   console.log(`Moderation: ${origin}/admin/comments`);
   console.log(`Local demo key: ${env.COMMENTS_ADMIN_KEY}`);
   console.log('All comments are local demo data. Stop with Ctrl+C.');

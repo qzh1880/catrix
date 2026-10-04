@@ -1,0 +1,50 @@
+{{ define "main" }}
+{{ $css := resources.Get "css/community.css" | minify | fingerprint }}
+{{ $js := resources.Get "js/discuss.js" | minify | fingerprint }}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}">
+<main class="community-page" id="discuss-app" data-api="{{ replaceRE "/comments/?$" "" (.Site.Params.comments.apiURL | default "") }}" data-article="/discuss/">
+  <header>
+    <p class="community-eyebrow">CATRIX / 社区交流</p>
+    <h1>开放讨论区</h1>
+    <div>{{ .Content }}</div>
+  </header>
+  <form id="discuss-form" class="feedback-form">
+    <fieldset id="discuss-fields">
+      <div id="reply-indicator" class="discuss-reply-badge" hidden>
+        <span>正在回复 <strong id="reply-target-name"></strong> 的发言</span>
+        <button type="button" id="cancel-reply-btn">取消回复</button>
+      </div>
+      <input type="hidden" id="discuss-parent" value="">
+      <label for="discuss-name">怎么称呼你</label>
+      <input id="discuss-name" maxlength="40" required autocomplete="nickname">
+      <label for="discuss-body">你的想法</label>
+      <textarea id="discuss-body" rows="4" minlength="2" maxlength="2000" required placeholder="写下你的想法、观点或问题……"></textarea>
+      <p>提交后公开显示，请勿填写私人信息。保持友善交流，支持发言点赞和单层回复。</p>
+      <button type="submit" id="discuss-submit">发布讨论 ↗</button>
+    </fieldset>
+  </form>
+  <p id="discuss-status" role="status" aria-live="polite"></p>
+  <div class="feedback-heading">
+    <h2>全部讨论</h2>
+    <span id="discuss-count"></span>
+    <button id="discuss-refresh" type="button">刷新</button>
+  </div>
+  <div id="discuss-list"></div>
+  <nav class="feedback-pagination" aria-label="讨论分页">
+    <button id="discuss-prev" type="button">上一页</button>
+    <span id="discuss-page"></span>
+    <button id="discuss-next" type="button">下一页</button>
+  </nav>
+  <details class="feedback-admin">
+    <summary>管理员处理讨论</summary>
+    <label for="discuss-key">评论管理凭证</label>
+    <input id="discuss-key" type="password" autocomplete="off">
+    <button id="discuss-admin-login" type="button">进入管理</button>
+    <button id="discuss-admin-logout" type="button" hidden>退出管理</button>
+    <p>凭证仅保存在当前页面内存中。</p>
+  </details>
+  <noscript>请启用 JavaScript 查看和提交讨论。</noscript>
+</main>
+<script src="{{ "js/community-client.js" | relURL }}?v=3" defer></script>
+<script src="{{ $js.RelPermalink }}" defer></script>
+{{ end }}

@@ -1,0 +1,125 @@
+/* ==========================================================================
+   首页背景：康威生命游戏底纹 (life-bg.css)
+   —— 与 js/life-bg.js 配套，仅在首页加载。
+
+   默认启用（<html class="life-mode">）：页面仍然是主题原本的白底浅色样式，
+   只是在所有内容下面垫了一层「纯白底 + #e9eddf 像素点」的淡色底纹；
+   右下角按钮可以切回不带底纹的纯白背景。
+   ========================================================================== */
+
+/* ---------- 背景画布：固定铺满视口，位于所有内容之下 ---------- */
+.life-canvas {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: -1;
+  background: #ffffff;
+  pointer-events: none;
+}
+
+html:not(.life-mode) .life-canvas {
+  display: none;
+}
+
+/* ---------- 浅色底纹：不需要改主题变量，只把 body 变透明让画布透出来 ---------- */
+html.life-mode {
+  background: #ffffff;
+}
+
+/* body 必须透明，否则会盖住 z-index:-1 的画布 */
+html.life-mode body {
+  background: transparent;
+}
+
+/* 顶栏/页脚原本是不透明白，稍微放透明一点，底纹会若隐若现 */
+html.life-mode .site-header {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+html.life-mode .site-footer {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+/* 相册区与精选卡片原本铺了底色，放开让底纹透过去 */
+html.life-mode .home-gallery {
+  background: transparent;
+}
+
+html.life-mode .featured-card {
+  background: transparent;
+}
+
+/* ---------- 右下角的“背景”设置按钮（浅色页面上用深色胶囊） ---------- */
+.bg-toggle {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.78);
+  color: #f7f7f7;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.bg-toggle:hover {
+  background: rgba(26, 26, 26, 0.95);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.bg-toggle:focus-visible {
+  outline: 2px solid #1a1a1a;
+  outline-offset: 2px;
+}
+
+.bg-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.bg-toggle svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.bg-toggle[data-mode='white'] svg {
+  opacity: 0.75;
+}
+
+/* ---------- 窄屏适配 ---------- */
+@media (max-width: 768px) {
+  .bg-toggle {
+    right: 12px;
+    bottom: 12px;
+    padding: 8px 13px;
+    font-size: 0.68rem;
+    letter-spacing: 0.8px;
+  }
+}
+
+@media print {
+  .bg-toggle,
+  .life-canvas {
+    display: none !important;
+  }
+}

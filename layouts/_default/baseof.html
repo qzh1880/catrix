@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode | default "zh-cn" }}">
+<head>
+  {{ partial "head.html" . }}
+  {{- if .IsHome }}
+  {{/* 首页背景：康威生命游戏（static/css/life-bg.css + static/js/life-bg.js） */}}
+  <link rel="stylesheet" href="{{ "css/life-bg.css" | relURL }}?v={{ now.Unix }}">
+  <script>
+    /* 在首次绘制前定好背景模式，避免白底闪一下：
+       除非用户主动切回过纯白背景，否则默认开启生命游戏。 */
+    (function () {
+      var life = true;
+      try { life = localStorage.getItem('catrix-bg') !== 'white'; } catch (e) {}
+      if (life) { document.documentElement.classList.add('life-mode'); }
+    })();
+  </script>
+  {{- end }}
+</head>
+<body>
+  {{ partial "header.html" . }}
+  <main class="site-main">
+    {{ block "main" . }}{{ end }}
+  </main>
+  {{ partial "footer.html" . }}
+
+  {{- if .IsHome }}
+  <canvas id="life-canvas" class="life-canvas" aria-hidden="true"
+          style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;background:#fff"></canvas>
+  <button id="bg-toggle" class="bg-toggle" type="button" data-mode="life" aria-pressed="true"
+          title="切换回不带底纹的纯白背景" aria-label="切换回不带底纹的纯白背景">
+    <span class="bg-toggle-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+        <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+      </svg>
+    </span>
+    <span class="bg-toggle-text">纯白背景</span>
+  </button>
+  <script src="{{ "js/life-bg.js" | relURL }}?v={{ now.Unix }}"></script>
+  {{- end }}
+
+  <script src="{{ "js/main.js" | relURL }}?v={{ now.Unix }}"></script>
+</body>
+</html>

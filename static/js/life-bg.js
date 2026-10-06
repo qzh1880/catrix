@@ -5,15 +5,18 @@
  *   1. 每次刷新页面都会重新随机挑选一种预设图案作为初始状态；
  *   2. 之后以固定节奏（约 16 代/秒）在环形网格上演化，纯黑底 + 纯白像素点，
  *      没有任何中间色；网格按屏幕分辨率自适应，桌面端约 320×180 个像素点；
- *   3. 规则 = 标准 B3/S23 + 一条「寿命上限」（见 MAX_AGE）：
- *      任何细胞连续存活超过 MAX_AGE 代就自然死亡。这一条专治生命游戏的老毛病——
- *      跑一阵子之后整片塌成静物（永久不动的方块/蜂巢）和原地抽搐的振荡子：
- *      它们的细胞是长期存活的，寿命一到就散架；而滑翔机、随机汤这类细胞寿命
- *      只有 1~3 代的动态结构基本不受影响；
- *   4. 活性过低（细胞太少 / 变化率太低）时自动补一块随机汤，画面永远不会死掉；
+ *   3. 规则 = 标准 B3/S23 + 两条「防结壳」的补充（见 MAX_AGE）：
+ *      a) 局部冻结清除：某个位置的 3×3 邻域连续 MAX_AGE 代没有变化（静物就是这样），
+ *         这一格就死。同一块静物的所有细胞的冻结计时是同一代开始的，所以会**整块同时消失**，
+ *         不会像「按细胞寿命逐个死」那样被邻居又生回来（那样只会闪一下、方块还在）；
+ *      b) 抖动老化：邻域一直在变（振荡子核心细胞每代都被"刷新"）但细胞本身连续存活
+ *         超过 MAX_AGE 代，也让它死，免得原地抽搐个没完。
+ *      滑翔机、随机汤这类细胞寿命只有 1~3 代、邻域一直在变的动态结构不受影响；
+ *   4. 活细胞数量有下限（MIN_POP）：掉下去就随机补种，同时变化率过低也补，
+ *      所以画面会一直维持在一个"乱 → 衰 → 补新乱"的循环里，不会越跑越冷清；
  *   5. 右下角按钮可一键切回原有纯白背景，选择记在 localStorage 里。
  *
- * 把 MAX_AGE 设成 0 就退回纯正的 B3/S23。
+ * 把 MAX_AGE 设成 0 就退回纯正的 B3/S23（MIN_POP 也可以设 0 关掉补种）。
  *
  * 无第三方依赖；在文件末尾暴露 window.__catrixLife 方便调试。
  */
@@ -133,11 +136,12 @@
   /* ------------------------------------------------------------------ *
    * 网格状态
    * ------------------------------------------------------------------ */
-  var MAX_AGE = 18;                 // 细胞寿命上限（代）；0 = 关闭，退回纯 B3/S23
+  var MAX_AGE = 14;                 // 冻结/存活多少代算「结壳」（0 = 关闭，退回纯 B3/S23）
+  var MIN_POP = 0.02;               // 活细胞数量下限（占整屏比例，低于就补种；0 = 关闭）
   var STEP_MS = 60;                 // 每代间隔（约 16 代/秒）
   var cell = 6, cols = 0, rows = 0, viewW = 0, viewH = 0;
-  var cur = null, buf = null, age = null;
-  var pop = 0, changed = 0, still = 0, stirs = 0, reseeds = 0;
+  var cur = null, buf = null, age = null, frozen = null, prevSig = null;
+  var pop = 0, changed = 0, still = 0, stirs = 0, reseeds = 0, injects = 0;
   var running = false, rafId = 0, lastStep = 0, lastPick = null;
   var resizeTimer = 0;
 
@@ -439,7 +443,7 @@
 
   function seed() {
     var n = cols * rows, i;
-    for (i = 0; i < n; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; }
+    for (i = 0; i < n; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; frozen[i] = 0; prevSig[i] = 0; }
 
     var p = pickPattern();
     seedKind(p);
@@ -452,7 +456,7 @@
     for (var i = 0; i < PATTERNS.length; i++) {
       if (PATTERNS[i].name === name) {
         var n = cols * rows;
-        for (var k = 0; k < n; k++) { cur[k] = 0; buf[k] = 0; age[k] = 0; }
+        for (var k = 0; k < n; k++) { cur[k] = 0; buf[k] = 0; age[k] = 0; frozen[k] = 0; prevSig[k] = 0; }
         seedKind(PATTERNS[i]);
         countPopulation();
         return true;
@@ -483,7 +487,7 @@
 
   /* ------------------------------------------------------------------ *
    * 演化 + 绘制
-   * 规则：标准 B3/S23，外加寿命上限——连续存活超过 MAX_AGE 代的细胞自然死亡。
+   * 规则：标准 B3/S23，外加「局部冻结清除」与「抖动老化」两条（见 MAX_AGE）。
    * ------------------------------------------------------------------ */
   function stepOnce() {
     pop = 0;
@@ -496,27 +500,39 @@
       for (var x = 0; x < cols; x++) {
         var xL = (x + cols - 1) % cols;
         var xR = (x + 1) % cols;
-        var nb = cur[yUp + xL] + cur[yUp + x] + cur[yUp + xR] +
-                 cur[yMid + xL] + cur[yMid + xR] +
-                 cur[yDn + xL] + cur[yDn + x] + cur[yDn + xR];
+        var uL = cur[yUp + xL], uM = cur[yUp + x], uR = cur[yUp + xR];
+        var mL = cur[yMid + xL], mR = cur[yMid + xR];
+        var dL = cur[yDn + xL], dM = cur[yDn + x], dR = cur[yDn + xR];
         var i = yMid + x;
-        var alive = cur[i];
+        var a = cur[i];
+        var nb = uL + uM + uR + mL + mR + dL + dM + dR;
+
+        /* 这一格的 3×3 邻域签名（9 位），用来判断「这块地方多久没动过了」 */
+        var sig = uL | (uM << 1) | (uR << 2) | (mL << 3) | (mR << 4) |
+                  (dL << 5) | (dM << 6) | (dR << 7) | (a << 8);
+        var f;
+        if (sig === prevSig[i]) { f = frozen[i] + 1; } else { f = 0; prevSig[i] = sig; }
+        frozen[i] = f;
+
         var live;
-        if (alive) {
-          live = (nb === 2 || nb === 3) ? 1 : 0;
-          if (live && aging && age[i] >= MAX_AGE) { live = 0; }   // 寿命到了
+        if (a) {
+          /* 冻结太久（静物：整块同代开始计时 → 整块同代消失）
+             或者邻域一直在变却被活了太久（振荡子核心细胞）→ 都让它死 */
+          var stale = aging && (f >= MAX_AGE || (f === 0 && age[i] >= MAX_AGE));
+          live = ((nb === 2 || nb === 3) && !stale) ? 1 : 0;
         } else {
           live = (nb === 3) ? 1 : 0;
         }
+
         if (live) {
           buf[i] = 1;
-          age[i] = alive ? (age[i] + 1) : 0;
+          age[i] = a ? (age[i] + 1) : 0;
           pop++;
-          if (!alive) { changed++; }
+          if (!a) { changed++; }
         } else {
           buf[i] = 0;
           age[i] = 0;
-          if (alive) { changed++; }
+          if (a) { changed++; }
         }
       }
     }
@@ -547,15 +563,21 @@
     stepOnce();
     render();
 
-    /* 活性自检：细胞太少、或者变化率过低（基本只剩静止块和慢振荡子）就补一块随机汤，
-       配合寿命上限，画面会一直在“乱 → 衰 → 补新乱”的循环里，不会定死 */
-    var thin = pop < Math.max(30, Math.round(cols * rows * 0.004));
+    /* 活性维持：
+       1) 活细胞低于下限（MIN_POP）→ 立刻补一块随机汤，画面不会越跑越冷清；
+       2) 细胞够多但变化率极低（基本只剩静止块和慢振荡子）→ 也补一块。
+       补种只落在左右留白带里，和有寿命/冻结清除配合，形成「乱 → 衰 → 补新乱」的循环 */
+    var floorPop = MIN_POP > 0 ? Math.round(cols * rows * MIN_POP) : 0;
     var quiet = changed * 12 < pop;
     if (pop === 0) {
       seed();
       reseeds++;
       render();
-    } else if (thin || quiet) {
+    } else if (floorPop > 0 && pop < floorPop) {
+      injectSoup();
+      injects++;
+      still = 0;
+    } else if (quiet) {
       still++;
       if (still > 8) { injectSoup(); stirs++; still = 0; }
     } else {
@@ -620,6 +642,8 @@
     cur = new Uint8Array(n);
     buf = new Uint8Array(n);
     age = new Uint16Array(n);
+    frozen = new Uint16Array(n);
+    prevSig = new Uint16Array(n);
     seed();
   }
 
@@ -703,17 +727,23 @@
     render: render,
     setMode: function (m) { applyMode(m === MODE_WHITE ? MODE_WHITE : MODE_LIFE, { reseed: true, persist: true }); },
     stats: function () {
+      var stillCells = 0;
+      for (var i = 0; i < cur.length; i++) { if (cur[i] && frozen[i] >= 4) { stillCells++; } }
       return {
         cols: cols, rows: rows, cell: cell, stepMs: STEP_MS,
-        pop: pop, changed: changed, running: running, maxAge: MAX_AGE,
-        stirs: stirs, reseeds: reseeds
+        pop: pop, changed: changed, running: running,
+        maxAge: MAX_AGE, minPop: MIN_POP,
+        /* stillFrac：活细胞里有多少落在「已经 4 代没动过」的位置，用来衡量结壳程度 */
+        stillFrac: pop ? +(stillCells / pop).toFixed(3) : 0,
+        stirs: stirs, reseeds: reseeds, injects: injects
       };
     },
     debug: {
       resize: resize,
-      /* 关掉寿命上限就退回纯 B3/S23 */
+      /* 关掉补充规则就退回纯 B3/S23 */
       setMaxAge: function (n) { MAX_AGE = Math.max(0, n | 0); return MAX_AGE; },
       maxAge: function () { return MAX_AGE; },
+      setMinPop: function (v) { MIN_POP = Math.max(0, +v || 0); return MIN_POP; },
       getCells: function () {
         var out = new Array(cols * rows);
         for (var i = 0; i < out.length; i++) { out[i] = cur[i]; }
@@ -724,8 +754,13 @@
         for (var i = 0; i < out.length; i++) { out[i] = age[i]; }
         return out;
       },
+      getFrozen: function () {
+        var out = new Array(cols * rows);
+        for (var i = 0; i < out.length; i++) { out[i] = frozen[i]; }
+        return out;
+      },
       setCells: function (arr) {
-        for (var i = 0; i < cur.length; i++) { cur[i] = arr[i] ? 1 : 0; age[i] = 0; }
+        for (var i = 0; i < cur.length; i++) { cur[i] = arr[i] ? 1 : 0; age[i] = 0; frozen[i] = 0; prevSig[i] = 0; }
         countPopulation();
         return pop;
       },
@@ -744,7 +779,7 @@
       },
       injectSoup: injectSoup,
       clear: function () {
-        for (var i = 0; i < cur.length; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; }
+        for (var i = 0; i < cur.length; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; frozen[i] = 0; prevSig[i] = 0; }
         pop = 0;
       }
     }

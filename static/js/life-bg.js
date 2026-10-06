@@ -5,7 +5,15 @@
  *   1. 每次刷新页面都会重新随机挑选一种预设图案作为初始状态；
  *   2. 之后以固定节奏（约 16 代/秒）在环形网格上演化，纯黑底 + 纯白像素点，
  *      没有任何中间色；网格按屏幕分辨率自适应，桌面端约 320×180 个像素点；
- *   3. 右下角按钮可一键切回原有纯白背景，选择记在 localStorage 里。
+ *   3. 规则 = 标准 B3/S23 + 一条「寿命上限」（见 MAX_AGE）：
+ *      任何细胞连续存活超过 MAX_AGE 代就自然死亡。这一条专治生命游戏的老毛病——
+ *      跑一阵子之后整片塌成静物（永久不动的方块/蜂巢）和原地抽搐的振荡子：
+ *      它们的细胞是长期存活的，寿命一到就散架；而滑翔机、随机汤这类细胞寿命
+ *      只有 1~3 代的动态结构基本不受影响；
+ *   4. 活性过低（细胞太少 / 变化率太低）时自动补一块随机汤，画面永远不会死掉；
+ *   5. 右下角按钮可一键切回原有纯白背景，选择记在 localStorage 里。
+ *
+ * 把 MAX_AGE 设成 0 就退回纯正的 B3/S23。
  *
  * 无第三方依赖；在文件末尾暴露 window.__catrixLife 方便调试。
  */
@@ -66,36 +74,6 @@
       ]
     },
     {
-      name: 'pulsar',
-      weight: 2,
-      copies: 20,
-      ascii: [
-        '..OOO...OOO..',
-        '.............',
-        'O....O.O....O',
-        'O....O.O....O',
-        'O....O.O....O',
-        '..OOO...OOO..',
-        '.............',
-        '..OOO...OOO..',
-        'O....O.O....O',
-        'O....O.O....O',
-        'O....O.O....O',
-        '.............',
-        '..OOO...OOO..'
-      ]
-    },
-    {
-      name: 'pentadecathlon',
-      weight: 2,
-      copies: 30,
-      ascii: [
-        '..O....O..',
-        'OO.OOOO.OO',
-        '..O....O..'
-      ]
-    },
-    {
       name: 'pi-heptomino',
       weight: 3,
       copies: 22,
@@ -137,8 +115,12 @@
     },
     { name: 'random-soup', kind: 'soup', weight: 4, density: 0.18 },
     { name: 'mirror-soup', kind: 'mirror-soup', weight: 2, density: 0.24 },
-    { name: 'glider-swarm', kind: 'gliders', weight: 3 }
+    { name: 'glider-swarm', kind: 'gliders', weight: 3 },
+    { name: 'methuselah-mix', kind: 'mix', weight: 4 }
   ];
+
+  /* 长寿种子库：混搭播撒用（都是经过验证的小图案，会各自炸开成一片混乱） */
+  var MIX = ['pi-heptomino', 'r-pentomino', 'acorn', 'diehard'];
 
   /* 滑翔机的四个朝向 */
   var GLIDERS = {
@@ -151,10 +133,11 @@
   /* ------------------------------------------------------------------ *
    * 网格状态
    * ------------------------------------------------------------------ */
+  var MAX_AGE = 18;                 // 细胞寿命上限（代）；0 = 关闭，退回纯 B3/S23
   var STEP_MS = 60;                 // 每代间隔（约 16 代/秒）
   var cell = 6, cols = 0, rows = 0, viewW = 0, viewH = 0;
-  var cur = null, buf = null;
-  var pop = 0, changed = 0, still = 0;
+  var cur = null, buf = null, age = null;
+  var pop = 0, changed = 0, still = 0, stirs = 0, reseeds = 0;
   var running = false, rafId = 0, lastStep = 0, lastPick = null;
   var resizeTimer = 0;
 
@@ -386,6 +369,27 @@
     }
   }
 
+  /* 散落一份：随机取点、随机朝向、与已放置的保持间距；放成功返回 true */
+  function scatterOne(p, zones, placed, gap) {
+    parsePattern(p);
+    var rot = Math.floor(Math.random() * 4);
+    var flip = Math.random() < 0.5;
+    var size = patternSize(p, rot);
+    var spot = pickSpot(zones, size.w, size.h);
+    if (!spot) { return false; }
+    if (overlaps(placed, spot.x, spot.y, size.w, size.h, gap)) { return false; }
+    drawPattern(p, spot.x, spot.y, rot, flip);
+    placed.push({ x: spot.x, y: spot.y, w: size.w, h: size.h });
+    return true;
+  }
+
+  function patternByName(name) {
+    for (var i = 0; i < PATTERNS.length; i++) {
+      if (PATTERNS[i].name === name && PATTERNS[i].ascii) { return PATTERNS[i]; }
+    }
+    return null;
+  }
+
   /* 随机散落：份数带随机系数，位置按面积加权随机取，朝向 8 选 1，互不重叠 */
   function scatterPattern(p) {
     parsePattern(p);
@@ -395,15 +399,7 @@
     var placed = [], done = 0, tries = 0;
     while (done < count && tries < count * 40) {
       tries++;
-      var rot = Math.floor(Math.random() * 4);
-      var flip = Math.random() < 0.5;
-      var size = patternSize(p, rot);
-      var spot = pickSpot(zones, size.w, size.h);
-      if (!spot) { break; }
-      if (overlaps(placed, spot.x, spot.y, size.w, size.h, gap)) { continue; }
-      drawPattern(p, spot.x, spot.y, rot, flip);
-      placed.push({ x: spot.x, y: spot.y, w: size.w, h: size.h });
-      done++;
+      if (scatterOne(p, zones, placed, gap)) { done++; }
     }
     /* 极端窄屏下留白带塞不进这个图案：退化成整屏随便放一份，别留空网格 */
     if (done === 0) {
@@ -420,20 +416,33 @@
     }
   }
 
+  /* 长寿种子混搭：每次随机挑一种，散落地播一批，谁炸成什么全看缘分 */
+  function seedMix() {
+    var zones = bands();
+    var count = 22 + Math.floor(Math.random() * 14);
+    var placed = [], done = 0, tries = 0;
+    while (done < count && tries < count * 40) {
+      tries++;
+      var p = patternByName(MIX[Math.floor(Math.random() * MIX.length)]);
+      if (p && scatterOne(p, zones, placed, 3)) { done++; }
+    }
+    if (done === 0) { scatterPattern(patternByName(MIX[0])); }
+  }
+
+  function seedKind(p) {
+    if (p.kind === 'soup') { fillSoupBands(p.density); }
+    else if (p.kind === 'mirror-soup') { fillMirrorSoup(p.density); }
+    else if (p.kind === 'gliders') { seedGliders(); }
+    else if (p.kind === 'mix') { seedMix(); }
+    else { scatterPattern(p); }
+  }
+
   function seed() {
     var n = cols * rows, i;
-    for (i = 0; i < n; i++) { cur[i] = 0; buf[i] = 0; }
+    for (i = 0; i < n; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; }
 
     var p = pickPattern();
-    if (p.kind === 'soup') {
-      fillSoupBands(p.density);
-    } else if (p.kind === 'mirror-soup') {
-      fillMirrorSoup(p.density);
-    } else if (p.kind === 'gliders') {
-      seedGliders();
-    } else {
-      scatterPattern(p);
-    }
+    seedKind(p);
     if (ROOT.setAttribute) { ROOT.setAttribute('data-life-preset', p.name); }
     countPopulation();
     return p.name;
@@ -443,12 +452,8 @@
     for (var i = 0; i < PATTERNS.length; i++) {
       if (PATTERNS[i].name === name) {
         var n = cols * rows;
-        for (var k = 0; k < n; k++) { cur[k] = 0; buf[k] = 0; }
-        var p = PATTERNS[i];
-        if (p.kind === 'soup') { fillSoupBands(p.density); }
-        else if (p.kind === 'mirror-soup') { fillMirrorSoup(p.density); }
-        else if (p.kind === 'gliders') { seedGliders(); }
-        else { scatterPattern(p); }
+        for (var k = 0; k < n; k++) { cur[k] = 0; buf[k] = 0; age[k] = 0; }
+        seedKind(PATTERNS[i]);
         countPopulation();
         return true;
       }
@@ -478,10 +483,12 @@
 
   /* ------------------------------------------------------------------ *
    * 演化 + 绘制
+   * 规则：标准 B3/S23，外加寿命上限——连续存活超过 MAX_AGE 代的细胞自然死亡。
    * ------------------------------------------------------------------ */
   function stepOnce() {
     pop = 0;
     changed = 0;
+    var aging = MAX_AGE > 0;
     for (var y = 0; y < rows; y++) {
       var yUp = ((y + rows - 1) % rows) * cols;
       var yDn = ((y + 1) % rows) * cols;
@@ -494,13 +501,21 @@
                  cur[yDn + xL] + cur[yDn + x] + cur[yDn + xR];
         var i = yMid + x;
         var alive = cur[i];
-        var live = alive ? (nb === 2 || nb === 3) : (nb === 3);
+        var live;
+        if (alive) {
+          live = (nb === 2 || nb === 3) ? 1 : 0;
+          if (live && aging && age[i] >= MAX_AGE) { live = 0; }   // 寿命到了
+        } else {
+          live = (nb === 3) ? 1 : 0;
+        }
         if (live) {
           buf[i] = 1;
+          age[i] = alive ? (age[i] + 1) : 0;
           pop++;
           if (!alive) { changed++; }
         } else {
           buf[i] = 0;
+          age[i] = 0;
           if (alive) { changed++; }
         }
       }
@@ -532,12 +547,17 @@
     stepOnce();
     render();
 
+    /* 活性自检：细胞太少、或者变化率过低（基本只剩静止块和慢振荡子）就补一块随机汤，
+       配合寿命上限，画面会一直在“乱 → 衰 → 补新乱”的循环里，不会定死 */
+    var thin = pop < Math.max(30, Math.round(cols * rows * 0.004));
+    var quiet = changed * 12 < pop;
     if (pop === 0) {
       seed();
+      reseeds++;
       render();
-    } else if (changed === 0) {
+    } else if (thin || quiet) {
       still++;
-      if (still > 2) { injectSoup(); still = 0; }
+      if (still > 8) { injectSoup(); stirs++; still = 0; }
     } else {
       still = 0;
     }
@@ -599,6 +619,7 @@
 
     cur = new Uint8Array(n);
     buf = new Uint8Array(n);
+    age = new Uint16Array(n);
     seed();
   }
 
@@ -668,7 +689,7 @@
 
   /* 调试接口：控制台里 __catrixLife.seedPreset('pulsar') 之类可以用 */
   global.__catrixLife = {
-    version: '1.0.0',
+    version: '1.1.0',
     patterns: (function () {
       var a = [];
       for (var i = 0; i < PATTERNS.length; i++) { a.push(PATTERNS[i].name); }
@@ -682,17 +703,29 @@
     render: render,
     setMode: function (m) { applyMode(m === MODE_WHITE ? MODE_WHITE : MODE_LIFE, { reseed: true, persist: true }); },
     stats: function () {
-      return { cols: cols, rows: rows, cell: cell, stepMs: STEP_MS, pop: pop, changed: changed, running: running };
+      return {
+        cols: cols, rows: rows, cell: cell, stepMs: STEP_MS,
+        pop: pop, changed: changed, running: running, maxAge: MAX_AGE,
+        stirs: stirs, reseeds: reseeds
+      };
     },
     debug: {
       resize: resize,
+      /* 关掉寿命上限就退回纯 B3/S23 */
+      setMaxAge: function (n) { MAX_AGE = Math.max(0, n | 0); return MAX_AGE; },
+      maxAge: function () { return MAX_AGE; },
       getCells: function () {
         var out = new Array(cols * rows);
         for (var i = 0; i < out.length; i++) { out[i] = cur[i]; }
         return out;
       },
+      getAges: function () {
+        var out = new Array(cols * rows);
+        for (var i = 0; i < out.length; i++) { out[i] = age[i]; }
+        return out;
+      },
       setCells: function (arr) {
-        for (var i = 0; i < cur.length; i++) { cur[i] = arr[i] ? 1 : 0; }
+        for (var i = 0; i < cur.length; i++) { cur[i] = arr[i] ? 1 : 0; age[i] = 0; }
         countPopulation();
         return pop;
       },
@@ -709,8 +742,9 @@
       bands: function () {
         return bands().map(function (b) { return { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1 }; });
       },
+      injectSoup: injectSoup,
       clear: function () {
-        for (var i = 0; i < cur.length; i++) { cur[i] = 0; buf[i] = 0; }
+        for (var i = 0; i < cur.length; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; }
         pop = 0;
       }
     }

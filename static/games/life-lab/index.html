@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>生命游戏实验台 · CATRIX</title>
+<link rel="stylesheet" href="style.css?v=1">
+<script type="module" src="game.mjs?v=1"></script>
+</head>
+<body>
+<main>
+  <header>
+    <a href="../">← 返回游乐场</a>
+    <p class="eyebrow">CATRIX PLAY / 05</p>
+    <h1>生命游戏 · 实验台<span>CONWAY'S GAME OF LIFE SANDBOX</span></h1>
+    <p class="intro">1970 年康威留下两条规矩，养出了滑翔机、脉冲星，还有会自己造滑翔机的枪。这里是能随便折腾的实验台：换尺寸、调速、盖图案、逐格画。</p>
+  </header>
+
+  <section class="controls" aria-label="游戏设置">
+    <div class="row">
+      <span class="label">视图大小</span>
+      <div class="seg" id="views" role="group" aria-label="视图大小"></div>
+    </div>
+    <div class="row">
+      <span class="label">速度</span>
+      <div class="seg" id="speeds" role="group" aria-label="速度"></div>
+    </div>
+    <div class="row">
+      <span class="label">边界</span>
+      <div class="seg" id="borders" role="group" aria-label="边界"></div>
+    </div>
+    <div class="row">
+      <span class="label">操作</span>
+      <button id="tool-draw" type="button" aria-pressed="true">✏️ 画笔</button>
+      <button id="tool-erase" type="button" aria-pressed="false">🧽 橡皮</button>
+      <button id="play" type="button" aria-pressed="false">▶ 开始</button>
+      <button id="step" type="button">⏭ 单步</button>
+      <button id="random" type="button">🎲 随机</button>
+      <button id="clear" type="button">🗑 清空</button>
+    </div>
+    <div class="row">
+      <span class="label">图案</span>
+      <div class="palette" id="palette"></div>
+    </div>
+    <p class="hint">空格 开始/暂停 · → 单步 · C 清空 · R 随机 · Esc 回到画笔</p>
+  </section>
+
+  <section class="play" aria-label="棋盘">
+    <div class="stats">
+      <div>代<strong id="gen">0</strong></div>
+      <div>存活<strong id="alive">0</strong></div>
+      <div>占比<strong id="density">0.0%</strong></div>
+    </div>
+    <div class="board-scroll" id="board-scroll">
+      <canvas id="board" role="img" aria-label="生命游戏棋盘"></canvas>
+    </div>
+    <p id="status" role="status"></p>
+    <p class="hint">点或拖动可以画、擦细胞；选中图案后点棋盘就是盖图章（一动手自动暂停）。棋盘比屏幕宽时可以横向滑动。</p>
+  </section>
+
+  <details>
+    <summary>玩法与规则</summary>
+    <p>规则只有两条：活细胞周围有 2 或 3 个活邻居就继续活着；死细胞周围正好有 3 个活邻居就诞生。其余情况一律死亡。</p>
+    <p>「环面」让棋盘上下左右相接，滑翔机飞出去会从对面绕回来；「死边界」则出了边就当死掉，滑翔机最后会撞死。</p>
+    <p>图案里有最稳的方块、来回闪的闪烁灯、周期 3 的脉冲星和周期 15 的十五周期振荡器，也有 5 个细胞就能折腾 1103 代的 R 五连块、折腾 5206 代的橡果，以及每 30 代吐出一架滑翔机的高斯珀滑翔机枪。</p>
+    <p>画布是真正在跑元胞自动机：速度拉到 40 代/秒时，一万多个格子也是逐格算出来的。</p>
+  </details>
+
+  <footer>LIVE, DIE, REPEAT.</footer>
+</main>
+</body>
+</html>

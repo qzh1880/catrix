@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>生命游戏 · 细胞推演 · Catrix</title>
+  <link rel="stylesheet" href="style.css?v=20261006">
+  <script src="game.js?v=20261006" defer></script>
+</head>
+<body>
+  <main class="game-shell" aria-labelledby="title">
+    <!-- 顶部导航与快捷操作 -->
+    <nav class="top-nav" aria-label="快捷导航">
+      <a href="../" class="back-link" id="btn-back" title="返回上级网页">← 返回游乐场</a>
+      <div class="top-actions">
+        <button type="button" class="btn-import" id="btn-open-import" title="输入阵列代码导入已有图案">
+          导入代码
+        </button>
+        <button type="button" class="btn-share" id="btn-open-share" title="生成阵列代码并分享到剪贴板">
+          <span aria-hidden="true">⎘</span> 分享细胞阵列
+        </button>
+      </div>
+    </nav>
+
+    <!-- 游戏标题与状态 -->
+    <header class="game-header">
+      <div>
+        <p class="eyebrow"><span class="brand-mark" aria-hidden="true">▦</span> CATRIX PLAY / 04</p>
+        <h1 id="title">方寸生灭<span>康威生命游戏 · 细胞推演</span></h1>
+      </div>
+      <span class="status-pill paused" id="status-pill">已暂停</span>
+    </header>
+    <p class="intro">生灭繁衍，起伏不息。在网格中点击或拖动画出细胞，亦可放置经典图案开启生命演化。</p>
+
+    <!-- 成绩/统计看板 -->
+    <section class="scoreboard" aria-label="运行数据">
+      <div>
+        <span>存活细胞</span>
+        <strong id="stat-pop">0</strong>
+      </div>
+      <div>
+        <span>演化代数</span>
+        <strong id="stat-gen">0</strong>
+      </div>
+      <div>
+        <span>历史峰值</span>
+        <strong id="stat-peak">0</strong>
+      </div>
+      <div>
+        <span>演化速度</span>
+        <strong id="stat-speed">16 fps</strong>
+      </div>
+    </section>
+
+    <!-- 控制工具栏 -->
+    <section class="toolbar" aria-label="演化控制工具栏">
+      <div class="toolbar-group">
+        <button type="button" class="btn-primary" id="btn-play-pause">
+          <span id="play-icon">▶</span> <span id="play-text">播放</span>
+        </button>
+        <button type="button" class="btn-subtle" id="btn-step" title="演化推进一代 (快捷键: S 或 空格)">
+          单步 ↷
+        </button>
+        <button type="button" class="btn-danger" id="btn-clear" title="清空网格所有活细胞">
+          清空
+        </button>
+      </div>
+
+      <div class="toolbar-divider" aria-hidden="true"></div>
+
+      <!-- 速度设置 -->
+      <div class="toolbar-group">
+        <label for="speed-select">速度
+          <select id="speed-select">
+            <option value="350">极慢 (约 3 fps)</option>
+            <option value="150">悠闲 (约 7 fps)</option>
+            <option value="60" selected>标准 (约 16 fps)</option>
+            <option value="25">极速 (约 40 fps)</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- 视图规格设置 -->
+      <div class="toolbar-group">
+        <label for="grid-size-select">网格
+          <select id="grid-size-select">
+            <option value="30x20">紧凑 (30 × 20)</option>
+            <option value="50x35" selected>标准 (50 × 35)</option>
+            <option value="80x50">宽广 (80 × 50)</option>
+            <option value="110x70">超大 (110 × 70)</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- 方块显示尺寸 (缩放) -->
+      <div class="toolbar-group">
+        <label for="cell-size-select">尺寸
+          <select id="cell-size-select">
+            <option value="10">小 (10px)</option>
+            <option value="14" selected>中 (14px)</option>
+            <option value="18">大 (18px)</option>
+            <option value="24">特大 (24px)</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- 随机初始化 -->
+      <div class="toolbar-group">
+        <label for="random-select">随机
+          <select id="random-select">
+            <option value="" disabled selected>快速播种...</option>
+            <option value="0.10">稀疏 (10% 活细胞)</option>
+            <option value="0.20">适中 (20% 活细胞)</option>
+            <option value="0.35">茂密 (35% 活细胞)</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <!-- 游戏主布局 -->
+    <div class="game-layout">
+      <!-- 棋盘画布容器 -->
+      <div class="board-container">
+        <div class="canvas-wrapper" id="canvas-wrapper">
+          <canvas id="game-canvas" width="700" height="490" tabindex="0" role="img"
+                  aria-label="康威生命游戏推演棋盘。可用鼠标绘制或点击放置图案。"></canvas>
+          <div class="canvas-tip" id="canvas-tip">左键点击/拖动画出细胞 · 右键擦除</div>
+        </div>
+      </div>
+
+      <!-- 侧边栏：画笔与特殊图案库 -->
+      <aside class="sidebar" aria-label="操作工具与图案库">
+        <!-- 交互模式 -->
+        <section class="card">
+          <h2>交互模式 <span>MODE</span></h2>
+          <div class="mode-toggle-group">
+            <button type="button" class="btn-tool active" id="tool-draw" data-tool="draw">✏️ 铅笔绘制</button>
+            <button type="button" class="btn-tool" id="tool-erase" data-tool="erase">🧹 橡皮擦除</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;">
+            快捷提示：按住鼠标左键可连续滑动涂色。
+          </div>
+        </section>
+
+        <!-- 特殊图案库 -->
+        <section class="card">
+          <h2>经典图案库 <span>PRESETS</span></h2>
+          <div class="pattern-list" id="pattern-list" role="listbox">
+            <!-- 由 game.js 动态渲染经典预设列表 -->
+          </div>
+          <div style="margin-top:10px;display:flex;gap:6px;">
+            <button type="button" class="btn-subtle" id="btn-place-center" style="flex:1;" title="在网格中央载入该图案">
+              居中置入
+            </button>
+            <button type="button" class="btn-subtle" id="btn-stamp-mode" style="flex:1;" title="点击画布任意位置盖下该图案">
+              印章放置
+            </button>
+          </div>
+        </section>
+
+        <!-- 辅助设置 -->
+        <section class="card">
+          <h2>辅助视图 <span>VIEW</span></h2>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px;">
+            <input type="checkbox" id="chk-grid" checked> 显示网格参考线
+          </label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="chk-torus" checked> 开启环形世界（两端环绕）
+          </label>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 玩法与规则折叠面板 -->
+    <details class="instructions">
+      <summary>玩法规则与生命推演法则 <span aria-hidden="true">＋</span></summary>
+      <div>
+        <p><strong>经典四条规则 (B3/S23)：</strong></p>
+        <p>1. <strong>人口过少</strong>：任何存活的细胞，若周围活细胞邻居少于 2 个，在下一代便死亡。</p>
+        <p>2. <strong>稳定繁衍</strong>：任何存活的细胞，若周围有 2 或 3 个活细胞邻居，能继续存活到下一代。</p>
+        <p>3. <strong>人口过剩</strong>：任何存活的细胞，若周围活细胞多于 3 个，在下一代便因拥挤而死亡。</p>
+        <p>4. <strong>生命诞生</strong>：任何死亡的格子，若周围恰好有 3 个活细胞邻居，将在下一代诞生出新细胞。</p>
+        <p><strong>键盘快捷键：</strong><kbd>空格</kbd> 播放/暂停 · <kbd>S</kbd> 单步推进 · <kbd>C</kbd> 清空网格 · <kbd>R</kbd> 随机生成</p>
+      </div>
+    </details>
+
+    <footer>
+      <span>TAKE A BREAK. OBSERVE THE LIVING PATTERNS.</span>
+      <span>CATRIX PLAYROOM / 04</span>
+    </footer>
+
+    <!-- 分享弹窗 -->
+    <div class="modal-backdrop" id="share-modal" hidden>
+      <div class="modal" role="dialog" aria-labelledby="share-title" aria-modal="true">
+        <div class="modal-header">
+          <h3 id="share-title">分享细胞阵列</h3>
+          <button type="button" class="modal-close" id="btn-close-share" aria-label="关闭">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="share-summary">已生成当前细胞阵列代码及直达推演链接：</p>
+          <textarea class="code-box" id="share-text" readonly></textarea>
+          <p style="font-size:11px;color:var(--muted);margin:0;">
+            分享内容末尾已附带游乐场官网地址及直接载入该阵列的专属推演链接。
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-subtle" id="btn-copy-code">仅复制阵列 Code</button>
+          <button type="button" class="btn-primary" id="btn-copy-all">复制完整分享文本</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导入弹窗 -->
+    <div class="modal-backdrop" id="import-modal" hidden>
+      <div class="modal" role="dialog" aria-labelledby="import-title" aria-modal="true">
+        <div class="modal-header">
+          <h3 id="import-title">导入细胞阵列代码</h3>
+          <button type="button" class="modal-close" id="btn-close-import" aria-label="关闭">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>请粘贴从其他玩家复制的细胞阵列代码（或包含代码的分享文本）：</p>
+          <textarea class="code-box" id="import-text" placeholder="粘贴 CGL1:... 阵列代码或完整分享内容"></textarea>
+          <p id="import-error" style="color:var(--danger);font-size:11px;display:none;"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-subtle" id="btn-cancel-import">取消</button>
+          <button type="button" class="btn-primary" id="btn-confirm-import">立即载入推演</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部吐司提示框 -->
+    <div class="toast" id="toast" role="status" aria-live="polite">已复制到剪贴板</div>
+  </main>
+</body>
+</html>

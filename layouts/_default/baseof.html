@@ -36,6 +36,17 @@
     </span>
     <span class="bg-toggle-text">纯白背景</span>
   </button>
+  <script src="{{ "js/life-config.js" | relURL }}?v={{ now.Unix }}"></script>
+  {{- with site.Params.life }}
+  <script>
+    (function () {
+      try {
+        var tomlCfg = JSON.parse({{ . | jsonify }});
+        window.LIFE_CONFIG = Object.assign(window.LIFE_CONFIG || {}, tomlCfg);
+      } catch (e) {}
+    })();
+  </script>
+  {{- end }}
   <script src="{{ "js/life-bg.js" | relURL }}?v={{ now.Unix }}"></script>
   {{- end }}
 

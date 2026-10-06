@@ -77,6 +77,16 @@ block  = [['$$', '$$']]
   enabled = true
   apiURL = "https://comments-api.catrix.net/comments"
 
+# 首页生命游戏背景配置（推荐直接编辑 static/js/life-config.js，亦可在此覆盖）
+# [params.life]
+#   stepMs = 60              # 演化速度（每代间隔毫秒数，越小越快）
+#   cellColor = "#e9eddf"    # 方块颜色
+#   bgColor = "#ffffff"      # 背景底色
+#   initMode = "preset"      # 初始化模式: "preset" (预设图案) 或 "random" (完全随机)
+#   randomDensity = 0.15     # 完全随机模式下的方块密度 (0.01~1.0)
+#   autoReplenish = false    # 是否自动增添新方块（false 为仅在刷新页面时初始化）
+#   maxAge = 0               # 防结壳老化代数（0 为纯正标准康威生命游戏，不主动消除静物）
+
 [[menu.main]]
   name = "网站反馈"
   parent = "more"

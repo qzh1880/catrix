@@ -38,16 +38,60 @@
   var MODE_WHITE = 'white';
 
   /* ------------------------------------------------------------------ *
-   * 只有两个颜色：先把网格写进 cols×rows 的 ImageData，再用最近邻放大到整屏，
-   * 所以每个细胞就是一个边缘锐利的 #e9eddf 像素块，落在纯白底上，不做任何混色。
+   * 读取后台配置（来自 js/life-config.js 或全局 LIFE_CONFIG）
    * ------------------------------------------------------------------ */
+  var cfg = (global.LIFE_CONFIG && typeof global.LIFE_CONFIG === 'object') ? global.LIFE_CONFIG : {};
+
   var LITTLE_ENDIAN = (function () {
     var buf = new ArrayBuffer(4);
     new Uint32Array(buf)[0] = 1;
     return new Uint8Array(buf)[0] === 1;
   })();
-  var PX_BG = 0xffffffff;                                      // 底：#ffffff
-  var PX_CELL = LITTLE_ENDIAN ? 0xffdfede9 : 0xe9eddfff;      // 像素点：#e9eddf
+
+  function parseHexToUint32(colorStr, fallbackHex) {
+    if (!colorStr || typeof colorStr !== 'string') {
+      colorStr = fallbackHex;
+    }
+    var c = colorStr.trim().replace(/^#/, '');
+    var r = 0, g = 0, b = 0, a = 255;
+    if (c.length === 3) {
+      r = parseInt(c.charAt(0) + c.charAt(0), 16);
+      g = parseInt(c.charAt(1) + c.charAt(1), 16);
+      b = parseInt(c.charAt(2) + c.charAt(2), 16);
+    } else if (c.length === 4) {
+      r = parseInt(c.charAt(0) + c.charAt(0), 16);
+      g = parseInt(c.charAt(1) + c.charAt(1), 16);
+      b = parseInt(c.charAt(2) + c.charAt(2), 16);
+      a = parseInt(c.charAt(3) + c.charAt(3), 16);
+    } else if (c.length === 6) {
+      r = parseInt(c.slice(0, 2), 16);
+      g = parseInt(c.slice(2, 4), 16);
+      b = parseInt(c.slice(4, 6), 16);
+    } else if (c.length === 8) {
+      r = parseInt(c.slice(0, 2), 16);
+      g = parseInt(c.slice(2, 4), 16);
+      b = parseInt(c.slice(4, 6), 16);
+      a = parseInt(c.slice(6, 8), 16);
+    } else {
+      var fb = fallbackHex.trim().replace(/^#/, '');
+      r = parseInt(fb.slice(0, 2), 16);
+      g = parseInt(fb.slice(2, 4), 16);
+      b = parseInt(fb.slice(4, 6), 16);
+    }
+    if (isNaN(r) || isNaN(g) || isNaN(b) || isNaN(a)) {
+      r = 0; g = 0; b = 0; a = 255;
+    }
+    if (LITTLE_ENDIAN) {
+      return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+    } else {
+      return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
+    }
+  }
+
+  var CELL_COLOR_STR = cfg.cellColor || '#e9eddf';
+  var BG_COLOR_STR = cfg.bgColor || '#ffffff';
+  var PX_BG = parseHexToUint32(BG_COLOR_STR, '#ffffff');
+  var PX_CELL = parseHexToUint32(CELL_COLOR_STR, '#e9eddf');
 
   var off = null;          // 网格分辨率的离屏画布
   var offCtx = null;
@@ -134,11 +178,13 @@
   };
 
   /* ------------------------------------------------------------------ *
-   * 网格状态
+   * 网格状态与配置
    * ------------------------------------------------------------------ */
-  var MAX_AGE = 14;                 // 冻结/存活多少代算「结壳」（0 = 关闭，退回纯 B3/S23）
-  var MIN_POP = 0.03;               // 活细胞数量下限（占整屏比例，低于就补种；0 = 关闭）
-  var STEP_MS = 60;                 // 每代间隔（约 16 代/秒）
+  var MAX_AGE = typeof cfg.maxAge === 'number' ? Math.max(0, cfg.maxAge | 0) : 0; // 0 = 纯正 B3/S23（默认）
+  var MIN_POP = typeof cfg.minPop === 'number' ? Math.max(0, cfg.minPop) : 0.03;
+  var AUTO_REPLENISH = Boolean(cfg.autoReplenish);                                // 默认 false：页面未刷新情况下只持续进行现有生命游戏
+  var hasCustomStepMs = typeof cfg.stepMs === 'number' && cfg.stepMs > 0;
+  var STEP_MS = hasCustomStepMs ? cfg.stepMs : 60;                                // 每代间隔毫秒数
   var cell = 6, cols = 0, rows = 0, viewW = 0, viewH = 0;
   var cur = null, buf = null, age = null, frozen = null, prevSig = null;
   var pop = 0, changed = 0, still = 0, stirs = 0, reseeds = 0, injects = 0;
@@ -149,8 +195,12 @@
    * 工具
    * ------------------------------------------------------------------ */
   /* 让不同分辨率下屏幕上大约都有 5~6 万个像素点：
-     1920×1080 → cell 6（320×180），4K → cell 12（320×180），手机 → cell 3。 */
+     1920×1080 → cell 6（320×180），4K → cell 12（320×180），手机 → cell 3。
+     也可在配置文件中设置 cellSize 固定方块大小。 */
   function computeCellSize(w, h) {
+    if (typeof cfg.cellSize === 'number' && cfg.cellSize > 0) {
+      return Math.round(cfg.cellSize);
+    }
     var s = Math.round(Math.sqrt(w * h) / 245);
     if (s < 3) { s = 3; }
     if (s > 14) { s = 14; }
@@ -443,15 +493,47 @@
     else { scatterPattern(p); }
   }
 
-  function seed() {
-    var n = cols * rows, i;
-    for (i = 0; i < n; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; frozen[i] = 0; prevSig[i] = 0; }
+  /* ------------------------------------------------------------------ *
+   * 初始化模式：预设图案播撒 vs 完全随机位置初始化
+   * ------------------------------------------------------------------ */
+  /* 完全随机位置初始化模式：在整个网格中按指定密度纯随机分布活细胞方块 */
+  function seedRandomMode(density) {
+    var d = (typeof density === 'number' && density >= 0 && density <= 1)
+      ? density
+      : ((typeof cfg.randomDensity === 'number' && cfg.randomDensity >= 0 && cfg.randomDensity <= 1) ? cfg.randomDensity : 0.15);
+    var startY = (cfg.avoidHeader !== false) ? Math.max(0, Math.min(rows, Math.round(SAFE_TOP_PX / cell))) : 0;
+    for (var y = startY; y < rows; y++) {
+      var rowOffset = y * cols;
+      for (var x = 0; x < cols; x++) {
+        if (Math.random() < d) {
+          cur[rowOffset + x] = 1;
+        }
+      }
+    }
+    if (ROOT.setAttribute) { ROOT.setAttribute('data-life-preset', 'full-random'); }
+    countPopulation();
+    return 'full-random';
+  }
 
+  /* 现有预设图案模式：从预设库中加权选择并散落播撒 */
+  function seedPresetMode() {
     var p = pickPattern();
     seedKind(p);
     if (ROOT.setAttribute) { ROOT.setAttribute('data-life-preset', p.name); }
     countPopulation();
     return p.name;
+  }
+
+  function seed() {
+    var n = cols * rows, i;
+    for (i = 0; i < n; i++) { cur[i] = 0; buf[i] = 0; age[i] = 0; frozen[i] = 0; prevSig[i] = 0; }
+
+    var mode = (cfg.initMode || 'preset').toLowerCase();
+    if (mode === 'random') {
+      return seedRandomMode(cfg.randomDensity);
+    } else {
+      return seedPresetMode();
+    }
   }
 
   function seedPreset(name) {
@@ -565,25 +647,26 @@
     stepOnce();
     render();
 
-    /* 活性维持：
-       1) 活细胞低于下限（MIN_POP）→ 立刻补一块随机汤，画面不会越跑越冷清；
-       2) 细胞够多但变化率极低（基本只剩静止块和慢振荡子）→ 也补一块。
-       补种只落在左右留白带里，和有寿命/冻结清除配合，形成「乱 → 衰 → 补新乱」的循环 */
-    var floorPop = MIN_POP > 0 ? Math.round(cols * rows * MIN_POP) : 0;
-    var quiet = changed * 12 < pop;
-    if (pop === 0) {
-      seed();
-      reseeds++;
-      render();
-    } else if (floorPop > 0 && pop < floorPop) {
-      injectSoup();
-      injects++;
-      still = 0;
-    } else if (quiet) {
-      still++;
-      if (still > 8) { injectSoup(); stirs++; still = 0; }
-    } else {
-      still = 0;
+    /* 活性维持：默认已关闭（AUTO_REPLENISH = false），不在运行中自动刷新增添新方块。
+       只在浏览器刷新页面时初始化一次，页面未刷新情况下只持续进行现有的生命游戏。
+       若在配置中开启 autoReplenish: true，则启用原有自动补种逻辑。 */
+    if (AUTO_REPLENISH) {
+      var floorPop = MIN_POP > 0 ? Math.round(cols * rows * MIN_POP) : 0;
+      var quiet = changed * 12 < pop;
+      if (pop === 0) {
+        seed();
+        reseeds++;
+        render();
+      } else if (floorPop > 0 && pop < floorPop) {
+        injectSoup();
+        injects++;
+        still = 0;
+      } else if (quiet) {
+        still++;
+        if (still > 8) { injectSoup(); stirs++; still = 0; }
+      } else {
+        still = 0;
+      }
     }
     rafId = global.requestAnimationFrame(frame);
   }
@@ -618,17 +701,20 @@
     cols = Math.max(1, Math.floor(w / cell));
     rows = Math.max(1, Math.floor(h / cell));
     var n = cols * rows;
-    STEP_MS = n > 90000 ? 80 : (n > 30000 ? 60 : 70);
+    if (!hasCustomStepMs) {
+      STEP_MS = n > 90000 ? 80 : (n > 30000 ? 60 : 70);
+    }
 
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
+    canvas.style.backgroundColor = BG_COLOR_STR;
     if (ctx.setTransform) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
     ctx.imageSmoothingEnabled = false;
     if ('webkitImageSmoothingEnabled' in ctx) { ctx.webkitImageSmoothingEnabled = false; }
     if ('mozImageSmoothingEnabled' in ctx) { ctx.mozImageSmoothingEnabled = false; }
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = BG_COLOR_STR;
     ctx.fillRect(0, 0, viewW, viewH);
 
     /* 网格分辨率的离屏位图 */
@@ -715,16 +801,19 @@
 
   /* 调试接口：控制台里 __catrixLife.seedPreset('pulsar') 之类可以用 */
   global.__catrixLife = {
-    version: '1.1.0',
+    version: '1.2.0',
+    config: cfg,
     patterns: (function () {
       var a = [];
       for (var i = 0; i < PATTERNS.length; i++) { a.push(PATTERNS[i].name); }
       return a;
     })(),
-    colors: { dead: '#000000', alive: '#ffffff' },
+    colors: { dead: BG_COLOR_STR, alive: CELL_COLOR_STR },
     parse: parsePattern,
     seed: seed,
     seedPreset: seedPreset,
+    seedPresetMode: seedPresetMode,
+    seedRandom: seedRandomMode,
     step: stepOnce,
     render: render,
     setMode: function (m) { applyMode(m === MODE_WHITE ? MODE_WHITE : MODE_LIFE, { reseed: true, persist: true }); },
@@ -733,6 +822,8 @@
       for (var i = 0; i < cur.length; i++) { if (cur[i] && frozen[i] >= 4) { stillCells++; } }
       return {
         cols: cols, rows: rows, cell: cell, stepMs: STEP_MS,
+        initMode: cfg.initMode || 'preset',
+        autoReplenish: AUTO_REPLENISH,
         pop: pop, changed: changed, running: running,
         maxAge: MAX_AGE, minPop: MIN_POP,
         /* stillFrac：活细胞里有多少落在「已经 4 代没动过」的位置，用来衡量结壳程度 */

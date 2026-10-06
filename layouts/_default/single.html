@@ -12,13 +12,13 @@
 
     <h1 class="single-title">{{ .Title }}</h1>
 
-    <!-- Author Link (调大字体) -->
+    <!-- Author Link (调大字体)；author 支持字符串和列表两种写法（投稿指南里用的是列表） -->
     {{ with .Params.author }}
+    {{ $authors := . }}
+    {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
     <p class="single-author" style="margin-top: 12px; margin-bottom: 8px; font-size: 1.15rem; opacity: 0.9;">
       <span class="by-line" style="font-weight: 400;">By </span>
-      <a href="{{ "/author/" | relURL }}{{ . | urlize }}/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">
-        {{ . }}
-      </a>
+      {{ range $i, $name := $authors }}{{ if $i }}<span class="by-line"> &amp; </span>{{ end }}<a href="{{ "/author/" | relURL }}{{ $name | urlize }}/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">{{ $name }}</a>{{ end }}
     </p>
     {{ end }}
 

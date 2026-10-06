@@ -3,8 +3,8 @@
  *
  * 行为：
  *   1. 每次刷新页面都会重新随机挑选一种预设图案作为初始状态；
- *   2. 之后以固定节奏（约 16 代/秒）在环形网格上演化，纯黑底 + 纯白像素点，
- *      没有任何中间色；网格按屏幕分辨率自适应，桌面端约 320×180 个像素点；
+ *   2. 之后以固定节奏（约 16 代/秒）在环形网格上演化：纯白底 + #e9eddf 像素点，
+ *      只有这两个颜色；网格按屏幕分辨率自适应，桌面端约 320×180 个像素点；
  *   3. 规则 = 标准 B3/S23 + 两条「防结壳」的补充（见 MAX_AGE）：
  *      a) 局部冻结清除：某个位置的 3×3 邻域连续 MAX_AGE 代没有变化（静物就是这样），
  *         这一格就死。同一块静物的所有细胞的冻结计时是同一代开始的，所以会**整块同时消失**，
@@ -38,16 +38,16 @@
   var MODE_WHITE = 'white';
 
   /* ------------------------------------------------------------------ *
-   * 只有黑白两色：先把网格写进 cols×rows 的 ImageData，再用最近邻放大到整屏，
-   * 所以每个细胞就是一个边缘锐利的纯白/纯黑像素块，不做任何混色。
+   * 只有两个颜色：先把网格写进 cols×rows 的 ImageData，再用最近邻放大到整屏，
+   * 所以每个细胞就是一个边缘锐利的 #e9eddf 像素块，落在纯白底上，不做任何混色。
    * ------------------------------------------------------------------ */
   var LITTLE_ENDIAN = (function () {
     var buf = new ArrayBuffer(4);
     new Uint32Array(buf)[0] = 1;
     return new Uint8Array(buf)[0] === 1;
   })();
-  var PX_WHITE = 0xffffffff;
-  var PX_BLACK = LITTLE_ENDIAN ? 0xff000000 : 0x000000ff;
+  var PX_BG = 0xffffffff;                                      // 底：#ffffff
+  var PX_CELL = LITTLE_ENDIAN ? 0xffdfede9 : 0xe9eddfff;      // 像素点：#e9eddf
 
   var off = null;          // 网格分辨率的离屏画布
   var offCtx = null;
@@ -137,7 +137,7 @@
    * 网格状态
    * ------------------------------------------------------------------ */
   var MAX_AGE = 14;                 // 冻结/存活多少代算「结壳」（0 = 关闭，退回纯 B3/S23）
-  var MIN_POP = 0.02;               // 活细胞数量下限（占整屏比例，低于就补种；0 = 关闭）
+  var MIN_POP = 0.03;               // 活细胞数量下限（占整屏比例，低于就补种；0 = 关闭）
   var STEP_MS = 60;                 // 每代间隔（约 16 代/秒）
   var cell = 6, cols = 0, rows = 0, viewW = 0, viewH = 0;
   var cur = null, buf = null, age = null, frozen = null, prevSig = null;
@@ -209,15 +209,17 @@
 
   /* ------------------------------------------------------------------ *
    * 播种区域
-   * 首页正文是一列 1020px 宽的玻璃面板，正中间从头到尾都被压住，
-   * 所以初始状态只播在左右两条留白带里；窄屏实在避不开时退回整屏（只避开顶部导航）。
+   * 默认 AVOID_CONTENT = false：底纹很淡，整屏都铺（只让出顶部吸顶导航那一条）。
+   * 若把 AVOID_CONTENT 设成 true，则初始只播在左右两条留白带里，避开 1020px 宽的正文列。
    * ------------------------------------------------------------------ */
   var CONTENT_W = 1020;      // 与主题 --container-width 一致
   var SAFE_TOP_PX = 76;      // 吸顶导航 64px + 余量
   var MIN_BAND = 6;          // 一侧留白少于 6 格就不再避让
+  var AVOID_CONTENT = false; // 底纹很淡，不需要避开正文列：整屏铺（设 true 可恢复避让）
 
   function bands() {
     var top = Math.max(0, Math.min(rows, Math.round(SAFE_TOP_PX / cell)));
+    if (!AVOID_CONTENT) { return [{ x0: 0, x1: cols, y0: top, y1: rows }]; }
     var left = Math.max(0, Math.min(cols, Math.round((viewW - CONTENT_W) / 2 / cell)));
     var right = Math.max(0, Math.min(cols, cols - Math.round((viewW + CONTENT_W) / 2 / cell)));
     if (left < MIN_BAND || right < MIN_BAND) {
@@ -546,7 +548,7 @@
     if (!cur || !pixels) { return; }
     var n = cols * rows;
     for (var i = 0; i < n; i++) {
-      pixels[i] = cur[i] ? PX_WHITE : PX_BLACK;
+      pixels[i] = cur[i] ? PX_CELL : PX_BG;
     }
     offCtx.putImageData(imgData, 0, 0);
     ctx.drawImage(off, 0, 0, cols, rows, 0, 0, cols * cell, rows * cell);
@@ -650,9 +652,9 @@
   function updateToggle(life) {
     if (!toggle) { return; }
     var text = toggle.querySelector ? toggle.querySelector('.bg-toggle-text') : null;
-    var label = life ? '纯白背景' : '生命游戏';
+    var label = life ? '纯白背景' : '生命游戏底纹';
     if (text) { text.textContent = label; } else { toggle.textContent = label; }
-    var tip = life ? '切换回主页原有的纯白背景' : '切换为康威生命游戏背景';
+    var tip = life ? '切换回不带底纹的纯白背景' : '打开康威生命游戏底纹';
     toggle.setAttribute('title', tip);
     toggle.setAttribute('aria-label', tip);
     toggle.setAttribute('aria-pressed', life ? 'true' : 'false');

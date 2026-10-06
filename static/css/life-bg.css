@@ -1,8 +1,10 @@
 /* ==========================================================================
-   首页背景：康威生命游戏 (life-bg.css)
+   首页背景：康威生命游戏底纹 (life-bg.css)
    —— 与 js/life-bg.js 配套，仅在首页加载。
-   默认启用（<html class="life-mode">）；右下角按钮切回纯白背景后移除该类，
-   页面即恢复主题原有的白底样式。
+
+   默认启用（<html class="life-mode">）：页面仍然是主题原本的白底浅色样式，
+   只是在所有内容下面垫了一层「纯白底 + #e9eddf 像素点」的淡色底纹；
+   右下角按钮可以切回不带底纹的纯白背景。
    ========================================================================== */
 
 /* ---------- 背景画布：固定铺满视口，位于所有内容之下 ---------- */
@@ -16,7 +18,7 @@
   height: 100%;
   display: block;
   z-index: -1;
-  background: #000;
+  background: #ffffff;
   pointer-events: none;
 }
 
@@ -24,64 +26,26 @@ html:not(.life-mode) .life-canvas {
   display: none;
 }
 
-/* ---------- 深色变量：让主题自带的变量体系整体切到暗色（严格无彩色） ---------- */
+/* ---------- 浅色底纹：不需要改主题变量，只把 body 变透明让画布透出来 ---------- */
 html.life-mode {
-  background: #000;
-  --color-bg: #000000;
-  --color-bg-alt: rgba(255, 255, 255, 0.04);
-  --color-text: #f5f5f5;
-  --color-text-secondary: #c8c8c8;
-  --color-text-muted: #9a9a9a;
-  --color-text-faint: #6e6e6e;
-  --color-link: #ffffff;
-  --color-link-hover: #c9c9c9;
-  --color-border: rgba(255, 255, 255, 0.2);
-  --color-border-light: rgba(255, 255, 255, 0.12);
-  --color-accent: #f5f5f5;
+  background: #ffffff;
 }
 
 /* body 必须透明，否则会盖住 z-index:-1 的画布 */
 html.life-mode body {
   background: transparent;
-  color: var(--color-text);
 }
 
-html.life-mode ::selection {
-  background: rgba(255, 255, 255, 0.28);
-  color: #ffffff;
-}
-
-/* ---------- 顶部导航 / 页脚：深色毛玻璃 ---------- */
+/* 顶栏/页脚原本是不透明白，稍微放透明一点，底纹会若隐若现 */
 html.life-mode .site-header {
-  background: rgba(10, 10, 10, 0.72);
-  backdrop-filter: blur(10px) saturate(140%);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.86);
 }
 
 html.life-mode .site-footer {
-  background: rgba(10, 10, 10, 0.68);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  border-top-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.86);
 }
 
-html.life-mode .footer-bottom {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-/* ---------- 首页各区块：玻璃面板浮在生命游戏之上 ---------- */
-html.life-mode .home-featured > .container,
-html.life-mode .home-latest > .container,
-html.life-mode .home-gallery > .container,
-html.life-mode .home-about > .container {
-  background: rgba(8, 8, 8, 0.52);
-  backdrop-filter: blur(6px) saturate(140%);
-  -webkit-backdrop-filter: blur(6px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  padding: 34px 30px;
-}
-
+/* 相册区与精选卡片原本铺了底色，放开让底纹透过去 */
 html.life-mode .home-gallery {
   background: transparent;
 }
@@ -90,45 +54,7 @@ html.life-mode .featured-card {
   background: transparent;
 }
 
-html.life-mode .featured-card:hover {
-  box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.9);
-}
-
-html.life-mode .featured-card:hover .featured-read {
-  color: #000000;
-}
-
-/* ---------- 几处主题里写死的浅色：暗色下需要修正 ---------- */
-html.life-mode .search-overlay {
-  background: rgba(8, 8, 8, 0.96);
-}
-
-html.life-mode .search-input {
-  color: var(--color-text);
-}
-
-html.life-mode .dropdown-menu {
-  background-color: #0e0e0e;
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
-}
-
-html.life-mode .dropdown-link:hover,
-html.life-mode .dropdown-link.active {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-html.life-mode .subscribe-form input {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.16);
-  color: var(--color-text);
-}
-
-html.life-mode .subscribe-form input::placeholder {
-  color: var(--color-text-faint);
-}
-
-/* ---------- 右下角的“背景”设置按钮 ---------- */
+/* ---------- 右下角的“背景”设置按钮（浅色页面上用深色胶囊） ---------- */
 .bg-toggle {
   position: fixed;
   right: 22px;
@@ -138,30 +64,30 @@ html.life-mode .subscribe-form input::placeholder {
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 999px;
-  background: rgba(12, 12, 12, 0.82);
-  color: #f5f5f5;
+  background: rgba(26, 26, 26, 0.78);
+  color: #f7f7f7;
   font-family: var(--font-sans, sans-serif);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 1.2px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px) saturate(140%);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .bg-toggle:hover {
-  background: rgba(28, 28, 28, 0.95);
-  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(26, 26, 26, 0.95);
+  border-color: rgba(255, 255, 255, 0.6);
   transform: translateY(-1px);
 }
 
 .bg-toggle:focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid #1a1a1a;
   outline-offset: 2px;
 }
 
@@ -182,30 +108,12 @@ html.life-mode .subscribe-form input::placeholder {
 
 /* ---------- 窄屏适配 ---------- */
 @media (max-width: 768px) {
-  html.life-mode .home-featured > .container,
-  html.life-mode .home-latest > .container,
-  html.life-mode .home-gallery > .container,
-  html.life-mode .home-about > .container {
-    padding: 22px var(--spacing-sm);
-  }
-
   .bg-toggle {
     right: 12px;
     bottom: 12px;
     padding: 8px 13px;
     font-size: 0.68rem;
     letter-spacing: 0.8px;
-  }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  html.life-mode .home-featured > .container,
-  html.life-mode .home-latest > .container,
-  html.life-mode .home-gallery > .container,
-  html.life-mode .home-about > .container {
-    background: rgba(6, 6, 6, 0.88);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 }
 

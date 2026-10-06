@@ -45,13 +45,14 @@
 
   /* ------------------------------------------------------------------ *
    * 预设图案：'O' 表示活细胞。weight 越大越容易被随机选中；
-   * fill 是图案块希望占屏幕宽度的比例，maxCols / maxRows 是硬上限。
+   * copies 是整屏大约播几份（最终会乘一个随机系数，位置/朝向全部随机，
+   * 不做等距排布，免得看起来像壁纸）。
    * ------------------------------------------------------------------ */
   var PATTERNS = [
     {
       name: 'gosper-glider-gun',
       weight: 3,
-      fill: 0.5, maxCols: 3, maxRows: 1,
+      copies: 5,
       ascii: [
         '........................O...........',
         '......................O.O...........',
@@ -66,8 +67,8 @@
     },
     {
       name: 'pulsar',
-      weight: 3,
-      fill: 0.45, maxCols: 8, maxRows: 2,
+      weight: 2,
+      copies: 20,
       ascii: [
         '..OOO...OOO..',
         '.............',
@@ -86,8 +87,8 @@
     },
     {
       name: 'pentadecathlon',
-      weight: 3,
-      fill: 0.5, maxCols: 10, maxRows: 3,
+      weight: 2,
+      copies: 30,
       ascii: [
         '..O....O..',
         'OO.OOOO.OO',
@@ -97,7 +98,7 @@
     {
       name: 'pi-heptomino',
       weight: 3,
-      fill: 0.5, maxCols: 16, maxRows: 3,
+      copies: 22,
       ascii: [
         'OOO',
         'O.O',
@@ -106,8 +107,8 @@
     },
     {
       name: 'acorn',
-      weight: 3,
-      fill: 0.5, maxCols: 12, maxRows: 3,
+      weight: 4,
+      copies: 20,
       ascii: [
         '.O.....',
         '...O...',
@@ -116,8 +117,8 @@
     },
     {
       name: 'r-pentomino',
-      weight: 3,
-      fill: 0.5, maxCols: 16, maxRows: 3,
+      weight: 4,
+      copies: 24,
       ascii: [
         '.OO',
         'OO.',
@@ -127,16 +128,16 @@
     {
       name: 'diehard',
       weight: 1,
-      fill: 0.5, maxCols: 12, maxRows: 3,
+      copies: 20,
       ascii: [
         '......O.',
         'OO......',
         '.O...OOO'
       ]
     },
-    { name: 'random-soup', kind: 'soup', weight: 4, density: 0.22 },
-    { name: 'mirror-soup', kind: 'mirror-soup', weight: 3, density: 0.28 },
-    { name: 'glider-fleet', kind: 'gliders', weight: 3 }
+    { name: 'random-soup', kind: 'soup', weight: 4, density: 0.18 },
+    { name: 'mirror-soup', kind: 'mirror-soup', weight: 2, density: 0.24 },
+    { name: 'glider-swarm', kind: 'gliders', weight: 3 }
   ];
 
   /* 滑翔机的四个朝向 */
@@ -220,6 +221,69 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * 播种区域
+   * 首页正文是一列 1020px 宽的玻璃面板，正中间从头到尾都被压住，
+   * 所以初始状态只播在左右两条留白带里；窄屏实在避不开时退回整屏（只避开顶部导航）。
+   * ------------------------------------------------------------------ */
+  var CONTENT_W = 1020;      // 与主题 --container-width 一致
+  var SAFE_TOP_PX = 76;      // 吸顶导航 64px + 余量
+  var MIN_BAND = 6;          // 一侧留白少于 6 格就不再避让
+
+  function bands() {
+    var top = Math.max(0, Math.min(rows, Math.round(SAFE_TOP_PX / cell)));
+    var left = Math.max(0, Math.min(cols, Math.round((viewW - CONTENT_W) / 2 / cell)));
+    var right = Math.max(0, Math.min(cols, cols - Math.round((viewW + CONTENT_W) / 2 / cell)));
+    if (left < MIN_BAND || right < MIN_BAND) {
+      return [{ x0: 0, x1: cols, y0: top, y1: rows }];
+    }
+    return [
+      { x0: 0, x1: left, y0: top, y1: rows },
+      { x0: cols - right, x1: cols, y0: top, y1: rows }
+    ];
+  }
+
+  /* 在留白带里按面积加权随机取一个左上角，保证 w×h 整个落在带内 */
+  function pickSpot(zones, w, h) {
+    var list = [], total = 0, i, b, aw, ah;
+    for (i = 0; i < zones.length; i++) {
+      b = zones[i];
+      aw = b.x1 - b.x0 - w + 1;
+      ah = b.y1 - b.y0 - h + 1;
+      if (aw > 0 && ah > 0) { list.push({ b: b, aw: aw, ah: ah }); total += aw * ah; }
+    }
+    if (!list.length) { return null; }
+    var r = Math.random() * total;
+    for (i = 0; i < list.length; i++) {
+      r -= list[i].aw * list[i].ah;
+      if (r <= 0 || i === list.length - 1) {
+        var z = list[i];
+        return {
+          x: z.b.x0 + Math.floor(Math.random() * z.aw),
+          y: z.b.y0 + Math.floor(Math.random() * z.ah)
+        };
+      }
+    }
+    return null;
+  }
+
+  /* 两个矩形（含间距 gap）是否相交 */
+  function overlaps(placed, x, y, w, h, gap) {
+    for (var i = 0; i < placed.length; i++) {
+      var r = placed[i];
+      if (x - gap < r.x + r.w && r.x - gap < x + w &&
+          y - gap < r.y + r.h && r.y - gap < y + h) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function patternSize(p, rot) {
+    parsePattern(p);
+    return (rot % 2 === 0) ? { w: p.w, h: p.h } : { w: p.h, h: p.w };
+  }
+
+  /* ------------------------------------------------------------------ *
    * 播种
    * ------------------------------------------------------------------ */
   function putGlider(ox, oy, dir) {
@@ -234,14 +298,19 @@
     }
   }
 
-  function drawPattern(p, ox, oy, flipX, flipY) {
+  /* rot：顺时针 90° 的倍数；flip：左右镜像。合起来 8 种朝向 */
+  function drawPattern(p, ox, oy, rot, flip) {
     parsePattern(p);
+    var w = p.w, h = p.h;
     for (var i = 0; i < p._cells.length; i++) {
       var cx = p._cells[i][0], cy = p._cells[i][1];
-      if (flipX) { cx = p.w - 1 - cx; }
-      if (flipY) { cy = p.h - 1 - cy; }
-      var x = (ox + cx) % cols; if (x < 0) { x += cols; }
-      var y = (oy + cy) % rows; if (y < 0) { y += rows; }
+      if (flip) { cx = w - 1 - cx; }
+      var rx = cx, ry = cy;
+      if (rot === 1) { rx = h - 1 - cy; ry = cx; }
+      else if (rot === 2) { rx = w - 1 - cx; ry = h - 1 - cy; }
+      else if (rot === 3) { rx = cy; ry = w - 1 - cx; }
+      var x = (ox + rx) % cols; if (x < 0) { x += cols; }
+      var y = (oy + ry) % rows; if (y < 0) { y += rows; }
       cur[y * cols + x] = 1;
     }
   }
@@ -256,66 +325,96 @@
     }
   }
 
-  /* 四象限镜像的“对称汤”，比随机汤更耐看也更长寿 */
+  /* 左右镜像 + 上下镜像同时落子；镜像后仍必须落在允许的留白带内 */
+  function inZones(zones, x, y) {
+    for (var i = 0; i < zones.length; i++) {
+      var b = zones[i];
+      if (x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1) { return true; }
+    }
+    return false;
+  }
+
+  function setMirrored(x, y, zones) {
+    var xs = [x, cols - 1 - x], ys = [y, rows - 1 - y];
+    for (var a = 0; a < 2; a++) {
+      for (var b = 0; b < 2; b++) {
+        var px = xs[a], py = ys[b];
+        if (px < 0 || px >= cols || py < 0 || py >= rows) { continue; }
+        if (!inZones(zones, px, py)) { continue; }
+        cur[py * cols + px] = 1;
+      }
+    }
+  }
+
+  /* 随机汤：在留白带里铺均匀的混沌（不规整，但不会留下大片纯黑） */
+  function fillSoupBands(density) {
+    var zones = bands();
+    for (var i = 0; i < zones.length; i++) {
+      var b = zones[i];
+      fillSoup(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, density);
+    }
+  }
+
+  /* 对称汤：只在基本域（左带的上半）铺，镜像到其余三块，密度才不会被翻倍 */
   function fillMirrorSoup(density) {
-    var hw = Math.ceil(cols / 2), hh = Math.ceil(rows / 2);
-    for (var y = 0; y < hh; y++) {
-      for (var x = 0; x < hw; x++) {
+    var zones = bands();
+    var z = zones[0];
+    var xEnd = Math.min(z.x1, Math.ceil(cols / 2));
+    var yEnd = Math.min(z.y1, Math.ceil(rows / 2));
+    for (var y = z.y0; y < yEnd; y++) {
+      for (var x = z.x0; x < xEnd; x++) {
         if (Math.random() >= density) { continue; }
-        var xs = [x, cols - 1 - x], ys = [y, rows - 1 - y];
-        for (var a = 0; a < 2; a++) {
-          for (var b = 0; b < 2; b++) {
-            cur[ys[b] * cols + xs[a]] = 1;
-          }
-        }
+        setMirrored(x, y, zones);
       }
     }
   }
 
-  /* 一队朝同一方向行军的滑翔机 + 少量随机朝向，靠碰撞不断产生新结构 */
+  /* 随机散落的滑翔机群：位置、朝向都随机，互相撞出各种结构 */
   function seedGliders() {
-    var step = Math.max(9, Math.round(cols / 14));
-    var margin = 3, dir = 'dr';
-    var nx = Math.max(1, Math.floor((cols - margin * 2) / step));
-    var ny = Math.max(1, Math.floor((rows - margin * 2) / step));
-    var x, y;
-    for (y = 0; y < ny; y++) {
-      for (x = 0; x < nx; x++) {
-        putGlider(margin + x * step, margin + y * step, dir);
-      }
-    }
-    var extra = Math.min(14, Math.round((cols * rows) / 12000));
-    for (var i = 0; i < extra; i++) {
-      putGlider(
-        Math.floor(Math.random() * cols),
-        Math.floor(Math.random() * rows),
-        ['dr', 'dl', 'ur', 'ul'][Math.floor(Math.random() * 4)]
-      );
+    var zones = bands();
+    var dirs = ['dr', 'dl', 'ur', 'ul'];
+    var count = 30 + Math.floor(Math.random() * 16);
+    var placed = [], done = 0, tries = 0;
+    while (done < count && tries < count * 40) {
+      tries++;
+      var spot = pickSpot(zones, 3, 3);
+      if (!spot) { break; }
+      if (overlaps(placed, spot.x, spot.y, 3, 3, 5)) { continue; }
+      putGlider(spot.x, spot.y, dirs[Math.floor(Math.random() * 4)]);
+      placed.push({ x: spot.x, y: spot.y, w: 3, h: 3 });
+      done++;
     }
   }
 
+  /* 随机散落：份数带随机系数，位置按面积加权随机取，朝向 8 选 1，互不重叠 */
   function scatterPattern(p) {
     parsePattern(p);
-    var gapX = Math.max(4, Math.round(cols * 0.04));
-    var gapY = Math.max(4, Math.round(rows * 0.1));
-    /* 按“图案块占屏幕宽度的比例”决定铺几份，换分辨率时观感一致 */
-    var wantX = Math.floor((cols * (p.fill || 0.45) + gapX) / (p.w + gapX));
-    var fitsX = Math.max(1, Math.floor((cols + gapX) / (p.w + gapX)));
-    var fitsY = Math.max(1, Math.floor((rows + gapY) / (p.h + gapY)));
-    var nx = Math.max(1, Math.min(p.maxCols || 1, wantX, fitsX));
-    var ny = Math.min(p.maxRows || 1, fitsY);
-    var blockW = nx * p.w + (nx - 1) * gapX;
-    var blockH = ny * p.h + (ny - 1) * gapY;
-    var ox = Math.floor((cols - blockW) / 2) + Math.round((Math.random() - 0.5) * 4);
-    var oy = Math.floor((rows - blockH) / 2) + Math.round((Math.random() - 0.5) * 4);
-    for (var r = 0; r < ny; r++) {
-      for (var c = 0; c < nx; c++) {
+    var zones = bands();
+    var count = Math.max(1, Math.round((p.copies || 8) * (0.6 + Math.random() * 0.9)));
+    var gap = Math.max(2, Math.round(Math.min(p.w, p.h) * 0.6));
+    var placed = [], done = 0, tries = 0;
+    while (done < count && tries < count * 40) {
+      tries++;
+      var rot = Math.floor(Math.random() * 4);
+      var flip = Math.random() < 0.5;
+      var size = patternSize(p, rot);
+      var spot = pickSpot(zones, size.w, size.h);
+      if (!spot) { break; }
+      if (overlaps(placed, spot.x, spot.y, size.w, size.h, gap)) { continue; }
+      drawPattern(p, spot.x, spot.y, rot, flip);
+      placed.push({ x: spot.x, y: spot.y, w: size.w, h: size.h });
+      done++;
+    }
+    /* 极端窄屏下留白带塞不进这个图案：退化成整屏随便放一份，别留空网格 */
+    if (done === 0) {
+      var s0 = patternSize(p, 0);
+      if (s0.w <= cols && s0.h <= rows) {
         drawPattern(
           p,
-          ox + c * (p.w + gapX),
-          oy + r * (p.h + gapY),
-          (r + c) % 2 === 1,
-          false
+          Math.floor(Math.random() * (cols - s0.w + 1)),
+          Math.max(1, Math.floor(Math.random() * (rows - s0.h))),
+          0,
+          Math.random() < 0.5
         );
       }
     }
@@ -327,7 +426,7 @@
 
     var p = pickPattern();
     if (p.kind === 'soup') {
-      fillSoup(0, 0, cols, rows, p.density);
+      fillSoupBands(p.density);
     } else if (p.kind === 'mirror-soup') {
       fillMirrorSoup(p.density);
     } else if (p.kind === 'gliders') {
@@ -346,7 +445,7 @@
         var n = cols * rows;
         for (var k = 0; k < n; k++) { cur[k] = 0; buf[k] = 0; }
         var p = PATTERNS[i];
-        if (p.kind === 'soup') { fillSoup(0, 0, cols, rows, p.density); }
+        if (p.kind === 'soup') { fillSoupBands(p.density); }
         else if (p.kind === 'mirror-soup') { fillMirrorSoup(p.density); }
         else if (p.kind === 'gliders') { seedGliders(); }
         else { scatterPattern(p); }
@@ -357,12 +456,16 @@
     return false;
   }
 
+  /* 画面静止时补一小块随机汤，同样只补在留白带里 */
   function injectSoup() {
-    var w = Math.min(cols, Math.max(12, Math.round(cols * 0.25)));
-    var h = Math.min(rows, Math.max(10, Math.round(rows * 0.28)));
+    var zones = bands();
+    var z = zones[Math.floor(Math.random() * zones.length)];
+    var bw = z.x1 - z.x0, bh = z.y1 - z.y0;
+    var w = Math.min(bw, Math.max(10, Math.round(bw * 0.6)));
+    var h = Math.min(bh, Math.max(10, Math.round(rows * 0.18)));
     fillSoup(
-      Math.floor(Math.random() * Math.max(1, cols - w + 1)),
-      Math.floor(Math.random() * Math.max(1, rows - h + 1)),
+      z.x0 + Math.floor(Math.random() * Math.max(1, bw - w + 1)),
+      z.y0 + Math.floor(Math.random() * Math.max(1, bh - h + 1)),
       w, h, 0.34
     );
   }
@@ -593,15 +696,18 @@
         countPopulation();
         return pop;
       },
-      place: function (name, ox, oy, flipX) {
+      place: function (name, ox, oy, rot, flip) {
         for (var i = 0; i < PATTERNS.length; i++) {
           if (PATTERNS[i].name === name) {
-            drawPattern(PATTERNS[i], ox, oy, !!flipX, false);
+            drawPattern(PATTERNS[i], ox, oy, rot || 0, !!flip);
             countPopulation();
             return pop;
           }
         }
         return -1;
+      },
+      bands: function () {
+        return bands().map(function (b) { return { x0: b.x0, x1: b.x1, y0: b.y0, y1: b.y1 }; });
       },
       clear: function () {
         for (var i = 0; i < cur.length; i++) { cur[i] = 0; buf[i] = 0; }

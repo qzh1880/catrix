@@ -9,7 +9,7 @@
 
   {{ with .Content }}<div class="post-content submission-intro">{{ . }}</div>{{ end }}
 
-  <form id="submission-form" action="https://submit-catrix.hsszl4.workers.dev/" method="post" enctype="multipart/form-data">
+  <form id="submission-form" action="" method="post" enctype="multipart/form-data">
     <fieldset id="submission-fields">
       <div class="submission-row">
         <div class="submission-field">
@@ -163,9 +163,11 @@
   .submission .post-content > p:first-of-type::first-letter { font: inherit; float: none; padding: 0; }
 </style>
 
+<script src="/js/api.js"></script>
 <script>
 (() => {
   const form = document.getElementById('submission-form');
+  form.action = window.CATRIX_API;
   const fields = document.getElementById('submission-fields');
   const picker = document.getElementById('submission-files');
   const drop = document.getElementById('submission-drop');

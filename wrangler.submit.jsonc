@@ -1,0 +1,14 @@
+{
+  "name": "catrix-submit",
+  "main": "worker/submit/worker.js",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    "GITHUB_REPO": "qzh1880/catrix"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "catrix-submissions" }
+  ],
+  "r2_buckets": [
+    { "binding": "IMAGES", "bucket_name": "catrix-submission-images" }
+  ]
+}

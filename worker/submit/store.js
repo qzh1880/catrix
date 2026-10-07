@@ -1,19 +1,29 @@
 export async function saveSubmission(env, data) {
+  if (data.files.some(file => !(file instanceof File) || file.size === 0 || !/\.(md|jpe?g|png|webp)$/i.test(file.name))) {
+    throw new Error("只支持非空的 Markdown、JPG、PNG 或 WebP 文件。");
+  }
   if (data.files.length > 5 || data.files.reduce((size, file) => size + file.size, 0) > 3 * 1024 * 1024) {
     throw new Error("最多上传 5 个文件，合计不超过 3 MB。");
   }
   if (data.files.some(file => !file.name || /[\\/]/.test(file.name))) {
     throw new Error("文件名不能包含目录路径。");
   }
-  if (data.files.filter(file => file.name.toLowerCase().endsWith(".md")).length !== 1) {
+  const filenames = data.files.map(file => file.name.toLowerCase() === "cover.png" ? "cover.png" : file.name);
+  if (new Set(filenames.map(name => name.toLowerCase())).size !== filenames.length) {
+    throw new Error("文件名不能重复。");
+  }
+  if (filenames.filter(name => name.toLowerCase().endsWith(".md")).length !== 1) {
     throw new Error("请上传一个 Markdown 正文文件。");
+  }
+  if (!filenames.includes("cover.png")) {
+    throw new Error("请上传 cover.png 封面。");
   }
 
   const prefix = `submissions/${crypto.randomUUID()}/`;
   const tags = data.tags.split(",").map(tag => tag.trim()).filter(Boolean);
   try {
-    for (const file of data.files) {
-      await env.IMAGES.put(prefix + file.name, file.stream(), {
+    for (const [index, file] of data.files.entries()) {
+      await env.IMAGES.put(prefix + filenames[index], file.stream(), {
         httpMetadata: { contentType: file.type || "application/octet-stream" },
       });
     }
@@ -21,7 +31,7 @@ export async function saveSubmission(env, data) {
       "INSERT INTO submissions (name, contact, title, tags, description, r2_prefix) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(data.name, data.contact, data.title, JSON.stringify(tags), data.description, prefix).run();
   } catch (error) {
-    await env.IMAGES.delete(data.files.map(file => prefix + file.name));
+    await env.IMAGES.delete(filenames.map(name => prefix + name));
     throw error;
   }
 }

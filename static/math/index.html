@@ -2,42 +2,60 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>空间三角形正投影与姿态实时演示</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>空间三角形正投影与姿态分析</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      border-radius: 0 !important;
+      -webkit-tap-highlight-color: transparent;
     }
     body {
-      background-color: #1e1e24;
-      color: #e0e0e0;
+      background-color: #ffffff;
+      color: #1a1a1a;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding: 20px;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
     }
-    h2 {
-      margin-bottom: 8px;
-      color: #ffffff;
-      font-weight: 600;
-    }
-    p.tip {
-      font-size: 13px;
-      color: #9e9ea7;
-      margin-bottom: 16px;
-    }
-    .panel {
-      background: #2b2b36;
-      border-radius: 8px;
-      padding: 12px 20px;
+    header {
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #1a1a1a;
+      padding-bottom: 12px;
       display: flex;
-      gap: 16px;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #000000;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #666666;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+    }
+    .toolbar {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
       align-items: center;
       margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border: 1px solid #d0d0d0;
+      padding: 12px 16px;
+      background: #fafafa;
     }
     .input-group {
       display: flex;
@@ -45,150 +63,173 @@
       gap: 6px;
     }
     .input-group label {
-      font-size: 14px;
-      color: #bbb;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      color: #444;
     }
     input[type="number"] {
-      width: 70px;
-      padding: 6px 8px;
-      border: 1px solid #444;
-      border-radius: 4px;
-      background: #18181f;
-      color: #fff;
-      font-size: 14px;
+      width: 64px;
+      height: 32px;
+      padding: 4px 8px;
+      border: 1px solid #b0b0b0;
+      background: #ffffff;
+      color: #000;
+      font-size: 13px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
       text-align: center;
     }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #000000;
+    }
     button {
-      padding: 6px 14px;
-      background: #007acc;
-      color: white;
-      border: none;
-      border-radius: 4px;
+      height: 32px;
+      padding: 0 16px;
+      background: #1a1a1a;
+      color: #ffffff;
+      border: 1px solid #1a1a1a;
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
-    button:hover {
-      background: #0098ff;
+    button:active {
+      background: #444444;
     }
-    .error {
-      color: #ff6b6b;
-      font-size: 13px;
+    button.secondary {
+      background: #ffffff;
+      color: #1a1a1a;
+      border: 1px solid #b0b0b0;
+    }
+    button.secondary:active {
+      background: #f0f0f0;
+    }
+    .error-tag {
+      font-size: 12px;
+      color: #d32f2f;
       display: none;
+      font-weight: 500;
     }
     #viewport-container {
       position: relative;
-      width: 760px;
-      height: 480px;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-      background: #15151a;
-      border: 1px solid #3a3a48;
+      width: 100%;
+      max-width: 800px;
+      height: 520px;
+      border: 1px solid #1a1a1a;
+      background: #ffffff;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     canvas {
       display: block;
       width: 100%;
       height: 100%;
-      cursor: grab;
+      touch-action: none;
     }
-    canvas:active {
-      cursor: grabbing;
-    }
-    .status-overlay {
+    .hud-overlay {
       position: absolute;
-      top: 12px;
-      left: 12px;
-      background: rgba(20, 20, 26, 0.75);
-      backdrop-filter: blur(4px);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      color: #8fa1b3;
+      top: 10px;
+      left: 10px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.5;
       pointer-events: none;
     }
-    .metrics-panel {
-      width: 760px;
+    .data-table-container {
+      width: 100%;
+      max-width: 800px;
       margin-top: 16px;
-      background: #2b2b36;
-      border-radius: 8px;
-      padding: 16px 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      border: 1px solid #1a1a1a;
+      border-top: none;
     }
-    .metric-card {
-      background: #202029;
-      padding: 12px 16px;
-      border-radius: 6px;
-      border-left: 4px solid #007acc;
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
     }
-    .metric-title {
-      font-size: 12px;
-      color: #888;
+    .data-table th, .data-table td {
+      border-top: 1px solid #1a1a1a;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    .data-table th {
+      background: #f4f4f4;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
+      color: #333;
+      width: 25%;
     }
-    .metric-value {
-      font-size: 17px;
-      font-weight: 600;
-      color: #4fc1ff;
-      font-family: "Courier New", monospace;
+    .data-table td.val-primary {
+      font-size: 15px;
+      font-weight: 700;
+      color: #000000;
     }
-    .metric-sub {
-      margin-top: 4px;
+    .data-table td.val-secondary {
       font-size: 12px;
-      color: #aaa;
+      color: #666666;
+    }
+    @media (max-width: 600px) {
+      #viewport-container { height: 400px; }
+      .data-table th, .data-table td { padding: 8px 10px; }
     }
   </style>
 </head>
 <body>
 
-  <h2>空间三角形与正投影实时演示</h2>
-  <p class="tip">按住鼠标左键在画板中拖拽以在空间中任意旋转（Inventor 视角拖动）；滚轮可缩放</p>
+  <header>
+    <h1>Orthographic Triangle Projection</h1>
+    <div class="subtitle">AUTODESK INVENTOR STYLE TRACKBALL</div>
+  </header>
 
-  <div class="panel">
+  <div class="toolbar">
     <div class="input-group">
-      <label>a:</label>
+      <label for="sideA">A:</label>
       <input type="number" id="sideA" value="3" min="0.1" step="0.5">
     </div>
     <div class="input-group">
-      <label>b:</label>
+      <label for="sideB">B:</label>
       <input type="number" id="sideB" value="4" min="0.1" step="0.5">
     </div>
     <div class="input-group">
-      <label>c:</label>
+      <label for="sideC">C:</label>
       <input type="number" id="sideC" value="5" min="0.1" step="0.5">
     </div>
-    <button id="btnUpdate">更新三角形</button>
-    <button id="btnReset" style="background:#555;">重置视角</button>
-    <span class="error" id="errorMsg">不能构成三角形！(需两边之和大于第三边)</span>
+    <button id="btnUpdate">更新比例</button>
+    <button id="btnReset" class="secondary">视角复位</button>
+    <span class="error-tag" id="errorMsg">无效三角形 (两边之和须大于第三边)</span>
   </div>
 
   <div id="viewport-container">
-    <canvas id="canvas" width="760" height="480"></canvas>
-    <div class="status-overlay">
-      正交投影屏幕：屏幕 XY 平面 | 投影线方向：垂直屏幕深入 (+Z)
+    <canvas id="viewport"></canvas>
+    <div class="hud-overlay">
+      PROJECTION: ORTHOGRAPHIC (FRONT VIEW / XY PLANE)<br>
+      DRAG: 3D ORBIT | PINCH/WHEEL: ZOOM
     </div>
   </div>
 
-  <div class="metrics-panel">
-    <div class="metric-card">
-      <div class="metric-title">正视图（投影）三边比</div>
-      <div class="metric-value" id="valRatio">-- : -- : --</div>
-      <div class="metric-sub" id="valLengths">投影边长: a'=0, b'=0, c'=0</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-title">正视图（投影）内角角度近似值</div>
-      <div class="metric-value" id="valAngles">∠A'=0°, ∠B'=0°, ∠C'=0°</div>
-      <div class="metric-sub" id="valSum">角度之和: 180.0°</div>
-    </div>
+  <div class="data-table-container">
+    <table class="data-table">
+      <tr>
+        <th>投影三边比</th>
+        <td class="val-primary" id="valRatio">-- : -- : --</td>
+        <td class="val-secondary" id="valLengths">a' = --, b' = --, c' = --</td>
+      </tr>
+      <tr>
+        <th>投影三个内角</th>
+        <td class="val-primary" id="valAngles">∠A' = --°, ∠B' = --°, ∠C' = --°</td>
+        <td class="val-secondary" id="valAngleSum">内角和: 180.0°</td>
+      </tr>
+    </table>
   </div>
 
   <script>
-    // --- 向量与四元数运算库 (实现平滑全方向三维空间旋转) ---
     class Vec3 {
       constructor(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; }
       add(v) { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z); }
@@ -202,7 +243,7 @@
           this.x * v.y - this.y * v.x
         );
       }
-      length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
+      length() { return Math.hypot(this.x, this.y, this.z); }
       normalize() {
         const l = this.length();
         return l > 1e-6 ? new Vec3(this.x / l, this.y / l, this.z / l) : new Vec3(0,0,0);
@@ -213,14 +254,13 @@
       constructor(w=1, x=0, y=0, z=0) { this.w = w; this.x = x; this.y = y; this.z = z; }
       multiply(q) {
         return new Quat(
-          this.w*q.w - this.x*q.x - this.y*q.y - this.z*q.z,
+          this.w*q.w - this.x*q.x - this.y*q.z - this.z*q.z,
           this.w*q.x + this.x*q.w + this.y*q.z - this.z*q.y,
           this.w*q.y - this.x*q.z + this.y*q.w + this.z*q.x,
           this.w*q.z + this.x*q.y - this.y*q.x + this.z*q.w
         );
       }
       rotateVec3(v) {
-        // v' = q * v * q^-1
         const u = new Vec3(this.x, this.y, this.z);
         const s = this.w;
         return u.scale(2 * u.dot(v))
@@ -235,36 +275,42 @@
       }
     }
 
-    // --- 应用状态 ---
-    const canvas = document.getElementById('canvas');
+    const container = document.getElementById('viewport-container');
+    const canvas = document.getElementById('viewport');
     const ctx = canvas.getContext('2d');
-    let orientation = new Quat(1, 0, 0, 0); // 空间朝向四元数
-    let scale = 1.0;
-    let baseVertices = []; // 初始平面三角形（以重心为原点）
 
-    // 根据输入三边构造三角形顶点
+    let orientation = new Quat(1, 0, 0, 0);
+    let scale = 1.0;
+    let baseVertices = [];
+    const TRACKBALL_RADIUS = 150;
+
+    function resizeCanvas() {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      render();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
     function buildTriangle(a, b, c) {
       if (a + b <= c || a + c <= b || b + c <= a) return null;
-
-      // 顶点 C 放原点, B 放在 (a, 0, 0)
-      // 根据余弦定理计算顶点 A 坐标
       const cosC = (a * a + b * b - c * c) / (2 * a * b);
       const sinC = Math.sqrt(Math.max(0, 1 - cosC * cosC));
       const pC = new Vec3(0, 0, 0);
       const pB = new Vec3(a, 0, 0);
       const pA = new Vec3(b * cosC, b * sinC, 0);
 
-      // 计算重心并移至中心
       const center = pA.add(pB).add(pC).scale(1 / 3);
       const vA = pA.sub(center);
       const vB = pB.sub(center);
       const vC = pC.sub(center);
 
-      // 缩放适应视图空间 (基准尺寸约为 200px)
-      const maxDist = Math.max(vA.length(), vB.length(), vC.length());
-      const fitScale = 140 / (maxDist || 1);
-
-      return [vA.scale(fitScale), vB.scale(fitScale), vC.scale(fitScale)];
+      const maxR = Math.max(vA.length(), vB.length(), vC.length());
+      const fit = (TRACKBALL_RADIUS * 0.85) / (maxR || 1);
+      return [vA.scale(fit), vB.scale(fit), vC.scale(fit)];
     }
 
     function initTriangle() {
@@ -272,55 +318,78 @@
       const b = parseFloat(document.getElementById('sideB').value);
       const c = parseFloat(document.getElementById('sideC').value);
 
+      const err = document.getElementById('errorMsg');
       const verts = buildTriangle(a, b, c);
-      const errEl = document.getElementById('errorMsg');
       if (!verts) {
-        errEl.style.display = 'inline';
+        err.style.display = 'inline';
         return;
       }
-      errEl.style.display = 'none';
+      err.style.display = 'none';
       baseVertices = verts;
       render();
     }
 
-    // --- 类似 Inventor 的 Trackball 交互逻辑 ---
-    let isDragging = false;
-    let lastX = 0, lastY = 0;
+    const activePointers = new Map();
+    let initialPinchDistance = null;
+    let initialPinchScale = 1.0;
 
-    canvas.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
+    canvas.addEventListener('pointerdown', (e) => {
+      canvas.setPointerCapture(e.pointerId);
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activePointers.size === 2) {
+        const pts = Array.from(activePointers.values());
+        initialPinchDistance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        initialPinchScale = scale;
+      }
     });
 
-    window.addEventListener('mouseup', () => { isDragging = false; });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!activePointers.has(e.pointerId)) return;
 
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
+      if (activePointers.size === 1) {
+        const prev = activePointers.get(e.pointerId);
+        const dx = e.clientX - prev.x;
+        const dy = e.clientY - prev.y;
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      if (dx === 0 && dy === 0) return;
+        if (dx === 0 && dy === 0) return;
 
-      // 屏幕切向速度向量 -> 旋转轴 (右手法则: 鼠标水平拖动绕 Y 轴旋转, 垂直拖动绕 X 轴旋转)
-      const speed = Math.sqrt(dx * dx + dy * dy);
-      const axis = new Vec3(dy, dx, 0).normalize();
-      const angle = speed * 0.008;
+        const dist = Math.hypot(dx, dy);
+        const axis = new Vec3(dy, dx, 0).normalize();
+        const angle = dist * 0.008;
 
-      const dq = Quat.fromAxisAngle(axis, angle);
-      orientation = dq.multiply(orientation);
-
-      render();
+        const dq = Quat.fromAxisAngle(axis, angle);
+        orientation = dq.multiply(orientation);
+        render();
+      } else if (activePointers.size === 2) {
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const pts = Array.from(activePointers.values());
+        const curDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (initialPinchDistance && initialPinchDistance > 10) {
+          const factor = curDist / initialPinchDistance;
+          scale = Math.min(Math.max(initialPinchScale * factor, 0.4), 2.5);
+          render();
+        }
+      }
     });
+
+    function endPointer(e) {
+      if (activePointers.has(e.pointerId)) {
+        activePointers.delete(e.pointerId);
+      }
+      if (activePointers.size < 2) {
+        initialPinchDistance = null;
+      }
+    }
+    canvas.addEventListener('pointerup', endPointer);
+    canvas.addEventListener('pointercancel', endPointer);
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
-      scale = Math.min(Math.max(scale * zoomFactor, 0.4), 3.0);
+      const zoom = e.deltaY > 0 ? 0.94 : 1.06;
+      scale = Math.min(Math.max(scale * zoom, 0.4), 2.5);
       render();
-    });
+    }, { passive: false });
 
     document.getElementById('btnUpdate').addEventListener('click', initTriangle);
     document.getElementById('btnReset').addEventListener('click', () => {
@@ -329,93 +398,146 @@
       render();
     });
 
-    // --- 渲染与投影计算 ---
+    function drawInventorBall(cx, cy, R) {
+      ctx.save();
+      ctx.lineWidth = 1;
+
+      // 1. 外围固定屏幕投影圆环
+      ctx.strokeStyle = '#d5d5d5';
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 2. 四方卡位定位点
+      const handleSize = 5;
+      ctx.fillStyle = '#666';
+      [[cx + R, cy], [cx - R, cy], [cx, cy + R], [cx, cy - R]].forEach(([hx, hy]) => {
+        ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+      });
+
+      // 3. 随动空间大圆经纬辅助线
+      function draw3DCircle(normal, strokeColor, dash = []) {
+        ctx.strokeStyle = strokeColor;
+        ctx.setLineDash(dash);
+        ctx.beginPath();
+        const steps = 64;
+        let started = false;
+        for (let i = 0; i <= steps; i++) {
+          const theta = (i / steps) * Math.PI * 2;
+          let p;
+          if (Math.abs(normal.z) > 0.9) {
+            p = new Vec3(Math.cos(theta) * R, Math.sin(theta) * R, 0);
+          } else if (Math.abs(normal.y) > 0.9) {
+            p = new Vec3(Math.cos(theta) * R, 0, Math.sin(theta) * R);
+          } else {
+            p = new Vec3(0, Math.cos(theta) * R, Math.sin(theta) * R);
+          }
+          const rotP = orientation.rotateVec3(p);
+          const sx = cx + rotP.x;
+          const sy = cy - rotP.y;
+          if (!started) { ctx.moveTo(sx, sy); started = true; }
+          else { ctx.lineTo(sx, sy); }
+        }
+        ctx.stroke();
+      }
+
+      draw3DCircle(new Vec3(0, 0, 1), '#e2e2e2', [3, 3]);
+      draw3DCircle(new Vec3(0, 1, 0), '#e2e2e2', [3, 3]);
+      draw3DCircle(new Vec3(1, 0, 0), '#e2e2e2', [3, 3]);
+
+      // 4. 三维正交轴标
+      const axisLen = R * 0.28;
+      const axes = [
+        { dir: new Vec3(1, 0, 0), label: 'X', color: '#c53929' },
+        { dir: new Vec3(0, 1, 0), label: 'Y', color: '#2e7d32' },
+        { dir: new Vec3(0, 0, 1), label: 'Z', color: '#1565c0' }
+      ];
+      ctx.setLineDash([]);
+      ctx.lineWidth = 1.5;
+      axes.forEach(axis => {
+        const rDir = orientation.rotateVec3(axis.dir);
+        const endX = cx + rDir.x * axisLen;
+        const endY = cy - rDir.y * axisLen;
+
+        ctx.strokeStyle = axis.color;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        ctx.font = '10px "SF Mono", monospace';
+        ctx.fillStyle = axis.color;
+        ctx.fillText(axis.label, endX + (rDir.x >= 0 ? 4 : -10), endY + (rDir.y >= 0 ? -4 : 10));
+      });
+
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, cy); ctx.lineTo(cx + 4, cy);
+      ctx.moveTo(cx, cy - 4); ctx.lineTo(cx, cy + 4);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
     function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
+      const rect = container.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
 
-      // 1. 旋转三维空间坐标
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      const currentR = TRACKBALL_RADIUS * scale;
+      drawInventorBall(cx, cy, currentR);
+
+      if (!baseVertices || baseVertices.length < 3) return;
+
       const rotated = baseVertices.map(v => orientation.rotateVec3(v).scale(scale));
-
-      // 2. 正交投影（垂直屏幕，即忽略 Z 坐标，仅提取 X 和 Y）
-      // 屏幕坐标系 Y 向下，故 Y 取负反转回笛卡尔坐标系
       const proj = rotated.map(p => ({
         screenX: cx + p.x,
         screenY: cy - p.y,
         x: p.x,
-        y: p.y
+        y: p.y,
+        z: p.z
       }));
 
-      // 3. 绘制参考网格与中心轴
-      drawGrid(cx, cy);
+      const edge1 = rotated[1].sub(rotated[0]);
+      const edge2 = rotated[2].sub(rotated[0]);
+      const normal = edge1.cross(edge2);
+      const isFront = normal.z >= 0;
 
-      // 4. 绘制三角形的半透明空间面与投影轮廓
       ctx.beginPath();
       ctx.moveTo(proj[0].screenX, proj[0].screenY);
       ctx.lineTo(proj[1].screenX, proj[1].screenY);
       ctx.lineTo(proj[2].screenX, proj[2].screenY);
       ctx.closePath();
 
-      // 判断正面/反面法向 (Z 轴分量)
-      const v01 = rotated[1].sub(rotated[0]);
-      const v02 = rotated[2].sub(rotated[0]);
-      const normal = v01.cross(v02);
-      const isFacing = normal.z >= 0;
-
-      ctx.fillStyle = isFacing ? 'rgba(0, 162, 255, 0.25)' : 'rgba(255, 120, 0, 0.2)';
+      ctx.fillStyle = isFront ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.02)';
       ctx.fill();
-      ctx.strokeStyle = '#00a2ff';
-      ctx.lineWidth = 2.5;
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.75;
       ctx.stroke();
 
-      // 5. 绘制三个顶点和标签
       const labels = ['A', 'B', 'C'];
       proj.forEach((pt, idx) => {
-        ctx.beginPath();
-        ctx.arc(pt.screenX, pt.screenY, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#18181f';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(pt.screenX - 2.5, pt.screenY - 2.5, 5, 5);
 
-        ctx.font = '13px sans-serif';
-        ctx.fillStyle = '#ffdf70';
-        ctx.fillText(labels[idx] + "'", pt.screenX + 8, pt.screenY - 8);
+        ctx.font = '11px "SF Mono", Menlo, Consolas, monospace';
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillText(`${labels[idx]}' `, pt.screenX + 6, pt.screenY - 6);
       });
 
-      // 6. 实时分析正视图投影性质
       updateMetrics(proj[0], proj[1], proj[2]);
     }
 
-    function drawGrid(cx, cy) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.lineWidth = 1;
-      const step = 40;
-      for (let x = cx % step; x < canvas.width; x += step) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-      }
-      for (let y = cy % step; y < canvas.height; y += step) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-      }
-
-      // X, Y 主轴线
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.beginPath();
-      ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
-      ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
-      ctx.stroke();
-    }
-
     function updateMetrics(pA, pB, pC) {
-      // 投影上的三边边长:
-      // a' = B'C', b' = C'A', c' = A'B'
       const lenA = Math.hypot(pB.x - pC.x, pB.y - pC.y);
       const lenB = Math.hypot(pC.x - pA.x, pC.y - pA.y);
       const lenC = Math.hypot(pA.x - pB.x, pA.y - pB.y);
 
-      // 计算内角 (余弦定理)
       function calcAngle(a, b, c) {
         if (a <= 1e-4 || b <= 1e-4) return 0;
         let cos = (b * b + c * c - a * a) / (2 * b * c);
@@ -427,33 +549,30 @@
       const angleB = calcAngle(lenB, lenA, lenC);
       const angleC = calcAngle(lenC, lenA, lenB);
 
-      // 归一化三边比 (以最小边为基准 1.00)
       const minLen = Math.min(lenA, lenB, lenC);
       let rA, rB, rC;
-      if (minLen > 1e-4) {
+      if (minLen > 1e-3) {
         rA = (lenA / minLen).toFixed(2);
         rB = (lenB / minLen).toFixed(2);
         rC = (lenC / minLen).toFixed(2);
       } else {
-        rA = lenA.toFixed(1);
-        rB = lenB.toFixed(1);
-        rC = lenC.toFixed(1);
+        rA = "0.0"; rB = "0.0"; rC = "0.0";
       }
 
-      // 更新界面文本
       document.getElementById('valRatio').innerText = `${rA} : ${rB} : ${rC}`;
       document.getElementById('valLengths').innerText = 
-        `投影边长像素估值: a'=${lenA.toFixed(1)}, b'=${lenB.toFixed(1)}, c'=${lenC.toFixed(1)}`;
+        `a' = ${lenA.toFixed(1)} px,  b' = ${lenB.toFixed(1)} px,  c' = ${lenC.toFixed(1)} px`;
       
       document.getElementById('valAngles').innerText = 
-        `∠A'≈${angleA.toFixed(1)}°,  ∠B'≈${angleB.toFixed(1)}°,  ∠C'≈${angleC.toFixed(1)}°`;
+        `∠A' = ${angleA.toFixed(1)}°,  ∠B' = ${angleB.toFixed(1)}°,  ∠C' = ${angleC.toFixed(1)}°`;
       
       const sum = (angleA + angleB + angleC).toFixed(1);
-      document.getElementById('valSum').innerText = `内角和: ${sum}° ${sum < 179 ? '(退化线段/极限投影)' : ''}`;
+      document.getElementById('valAngleSum').innerText = 
+        `内角和: ${sum}° ${sum < 179 ? '(接近垂直退化状态)' : ''}`;
     }
 
-    // 初始化运行
     initTriangle();
+    resizeCanvas();
   </script>
 </body>
 </html>

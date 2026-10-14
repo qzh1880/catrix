@@ -9,7 +9,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      border-radius: 0 !important;
+      border-radius: 0 !important; /* 强制纯直角设计 */
       -webkit-tap-highlight-color: transparent;
     }
     body {
@@ -23,55 +23,104 @@
       padding: 24px 16px;
       -webkit-font-smoothing: antialiased;
     }
+    .top-nav {
+      width: 100%;
+      max-width: 840px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1a1a1a;
+      text-decoration: none;
+      padding: 5px 8px;
+      border: 1px solid #1a1a1a;
+      background: #ffffff;
+      transition: background 0.15s, color 0.15s;
+    }
+    .back-link:hover {
+      background: #1a1a1a;
+      color: #ffffff;
+    }
     header {
       width: 100%;
-      max-width: 800px;
-      margin-bottom: 20px;
+      max-width: 840px;
+      margin-bottom: 16px;
       border-bottom: 1px solid #1a1a1a;
-      padding-bottom: 12px;
+      padding-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
     }
     h1 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
       color: #000000;
     }
     .subtitle {
-      font-size: 12px;
+      font-size: 11px;
       color: #666666;
       font-family: "SF Mono", Menlo, Consolas, monospace;
     }
-    .toolbar {
+
+    .control-panels {
       width: 100%;
-      max-width: 800px;
-      display: flex;
-      flex-wrap: wrap;
+      max-width: 840px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
-      align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+    }
+    .panel-block {
       border: 1px solid #d0d0d0;
-      padding: 12px 16px;
+      padding: 10px 14px;
       background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .panel-label {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #333333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .inputs-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .input-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
     .input-group label {
       font-size: 12px;
       font-weight: 600;
       font-family: "SF Mono", Menlo, Consolas, monospace;
-      color: #444;
+      color: #555;
     }
     input[type="number"] {
-      width: 64px;
-      height: 32px;
-      padding: 4px 8px;
+      width: 58px;
+      height: 30px;
+      padding: 3px 6px;
       border: 1px solid #b0b0b0;
       background: #ffffff;
       color: #000;
@@ -84,16 +133,18 @@
       border-color: #000000;
     }
     button {
-      height: 32px;
-      padding: 0 16px;
+      height: 30px;
+      padding: 0 12px;
       background: #1a1a1a;
       color: #ffffff;
       border: 1px solid #1a1a1a;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      transition: background 0.15s;
     }
     button:active {
       background: #444444;
@@ -107,19 +158,21 @@
       background: #f0f0f0;
     }
     .error-tag {
-      font-size: 12px;
+      font-size: 11px;
       color: #d32f2f;
       display: none;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
       font-weight: 500;
     }
+
     #viewport-container {
       position: relative;
       width: 100%;
-      max-width: 800px;
-      height: 520px;
+      max-width: 840px;
+      height: 480px;
       border: 1px solid #1a1a1a;
       background: #ffffff;
-      touch-action: none;
+      touch-action: none; /* 关键：禁用浏览器在 iPad 上的原生拖拽 */
       user-select: none;
       -webkit-user-select: none;
     }
@@ -139,10 +192,11 @@
       line-height: 1.5;
       pointer-events: none;
     }
+
     .data-table-container {
       width: 100%;
-      max-width: 800px;
-      margin-top: 16px;
+      max-width: 840px;
+      margin-top: 14px;
       border: 1px solid #1a1a1a;
       border-top: none;
     }
@@ -150,11 +204,11 @@
       width: 100%;
       border-collapse: collapse;
       font-family: "SF Mono", Menlo, Consolas, monospace;
-      font-size: 13px;
+      font-size: 12px;
     }
     .data-table th, .data-table td {
       border-top: 1px solid #1a1a1a;
-      padding: 10px 14px;
+      padding: 8px 12px;
       text-align: left;
     }
     .data-table th {
@@ -164,65 +218,83 @@
       letter-spacing: 0.05em;
       text-transform: uppercase;
       color: #333;
-      width: 25%;
+      width: 26%;
     }
     .data-table td.val-primary {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       color: #000000;
     }
     .data-table td.val-secondary {
-      font-size: 12px;
+      font-size: 11px;
       color: #666666;
     }
-    @media (max-width: 600px) {
-      #viewport-container { height: 400px; }
-      .data-table th, .data-table td { padding: 8px 10px; }
+    @media (max-width: 720px) {
+      .control-panels { grid-template-columns: 1fr; }
+      #viewport-container { height: 380px; }
+      .data-table th, .data-table td { padding: 6px 8px; }
     }
   </style>
 </head>
 <body>
 
+  <div class="top-nav">
+    <a href="https://catrix.net" class="back-link">← CATRIX.NET</a>
+  </div>
+
   <header>
     <h1>Orthographic Triangle Projection</h1>
-    <div class="subtitle">AUTODESK INVENTOR STYLE TRACKBALL</div>
+    <div class="subtitle">AUTODESK INVENTOR TRACKBALL & AUTO-SOLVER</div>
   </header>
 
-  <div class="toolbar">
-    <div class="input-group">
-      <label for="sideA">A:</label>
-      <input type="number" id="sideA" value="3" min="0.1" step="0.5">
+  <div class="control-panels">
+    <!-- 原三角形参数控制 -->
+    <div class="panel-block">
+      <div class="panel-label">
+        <span>原空间三角形 (Source)</span>
+        <span class="error-tag" id="errSource">无法构成三角形</span>
+      </div>
+      <div class="inputs-row">
+        <div class="input-group"><label>a:</label><input type="number" id="sideA" value="3" min="0.1" step="0.5"></div>
+        <div class="input-group"><label>b:</label><input type="number" id="sideB" value="4" min="0.1" step="0.5"></div>
+        <div class="input-group"><label>c:</label><input type="number" id="sideC" value="5" min="0.1" step="0.5"></div>
+        <button id="btnUpdateSrc">重设原形</button>
+        <button id="btnReset" class="secondary" title="恢复初始前置朝向">复位</button>
+      </div>
     </div>
-    <div class="input-group">
-      <label for="sideB">B:</label>
-      <input type="number" id="sideB" value="4" min="0.1" step="0.5">
+
+    <!-- 目标投影形状控制与自动旋转求解 -->
+    <div class="panel-block">
+      <div class="panel-label">
+        <span>目标投影形状 (Target)</span>
+        <span class="error-tag" id="errTarget">无法构成目标形</span>
+      </div>
+      <div class="inputs-row">
+        <div class="input-group"><label>a':</label><input type="number" id="tgtA" value="1" min="0.1" step="0.5"></div>
+        <div class="input-group"><label>b':</label><input type="number" id="tgtB" value="1" min="0.1" step="0.5"></div>
+        <div class="input-group"><label>c':</label><input type="number" id="tgtC" value="1" min="0.1" step="0.5"></div>
+        <button id="btnSolve" style="background: #000; border-color: #000;">对齐至目标</button>
+      </div>
     </div>
-    <div class="input-group">
-      <label for="sideC">C:</label>
-      <input type="number" id="sideC" value="5" min="0.1" step="0.5">
-    </div>
-    <button id="btnUpdate">更新比例</button>
-    <button id="btnReset" class="secondary">视角复位</button>
-    <span class="error-tag" id="errorMsg">无效三角形 (两边之和须大于第三边)</span>
   </div>
 
   <div id="viewport-container">
     <canvas id="viewport"></canvas>
     <div class="hud-overlay">
       PROJECTION: ORTHOGRAPHIC (FRONT VIEW / XY PLANE)<br>
-      DRAG: 3D ORBIT | PINCH/WHEEL: ZOOM
+      IPAD / TOUCH: DRAG TO ORBIT | PINCH TO ZOOM
     </div>
   </div>
 
   <div class="data-table-container">
     <table class="data-table">
       <tr>
-        <th>投影三边比</th>
+        <th>正视图三边比</th>
         <td class="val-primary" id="valRatio">-- : -- : --</td>
         <td class="val-secondary" id="valLengths">a' = --, b' = --, c' = --</td>
       </tr>
       <tr>
-        <th>投影三个内角</th>
+        <th>正视图三个内角</th>
         <td class="val-primary" id="valAngles">∠A' = --°, ∠B' = --°, ∠C' = --°</td>
         <td class="val-secondary" id="valAngleSum">内角和: 180.0°</td>
       </tr>
@@ -230,6 +302,7 @@
   </div>
 
   <script>
+    // --- 线性代数与四元数体系 ---
     class Vec3 {
       constructor(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; }
       add(v) { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z); }
@@ -254,7 +327,7 @@
       constructor(w=1, x=0, y=0, z=0) { this.w = w; this.x = x; this.y = y; this.z = z; }
       multiply(q) {
         return new Quat(
-          this.w*q.w - this.x*q.x - this.y*q.z - this.z*q.z,
+          this.w*q.w - this.x*q.x - this.y*q.y - this.z*q.z,
           this.w*q.x + this.x*q.w + this.y*q.z - this.z*q.y,
           this.w*q.y - this.x*q.z + this.y*q.w + this.z*q.x,
           this.w*q.z + this.x*q.y - this.y*q.x + this.z*q.w
@@ -273,8 +346,66 @@
         const sin = Math.sin(half);
         return new Quat(Math.cos(half), a.x * sin, a.y * sin, a.z * sin);
       }
+      static fromMatrix3x3(m) {
+        const tr = m[0][0] + m[1][1] + m[2][2];
+        let w, x, y, z;
+        if (tr > 0) {
+          const S = Math.sqrt(tr + 1.0) * 2;
+          w = 0.25 * S;
+          x = (m[2][1] - m[1][2]) / S;
+          y = (m[0][2] - m[2][0]) / S;
+          z = (m[1][0] - m[0][1]) / S;
+        } else if ((m[0][0] > m[1][1]) && (m[0][0] > m[2][2])) {
+          const S = Math.sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2;
+          w = (m[2][1] - m[1][2]) / S;
+          x = 0.25 * S;
+          y = (m[0][1] + m[1][0]) / S;
+          z = (m[0][2] + m[2][0]) / S;
+        } else if (m[1][1] > m[2][2]) {
+          const S = Math.sqrt(1.0 + m[1][1] - m[0][0] - m[2][2]) * 2;
+          w = (m[0][2] - m[2][0]) / S;
+          x = (m[0][1] + m[1][0]) / S;
+          y = 0.25 * S;
+          z = (m[1][2] + m[2][1]) / S;
+        } else {
+          const S = Math.sqrt(1.0 + m[2][2] - m[0][0] - m[1][1]) * 2;
+          w = (m[1][0] - m[0][1]) / S;
+          x = (m[0][2] + m[2][0]) / S;
+          y = (m[1][2] + m[2][1]) / S;
+          z = 0.25 * S;
+        }
+        const len = Math.hypot(w, x, y, z) || 1;
+        return new Quat(w / len, x / len, y / len, z / len);
+      }
+      static slerp(q1, q2, t) {
+        let cosHalfTheta = q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z;
+        let target = q2;
+        if (cosHalfTheta < 0) {
+          target = new Quat(-q2.w, -q2.x, -q2.y, -q2.z);
+          cosHalfTheta = -cosHalfTheta;
+        }
+        if (cosHalfTheta >= 1.0 - 1e-5) {
+          return new Quat(
+            q1.w * (1 - t) + target.w * t,
+            q1.x * (1 - t) + target.x * t,
+            q1.y * (1 - t) + target.y * t,
+            q1.z * (1 - t) + target.z * t
+          );
+        }
+        const halfTheta = Math.acos(cosHalfTheta);
+        const sinHalfTheta = Math.sqrt(1.0 - cosHalfTheta * cosHalfTheta);
+        const ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta;
+        const ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
+        return new Quat(
+          q1.w * ratioA + target.w * ratioB,
+          q1.x * ratioA + target.x * ratioB,
+          q1.y * ratioA + target.y * ratioB,
+          q1.z * ratioA + target.z * ratioB
+        );
+      }
     }
 
+    // --- 应用环境与全局状态 ---
     const container = document.getElementById('viewport-container');
     const canvas = document.getElementById('viewport');
     const ctx = canvas.getContext('2d');
@@ -282,6 +413,7 @@
     let orientation = new Quat(1, 0, 0, 0);
     let scale = 1.0;
     let baseVertices = [];
+    let currentSrcSides = [3, 4, 5];
     const TRACKBALL_RADIUS = 150;
 
     function resizeCanvas() {
@@ -295,7 +427,8 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    function buildTriangle(a, b, c) {
+    // 标准逆时针 (CCW) 三角形顶点构造
+    function buildTriangleCoords(a, b, c) {
       if (a + b <= c || a + c <= b || b + c <= a) return null;
       const cosC = (a * a + b * b - c * c) / (2 * a * b);
       const sinC = Math.sqrt(Math.max(0, 1 - cosC * cosC));
@@ -304,13 +437,7 @@
       const pA = new Vec3(b * cosC, b * sinC, 0);
 
       const center = pA.add(pB).add(pC).scale(1 / 3);
-      const vA = pA.sub(center);
-      const vB = pB.sub(center);
-      const vC = pC.sub(center);
-
-      const maxR = Math.max(vA.length(), vB.length(), vC.length());
-      const fit = (TRACKBALL_RADIUS * 0.85) / (maxR || 1);
-      return [vA.scale(fit), vB.scale(fit), vC.scale(fit)];
+      return [pA.sub(center), pB.sub(center), pC.sub(center)];
     }
 
     function initTriangle() {
@@ -318,22 +445,159 @@
       const b = parseFloat(document.getElementById('sideB').value);
       const c = parseFloat(document.getElementById('sideC').value);
 
-      const err = document.getElementById('errorMsg');
-      const verts = buildTriangle(a, b, c);
-      if (!verts) {
+      const err = document.getElementById('errSource');
+      const unscaled = buildTriangleCoords(a, b, c);
+      if (!unscaled) {
         err.style.display = 'inline';
         return;
       }
       err.style.display = 'none';
-      baseVertices = verts;
+      currentSrcSides = [a, b, c];
+
+      const maxR = Math.max(unscaled[0].length(), unscaled[1].length(), unscaled[2].length());
+      const fit = (TRACKBALL_RADIUS * 0.85) / (maxR || 1);
+      baseVertices = [unscaled[0].scale(fit), unscaled[1].scale(fit), unscaled[2].scale(fit)];
       render();
     }
 
+    // --- 任意三角形正投影至目标形状的代数逆解算法 ---
+    function solveProjectionQuaternion(srcSides, tgtSides) {
+      const v = buildTriangleCoords(srcSides[0], srcSides[1], srcSides[2]);
+      const u = buildTriangleCoords(tgtSides[0], tgtSides[1], tgtSides[2]);
+      if (!v || !u) return null;
+
+      // 求解二维线性变换矩阵 A = [uA, uB] * [vA, vB]^-1
+      const detV = v[0].x * v[1].y - v[0].y * v[1].x;
+      if (Math.abs(detV) < 1e-7) return null;
+
+      const invV = [
+        [ v[1].y / detV, -v[1].x / detV],
+        [-v[0].y / detV,  v[0].x / detV]
+      ];
+
+      const a00 = u[0].x * invV[0][0] + u[1].x * invV[1][0];
+      const a01 = u[0].x * invV[0][1] + u[1].x * invV[1][1];
+      const a10 = u[0].y * invV[0][0] + u[1].y * invV[1][0];
+      const a11 = u[0].y * invV[0][1] + u[1].y * invV[1][1];
+
+      // 二维矩阵 SVD: A = U * diag(s1, s2) * V^T
+      const E = (a00*a00 + a10*a10 + a01*a01 + a11*a11) / 2.0;
+      const F = (a00*a00 + a10*a10 - (a01*a01 + a11*a11)) / 2.0;
+      const G = a00*a01 + a10*a11;
+      const H = Math.hypot(F, G);
+
+      const s1 = Math.sqrt(Math.max(0, E + H));
+      const s2 = Math.sqrt(Math.max(0, E - H));
+      if (s1 < 1e-7) return null;
+
+      const thetaV = 0.5 * Math.atan2(G, F);
+      const cv = Math.cos(thetaV), sv = Math.sin(thetaV);
+      const Vt = [
+        [ cv,  sv],
+        [-sv,  cv]
+      ];
+
+      const av00 = a00 * cv + a01 * sv;
+      const av10 = a10 * cv + a11 * sv;
+      const av01 = -a00 * sv + a01 * cv;
+      const av11 = -a10 * sv + a11 * cv;
+
+      const u00 = av00 / s1;
+      const u10 = av10 / s1;
+      const u01 = s2 > 1e-7 ? (av01 / s2) : -u10;
+      const u11 = s2 > 1e-7 ? (av11 / s2) :  u00;
+
+      const U_mat = [
+        [u00, u01],
+        [u10, u11]
+      ];
+
+      // 倾斜角二面角 theta
+      const cosTheta = Math.min(1.0, Math.max(0.0, s2 / s1));
+      const sinTheta = Math.sqrt(Math.max(0.0, 1.0 - cosTheta * cosTheta));
+
+      // 构造三维空间组合旋转矩阵: R = R_beta * R_tilt * R_alpha
+      const R_alpha = [
+        [Vt[0][0], Vt[0][1], 0],
+        [Vt[1][0], Vt[1][1], 0],
+        [0,        0,        1]
+      ];
+
+      const R_tilt = [
+        [1,  0,         0],
+        [0,  cosTheta, -sinTheta],
+        [0,  sinTheta,  cosTheta]
+      ];
+
+      const R_beta = [
+        [U_mat[0][0], U_mat[0][1], 0],
+        [U_mat[1][0], U_mat[1][1], 0],
+        [0,           0,           1]
+      ];
+
+      function mult3(A, B) {
+        const C = [[0,0,0],[0,0,0],[0,0,0]];
+        for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            C[i][j] = A[i][0]*B[0][j] + A[i][1]*B[1][j] + A[i][2]*B[2][j];
+          }
+        }
+        return C;
+      }
+
+      const R_total = mult3(R_beta, mult3(R_tilt, R_alpha));
+      return Quat.fromMatrix3x3(R_total);
+    }
+
+    // --- 平滑旋转动画 (SLERP) ---
+    let animId = null;
+    function animateToOrientation(targetQ) {
+      if (animId) cancelAnimationFrame(animId);
+      const startQ = new Quat(orientation.w, orientation.x, orientation.y, orientation.z);
+      const startTime = performance.now();
+      const duration = 500;
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1.0, elapsed / duration);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        orientation = Quat.slerp(startQ, targetQ, ease);
+        render();
+
+        if (progress < 1.0) {
+          animId = requestAnimationFrame(step);
+        } else {
+          animId = null;
+        }
+      }
+      animId = requestAnimationFrame(step);
+    }
+
+    document.getElementById('btnSolve').addEventListener('click', () => {
+      const ta = parseFloat(document.getElementById('tgtA').value);
+      const tb = parseFloat(document.getElementById('tgtB').value);
+      const tc = parseFloat(document.getElementById('tgtC').value);
+
+      const err = document.getElementById('errTarget');
+      if (ta + tb <= tc || ta + tc <= tb || tb + tc <= ta) {
+        err.style.display = 'inline';
+        return;
+      }
+      err.style.display = 'none';
+
+      const targetQ = solveProjectionQuaternion(currentSrcSides, [ta, tb, tc]);
+      if (targetQ) {
+        animateToOrientation(targetQ);
+      }
+    });
+
+    // --- Pointer Events 交互体系 (iPad 触控 + 鼠标统一支持) ---
     const activePointers = new Map();
     let initialPinchDistance = null;
     let initialPinchScale = 1.0;
 
     canvas.addEventListener('pointerdown', (e) => {
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
       canvas.setPointerCapture(e.pointerId);
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (activePointers.size === 2) {
@@ -391,13 +655,13 @@
       render();
     }, { passive: false });
 
-    document.getElementById('btnUpdate').addEventListener('click', initTriangle);
+    document.getElementById('btnUpdateSrc').addEventListener('click', initTriangle);
     document.getElementById('btnReset').addEventListener('click', () => {
-      orientation = new Quat(1, 0, 0, 0);
-      scale = 1.0;
-      render();
+      if (animId) cancelAnimationFrame(animId);
+      animateToOrientation(new Quat(1, 0, 0, 0));
     });
 
+    // --- 绘制 Inventor 风格的 3D 轨迹球与辅助线 ---
     function drawInventorBall(cx, cy, R) {
       ctx.save();
       ctx.lineWidth = 1;
@@ -409,14 +673,14 @@
       ctx.arc(cx, cy, R, 0, Math.PI * 2);
       ctx.stroke();
 
-      // 2. 四方卡位定位点
+      // 2. 四方卡位定位提手
       const handleSize = 5;
       ctx.fillStyle = '#666';
       [[cx + R, cy], [cx - R, cy], [cx, cy + R], [cx, cy - R]].forEach(([hx, hy]) => {
         ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
       });
 
-      // 3. 随动空间大圆经纬辅助线
+      // 3. 随模型旋转的三维空间赤道圈与经线圈
       function draw3DCircle(normal, strokeColor, dash = []) {
         ctx.strokeStyle = strokeColor;
         ctx.setLineDash(dash);
@@ -446,7 +710,7 @@
       draw3DCircle(new Vec3(0, 1, 0), '#e2e2e2', [3, 3]);
       draw3DCircle(new Vec3(1, 0, 0), '#e2e2e2', [3, 3]);
 
-      // 4. 三维正交轴标
+      // 4. 三维正交轴标 (RGB: X=红, Y=绿, Z=蓝)
       const axisLen = R * 0.28;
       const axes = [
         { dir: new Vec3(1, 0, 0), label: 'X', color: '#c53929' },
@@ -481,6 +745,7 @@
       ctx.restore();
     }
 
+    // --- 主渲染 ---
     function render() {
       const rect = container.getBoundingClientRect();
       const cx = rect.width / 2;
@@ -527,7 +792,7 @@
 
         ctx.font = '11px "SF Mono", Menlo, Consolas, monospace';
         ctx.fillStyle = '#1a1a1a';
-        ctx.fillText(`${labels[idx]}' `, pt.screenX + 6, pt.screenY - 6);
+        ctx.fillText(`${labels[idx]}'`, pt.screenX + 6, pt.screenY - 6);
       });
 
       updateMetrics(proj[0], proj[1], proj[2]);

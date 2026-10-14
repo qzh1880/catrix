@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>空间三角形正投影与姿态实时演示</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: #1e1e24;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 8px;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    p.tip {
+      font-size: 13px;
+      color: #9e9ea7;
+      margin-bottom: 16px;
+    }
+    .panel {
+      background: #2b2b36;
+      border-radius: 8px;
+      padding: 12px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .input-group label {
+      font-size: 14px;
+      color: #bbb;
+    }
+    input[type="number"] {
+      width: 70px;
+      padding: 6px 8px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #18181f;
+      color: #fff;
+      font-size: 14px;
+      text-align: center;
+    }
+    button {
+      padding: 6px 14px;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0098ff;
+    }
+    .error {
+      color: #ff6b6b;
+      font-size: 13px;
+      display: none;
+    }
+    #viewport-container {
+      position: relative;
+      width: 760px;
+      height: 480px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      background: #15151a;
+      border: 1px solid #3a3a48;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    canvas:active {
+      cursor: grabbing;
+    }
+    .status-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(20, 20, 26, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #8fa1b3;
+      pointer-events: none;
+    }
+    .metrics-panel {
+      width: 760px;
+      margin-top: 16px;
+      background: #2b2b36;
+      border-radius: 8px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .metric-card {
+      background: #202029;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border-left: 4px solid #007acc;
+    }
+    .metric-title {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .metric-value {
+      font-size: 17px;
+      font-weight: 600;
+      color: #4fc1ff;
+      font-family: "Courier New", monospace;
+    }
+    .metric-sub {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>空间三角形与正投影实时演示</h2>
+  <p class="tip">按住鼠标左键在画板中拖拽以在空间中任意旋转（Inventor 视角拖动）；滚轮可缩放</p>
+
+  <div class="panel">
+    <div class="input-group">
+      <label>a:</label>
+      <input type="number" id="sideA" value="3" min="0.1" step="0.5">
+    </div>
+    <div class="input-group">
+      <label>b:</label>
+      <input type="number" id="sideB" value="4" min="0.1" step="0.5">
+    </div>
+    <div class="input-group">
+      <label>c:</label>
+      <input type="number" id="sideC" value="5" min="0.1" step="0.5">
+    </div>
+    <button id="btnUpdate">更新三角形</button>
+    <button id="btnReset" style="background:#555;">重置视角</button>
+    <span class="error" id="errorMsg">不能构成三角形！(需两边之和大于第三边)</span>
+  </div>
+
+  <div id="viewport-container">
+    <canvas id="canvas" width="760" height="480"></canvas>
+    <div class="status-overlay">
+      正交投影屏幕：屏幕 XY 平面 | 投影线方向：垂直屏幕深入 (+Z)
+    </div>
+  </div>
+
+  <div class="metrics-panel">
+    <div class="metric-card">
+      <div class="metric-title">正视图（投影）三边比</div>
+      <div class="metric-value" id="valRatio">-- : -- : --</div>
+      <div class="metric-sub" id="valLengths">投影边长: a'=0, b'=0, c'=0</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">正视图（投影）内角角度近似值</div>
+      <div class="metric-value" id="valAngles">∠A'=0°, ∠B'=0°, ∠C'=0°</div>
+      <div class="metric-sub" id="valSum">角度之和: 180.0°</div>
+    </div>
+  </div>
+
+  <script>
+    // --- 向量与四元数运算库 (实现平滑全方向三维空间旋转) ---
+    class Vec3 {
+      constructor(x=0, y=0, z=0) { this.x = x; this.y = y; this.z = z; }
+      add(v) { return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z); }
+      sub(v) { return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z); }
+      scale(s) { return new Vec3(this.x * s, this.y * s, this.z * s); }
+      dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+      cross(v) {
+        return new Vec3(
+          this.y * v.z - this.z * v.y,
+          this.z * v.x - this.x * v.z,
+          this.x * v.y - this.y * v.x
+        );
+      }
+      length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
+      normalize() {
+        const l = this.length();
+        return l > 1e-6 ? new Vec3(this.x / l, this.y / l, this.z / l) : new Vec3(0,0,0);
+      }
+    }
+
+    class Quat {
+      constructor(w=1, x=0, y=0, z=0) { this.w = w; this.x = x; this.y = y; this.z = z; }
+      multiply(q) {
+        return new Quat(
+          this.w*q.w - this.x*q.x - this.y*q.y - this.z*q.z,
+          this.w*q.x + this.x*q.w + this.y*q.z - this.z*q.y,
+          this.w*q.y - this.x*q.z + this.y*q.w + this.z*q.x,
+          this.w*q.z + this.x*q.y - this.y*q.x + this.z*q.w
+        );
+      }
+      rotateVec3(v) {
+        // v' = q * v * q^-1
+        const u = new Vec3(this.x, this.y, this.z);
+        const s = this.w;
+        return u.scale(2 * u.dot(v))
+          .add(v.scale(s * s - u.dot(u)))
+          .add(u.cross(v).scale(2 * s));
+      }
+      static fromAxisAngle(axis, angle) {
+        const a = axis.normalize();
+        const half = angle / 2;
+        const sin = Math.sin(half);
+        return new Quat(Math.cos(half), a.x * sin, a.y * sin, a.z * sin);
+      }
+    }
+
+    // --- 应用状态 ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let orientation = new Quat(1, 0, 0, 0); // 空间朝向四元数
+    let scale = 1.0;
+    let baseVertices = []; // 初始平面三角形（以重心为原点）
+
+    // 根据输入三边构造三角形顶点
+    function buildTriangle(a, b, c) {
+      if (a + b <= c || a + c <= b || b + c <= a) return null;
+
+      // 顶点 C 放原点, B 放在 (a, 0, 0)
+      // 根据余弦定理计算顶点 A 坐标
+      const cosC = (a * a + b * b - c * c) / (2 * a * b);
+      const sinC = Math.sqrt(Math.max(0, 1 - cosC * cosC));
+      const pC = new Vec3(0, 0, 0);
+      const pB = new Vec3(a, 0, 0);
+      const pA = new Vec3(b * cosC, b * sinC, 0);
+
+      // 计算重心并移至中心
+      const center = pA.add(pB).add(pC).scale(1 / 3);
+      const vA = pA.sub(center);
+      const vB = pB.sub(center);
+      const vC = pC.sub(center);
+
+      // 缩放适应视图空间 (基准尺寸约为 200px)
+      const maxDist = Math.max(vA.length(), vB.length(), vC.length());
+      const fitScale = 140 / (maxDist || 1);
+
+      return [vA.scale(fitScale), vB.scale(fitScale), vC.scale(fitScale)];
+    }
+
+    function initTriangle() {
+      const a = parseFloat(document.getElementById('sideA').value);
+      const b = parseFloat(document.getElementById('sideB').value);
+      const c = parseFloat(document.getElementById('sideC').value);
+
+      const verts = buildTriangle(a, b, c);
+      const errEl = document.getElementById('errorMsg');
+      if (!verts) {
+        errEl.style.display = 'inline';
+        return;
+      }
+      errEl.style.display = 'none';
+      baseVertices = verts;
+      render();
+    }
+
+    // --- 类似 Inventor 的 Trackball 交互逻辑 ---
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      if (dx === 0 && dy === 0) return;
+
+      // 屏幕切向速度向量 -> 旋转轴 (右手法则: 鼠标水平拖动绕 Y 轴旋转, 垂直拖动绕 X 轴旋转)
+      const speed = Math.sqrt(dx * dx + dy * dy);
+      const axis = new Vec3(dy, dx, 0).normalize();
+      const angle = speed * 0.008;
+
+      const dq = Quat.fromAxisAngle(axis, angle);
+      orientation = dq.multiply(orientation);
+
+      render();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
+      scale = Math.min(Math.max(scale * zoomFactor, 0.4), 3.0);
+      render();
+    });
+
+    document.getElementById('btnUpdate').addEventListener('click', initTriangle);
+    document.getElementById('btnReset').addEventListener('click', () => {
+      orientation = new Quat(1, 0, 0, 0);
+      scale = 1.0;
+      render();
+    });
+
+    // --- 渲染与投影计算 ---
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // 1. 旋转三维空间坐标
+      const rotated = baseVertices.map(v => orientation.rotateVec3(v).scale(scale));
+
+      // 2. 正交投影（垂直屏幕，即忽略 Z 坐标，仅提取 X 和 Y）
+      // 屏幕坐标系 Y 向下，故 Y 取负反转回笛卡尔坐标系
+      const proj = rotated.map(p => ({
+        screenX: cx + p.x,
+        screenY: cy - p.y,
+        x: p.x,
+        y: p.y
+      }));
+
+      // 3. 绘制参考网格与中心轴
+      drawGrid(cx, cy);
+
+      // 4. 绘制三角形的半透明空间面与投影轮廓
+      ctx.beginPath();
+      ctx.moveTo(proj[0].screenX, proj[0].screenY);
+      ctx.lineTo(proj[1].screenX, proj[1].screenY);
+      ctx.lineTo(proj[2].screenX, proj[2].screenY);
+      ctx.closePath();
+
+      // 判断正面/反面法向 (Z 轴分量)
+      const v01 = rotated[1].sub(rotated[0]);
+      const v02 = rotated[2].sub(rotated[0]);
+      const normal = v01.cross(v02);
+      const isFacing = normal.z >= 0;
+
+      ctx.fillStyle = isFacing ? 'rgba(0, 162, 255, 0.25)' : 'rgba(255, 120, 0, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = '#00a2ff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // 5. 绘制三个顶点和标签
+      const labels = ['A', 'B', 'C'];
+      proj.forEach((pt, idx) => {
+        ctx.beginPath();
+        ctx.arc(pt.screenX, pt.screenY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#18181f';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = '13px sans-serif';
+        ctx.fillStyle = '#ffdf70';
+        ctx.fillText(labels[idx] + "'", pt.screenX + 8, pt.screenY - 8);
+      });
+
+      // 6. 实时分析正视图投影性质
+      updateMetrics(proj[0], proj[1], proj[2]);
+    }
+
+    function drawGrid(cx, cy) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      const step = 40;
+      for (let x = cx % step; x < canvas.width; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = cy % step; y < canvas.height; y += step) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // X, Y 主轴线
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.beginPath();
+      ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
+      ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
+      ctx.stroke();
+    }
+
+    function updateMetrics(pA, pB, pC) {
+      // 投影上的三边边长:
+      // a' = B'C', b' = C'A', c' = A'B'
+      const lenA = Math.hypot(pB.x - pC.x, pB.y - pC.y);
+      const lenB = Math.hypot(pC.x - pA.x, pC.y - pA.y);
+      const lenC = Math.hypot(pA.x - pB.x, pA.y - pB.y);
+
+      // 计算内角 (余弦定理)
+      function calcAngle(a, b, c) {
+        if (a <= 1e-4 || b <= 1e-4) return 0;
+        let cos = (b * b + c * c - a * a) / (2 * b * c);
+        cos = Math.max(-1, Math.min(1, cos));
+        return Math.acos(cos) * (180 / Math.PI);
+      }
+
+      const angleA = calcAngle(lenA, lenB, lenC);
+      const angleB = calcAngle(lenB, lenA, lenC);
+      const angleC = calcAngle(lenC, lenA, lenB);
+
+      // 归一化三边比 (以最小边为基准 1.00)
+      const minLen = Math.min(lenA, lenB, lenC);
+      let rA, rB, rC;
+      if (minLen > 1e-4) {
+        rA = (lenA / minLen).toFixed(2);
+        rB = (lenB / minLen).toFixed(2);
+        rC = (lenC / minLen).toFixed(2);
+      } else {
+        rA = lenA.toFixed(1);
+        rB = lenB.toFixed(1);
+        rC = lenC.toFixed(1);
+      }
+
+      // 更新界面文本
+      document.getElementById('valRatio').innerText = `${rA} : ${rB} : ${rC}`;
+      document.getElementById('valLengths').innerText = 
+        `投影边长像素估值: a'=${lenA.toFixed(1)}, b'=${lenB.toFixed(1)}, c'=${lenC.toFixed(1)}`;
+      
+      document.getElementById('valAngles').innerText = 
+        `∠A'≈${angleA.toFixed(1)}°,  ∠B'≈${angleB.toFixed(1)}°,  ∠C'≈${angleC.toFixed(1)}°`;
+      
+      const sum = (angleA + angleB + angleC).toFixed(1);
+      document.getElementById('valSum').innerText = `内角和: ${sum}° ${sum < 179 ? '(退化线段/极限投影)' : ''}`;
+    }
+
+    // 初始化运行
+    initTriangle();
+  </script>
+</body>
+</html>

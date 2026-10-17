@@ -11,7 +11,7 @@ showRelated: false
 cover: 'https://media.catrix.net/cover3.jpg'
 ---
 
-{{< bilibili "BV1rw411w7SM" >}}
+{{< bilibili "BV12N411t7Ln" >}}
 
 # 作曲背景：为万物谱曲
 

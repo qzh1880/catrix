@@ -1,0 +1,125 @@
+{{ define "main" }}
+<article class="single-post">
+  <div class="single-body">
+    <a class="admin-back" href="/admin/">← 返回后台</a>
+  </div>
+  <header class="single-header">
+    <p class="single-date"></p>
+    <h1 class="single-title"></h1>
+    <p class="single-author"><span class="by-line">By </span><a class="author-link"></a></p>
+    <p class="single-excerpt"></p>
+  </header>
+  <div class="single-cover"><div class="container"><img alt=""></div></div>
+  <div class="single-body">
+    <aside class="single-share-side">
+      <span class="share-side-label">Share</span>
+      {{ partial "share-buttons.html" . }}
+    </aside>
+    <div class="post-content"></div>
+  </div>
+  <div class="single-share-bottom">
+    <span class="share-label">Share</span>
+    {{ partial "share-buttons.html" . }}
+  </div>
+  <div class="container-narrow"></div>
+</article>
+
+<style>
+  .admin-back { display: inline-block; margin-bottom: 26px; font-size: .78rem; color: var(--color-text-muted); }
+  .admin-back:hover { color: var(--color-text); }
+  .single-author { margin-top: 12px; margin-bottom: 8px; font-size: 1.15rem; opacity: .9; }
+  .single-author .author-link { color: inherit; text-decoration: underline; font-weight: 600; }
+  .single-share-bottom { display: none; justify-content: center; }
+  @media (max-width: 1024px) {
+    .single-share-bottom { display: flex; flex-direction: row; }
+  }
+</style>
+
+<script src="/js/api.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<script>
+function doShare() {
+  if (navigator.share) {
+    navigator.share({ title: document.title, url: location.href }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(location.href);
+  }
+}
+
+(() => {
+  const id = new URLSearchParams(location.search).get('id');
+  const KEY = localStorage.getItem('catrixAdmin') || '';
+  const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const q = s => document.querySelector(s);
+
+  // 取一篇投稿，把各部分填进上面那套空的文章骨架
+  fetch(window.CATRIX_API + '/admin/post?id=' + id, { headers: { 'X-Admin-Key': KEY } })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d) {
+        document.querySelector('.single-post').replaceChildren(
+          Object.assign(document.createElement('p'), {
+            textContent: '预览需要先在后台登录。',
+            style: 'text-align:center;padding-top:30vh;font-size:.9rem;'
+          })
+        );
+        return;
+      }
+      const bj = new Date(Date.parse(d.meta.date.replace(' ', 'T') + 'Z') + 8 * 3600 * 1000);
+      const cat = MON[bj.getUTCMonth()].slice(0, 3) + '.' + bj.getUTCFullYear();
+      document.title = d.meta.title + ' · [catrix]';
+      document.querySelectorAll('.single-share-side a, .single-share-bottom a').forEach(link => {
+        const url = new URL(link.href);
+        url.searchParams.set(url.searchParams.has('u') ? 'u' : 'url', location.href);
+        if (url.searchParams.has('text')) url.searchParams.set('text', d.meta.title);
+        if (url.searchParams.has('description')) url.searchParams.set('description', d.meta.title);
+        link.href = url;
+      });
+      q('.single-date').innerHTML =
+        '<time datetime="' + bj.toISOString().slice(0, 10) + '">' + MON[bj.getUTCMonth()] + ' ' + bj.getUTCDate() + ', ' + bj.getUTCFullYear() + '</time>' +
+        '<span class="meta-sep">·</span>' +
+        '<a href="/categories/' + encodeURIComponent(cat.toLowerCase()) + '/">' + cat.toUpperCase() + '</a>';
+      q('.single-title').textContent = d.meta.title;
+      q('.author-link').textContent = d.meta.author;
+      q('.author-link').href = '/author/' + encodeURIComponent(d.meta.author) + '/';
+
+      const ex = q('.single-excerpt');
+      if (d.meta.desc) ex.textContent = d.meta.desc; else ex.remove();
+
+      const cover = (d.files || []).find(f => f.filename.toLowerCase() === 'cover.png');
+      if (cover) q('.single-cover img').src = cover.filename;
+      else q('.single-cover').remove();
+
+      // markdown 先渲染再消毒，防投稿里夹带脚本
+      q('.post-content').innerHTML = DOMPurify.sanitize(marked.parse(d.body));
+
+      const cn = q('.container-narrow');
+      if (d.meta.tags && d.meta.tags.length) {
+        const wrap = document.createElement('div');
+        wrap.className = 'single-tags';
+        const label = document.createElement('span');
+        label.className = 'tags-label';
+        label.textContent = 'Tags';
+        wrap.append(label);
+        d.meta.tags.forEach(t => {
+          const a = document.createElement('a');
+          a.className = 'tag-link';
+          a.textContent = t;
+          wrap.append(a);
+        });
+        cn.replaceChildren(wrap);
+      } else cn.replaceChildren();
+
+      // 正文里的相对路径图片走接口取，同样带密码
+      document.querySelectorAll('img').forEach(img => {
+        const src = img.getAttribute('src') || '';
+        if (/^(https?:|data:|\/)/.test(src)) return;
+        fetch(window.CATRIX_API + '/admin/file?id=' + id + '&name=' + encodeURIComponent(src), { headers: { 'X-Admin-Key': KEY } })
+          .then(r => r.ok ? r.blob() : null)
+          .then(b => { if (b) img.src = URL.createObjectURL(b); });
+      });
+    });
+})();
+</script>
+{{ end }}

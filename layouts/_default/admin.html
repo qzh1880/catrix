@@ -1,0 +1,244 @@
+{{ define "main" }}
+<article class="admin container-narrow">
+  <header class="page-header">
+    <p class="page-eyebrow">Catrix · Admin</p>
+    <h1 class="page-title">{{ .Title }}</h1>
+    <div class="page-divider" aria-hidden="true"></div>
+  </header>
+
+  <p id="admin-status" class="admin-feedback" role="status" aria-live="polite"></p>
+  <div id="panel">正在读取投稿…</div>
+
+  <dialog id="publish-dialog" aria-labelledby="publish-heading">
+    <form id="publish-form">
+      <h2 id="publish-heading">发布文章</h2>
+      <p>请输入完整标题 <strong id="publish-article"></strong>，确认发布到 GitHub 的 main 分支。</p>
+      <label for="publish-title">文章标题</label>
+      <input id="publish-title" type="text" autocomplete="off" required>
+      <p id="publish-status" role="status"></p>
+      <div class="admin-actions">
+        <button id="publish-cancel" class="admin-btn" type="button">取消</button>
+        <button id="publish-confirm" class="admin-btn admin-publish" type="submit" disabled>发布</button>
+      </div>
+    </form>
+  </dialog>
+</article>
+
+<style>
+  .admin { padding-bottom: var(--spacing-xl); }
+
+  /* 投稿卡片 */
+  .admin-card { border: 1px solid var(--color-border); padding: 20px 22px; margin-bottom: 18px; }
+  .admin-card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+  .admin-meta { font-size: .75rem; color: var(--color-text-muted); }
+  .admin-ok { color: #356148; }
+  .admin-feedback { margin-bottom: 18px; font-size: .85rem; }
+  .admin-feedback:empty { display: none; }
+  .admin-feedback[data-state="success"] { color: #356148; }
+  .admin-feedback[data-state="error"] { color: #a33434; }
+  .admin-feedback a { text-decoration: underline; }
+  .admin-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .admin-btn {
+    padding: 8px 16px; border: 1px solid var(--color-border); background: none;
+    color: var(--color-text-secondary); font: inherit; font-size: .78rem; cursor: pointer;
+  }
+  .admin-btn:hover { border-color: var(--color-text); color: var(--color-text); }
+  .admin-btn.admin-publish { background: #238636; border-color: #238636; color: #fff; }
+  .admin-btn.admin-publish:hover { background: #1f7630; border-color: #1f7630; color: #fff; }
+  .admin-btn:disabled { opacity: .5; cursor: not-allowed; }
+  #publish-dialog {
+    margin: auto;
+    width: min(440px, calc(100% - 32px)); padding: 24px;
+    border: 1px solid var(--color-border); border-radius: 0;
+    background: var(--color-bg); color: var(--color-text); font: inherit;
+  }
+  #publish-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+  #publish-dialog h2 { margin-bottom: 16px; font-size: 1.15rem; }
+  #publish-dialog p { margin-bottom: 16px; font-size: .85rem; overflow-wrap: anywhere; }
+  #publish-article { white-space: pre-wrap; }
+  #publish-dialog label { display: block; margin-bottom: 8px; font-size: .8rem; }
+  #publish-title {
+    width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--color-bg); color: var(--color-text); font: inherit;
+  }
+  #publish-status:empty { display: none; }
+  #publish-dialog .admin-actions { justify-content: flex-end; margin-top: 0; }
+</style>
+
+<script src="/js/api.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.2/dist/jszip.min.js"></script>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const panel = $('panel');
+  const KEY = localStorage.getItem('catrixAdmin') || '';
+  const dialog = $('publish-dialog');
+  const titleInput = $('publish-title');
+  const publishButton = $('publish-confirm');
+  const cancelButton = $('publish-cancel');
+  const publishStatus = $('publish-status');
+  const feedback = $('admin-status');
+  let selectedPost = null;
+  let publishing = false;
+
+  // 调 Worker 接口，密码放在自定义请求头里
+  const api = (path, options = {}) => fetch(window.CATRIX_API + path, {
+    ...options,
+    headers: { 'X-Admin-Key': KEY, ...options.headers },
+  });
+
+  // 建一个带 class 的元素
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  // 把投稿列表画成一张张卡片
+  function render(posts) {
+    panel.replaceChildren();
+    if (!posts.length) return panel.append(el('p', 'admin-meta', '还没有投稿。'));
+    posts.forEach(p => {
+      let tags = '';
+      try { tags = (JSON.parse(p.tags) || []).join('、'); } catch { tags = p.tags; }
+      const meta = el('p', 'admin-meta', '#' + p.id + ' · ' + p.name + ' · ' + p.created_at + ' UTC · ' + (tags || '无标签'));
+      if (p.approved) meta.append(el('span', 'admin-ok', ' ✓ 已发布'));
+
+      // 已发布的文章显示提交和文章链接，待发布的文章显示发布按钮。
+      const actions = el('div', 'admin-actions');
+      const add = (text, fn) => {
+        const b = el('button', 'admin-btn', text);
+        b.addEventListener('click', fn);
+        actions.append(b);
+        return b;
+      };
+      const addLink = (text, href) => {
+        const link = el('a', 'admin-btn', text);
+        link.href = href;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        actions.append(link);
+      };
+      add('成品', () => { location.href = '/admin/preview/?id=' + p.id; });
+      add('zip', () => download(p));
+      if (p.approved) {
+        if (p.commit_url) addLink('GitHub 提交', p.commit_url);
+        addLink('查看文章', p.page_url);
+      } else {
+        add('发布', () => openPublish(p)).classList.add('admin-publish');
+      }
+
+      const card = el('div', 'admin-card');
+      card.append(el('h3', '', p.title), meta, actions);
+      panel.append(card);
+    });
+  }
+
+  function openPublish(post) {
+    selectedPost = post;
+    $('publish-article').textContent = post.title;
+    titleInput.value = '';
+    publishStatus.textContent = '';
+    publishButton.disabled = true;
+    dialog.showModal();
+    titleInput.focus();
+  }
+
+  titleInput.addEventListener('input', () => {
+    publishButton.disabled = publishing || titleInput.value !== selectedPost.title;
+  });
+  cancelButton.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('cancel', event => {
+    if (publishing) event.preventDefault();
+  });
+  $('publish-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (publishing || !selectedPost || titleInput.value !== selectedPost.title) return;
+    publishing = true;
+    publishButton.disabled = true;
+    cancelButton.disabled = true;
+    titleInput.disabled = true;
+    feedback.replaceChildren();
+    publishStatus.textContent = '正在发布到 GitHub…';
+    try {
+      const response = await api('/admin/publish?id=' + selectedPost.id, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: titleInput.value }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok !== true) throw new Error(result.error || '发布失败（' + response.status + '）。');
+      feedback.dataset.state = 'success';
+      feedback.append('发布成功：' + selectedPost.title + '。');
+      if (result.url) {
+        const link = el('a', '', '查看 GitHub 提交');
+        link.href = result.url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        feedback.append(' ', link);
+      }
+      dialog.close();
+      await load();
+    } catch (error) {
+      const message = '发布失败：' + (error instanceof TypeError ? '连接失败，请稍后重试。' : error.message);
+      publishStatus.textContent = message;
+      feedback.dataset.state = 'error';
+      feedback.textContent = message;
+    } finally {
+      publishing = false;
+      cancelButton.disabled = false;
+      titleInput.disabled = false;
+      publishButton.disabled = titleInput.value !== selectedPost.title;
+    }
+  });
+
+  // 拉列表并画出来
+  async function load() {
+    try {
+      const res = await api('/admin/list');
+      if ([401, 403, 404].includes(res.status)) {
+        localStorage.removeItem('catrixAdmin');
+        location.replace('/admin/login/');
+        return;
+      }
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        panel.textContent = error.error || '后台读取失败（' + res.status + '）。';
+        return;
+      }
+      render(await res.json());
+    } catch {
+      panel.textContent = '连接失败，请确认 Worker 已启动。';
+    }
+  }
+
+  // 打包成 zip 下载，目录结构就是 content/posts/<日期>-<标题>/
+  async function download(p) {
+    const res = await api('/admin/post?id=' + p.id);
+    if (!res.ok) return alert('读取失败 ' + res.status);
+    const d = await res.json();
+    const zip = new JSZip();
+    const folder = zip.folder(d.dir);
+    folder.file('index.md', d.indexMd);
+    for (const f of d.files) {
+      if (f.filename.toLowerCase().endsWith('.md')) continue;
+      const r = await api('/admin/file?id=' + p.id + '&name=' + encodeURIComponent(f.filename));
+      if (!r.ok) return alert('打包失败 ' + r.status);
+      folder.file(f.filename, await r.arrayBuffer());
+    }
+    const a = el('a');
+    const blob = await zip.generateAsync({ type: 'blob' });
+    a.href = URL.createObjectURL(blob);
+    a.download = 'catrix-' + p.id + '.zip';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  if (KEY) load();
+  else location.replace('/admin/login/');
+})();
+</script>
+{{ end }}

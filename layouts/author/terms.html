@@ -1,0 +1,59 @@
+{{ define "main" }}
+<section class="page-header">
+  <div class="container">
+    <p class="page-eyebrow">AUTHORS</p>
+    <h1 class="page-title">专栏作者</h1>
+    <p class="page-desc">浏览所有创作者及其作品</p>
+    <div class="page-divider"></div>
+  </div>
+</section>
+
+<section class="tags-section">
+  <div class="container">
+    <div class="authors-grid">
+      {{ range .Data.Terms.ByCount }}
+      {{ $authorPage := .Page }}
+      {{ $avatar := or $authorPage.Params.avatar $authorPage.Params.avator }}
+      {{ $bio := or $authorPage.Params.bio $authorPage.Params.description }}
+      <a href="{{ .Page.Permalink }}" class="author-card-item">
+        <div class="author-card-avatar">
+          {{ if $avatar }}
+          <img src="{{ $avatar | relURL }}" alt="{{ .Page.Title }}" loading="lazy">
+          {{ else }}
+          <span class="author-card-fallback" aria-hidden="true">{{ substr .Page.Title 0 1 }}</span>
+          {{ end }}
+        </div>
+        <h2 class="author-card-name">{{ .Page.Title }}</h2>
+        {{ with $bio }}
+        <p class="author-card-bio">{{ . }}</p>
+        {{ end }}
+        <span class="author-card-count">{{ .Count }} 篇文章</span>
+      </a>
+      {{ end }}
+    </div>
+
+    <!-- All authors with posts -->
+    <div class="tags-detail-list">
+      {{ range .Data.Terms.Alphabetical }}
+      <div class="tag-detail-group">
+        <h3 class="tag-detail-title">
+          <a href="{{ .Page.Permalink }}">{{ .Page.Title }}</a>
+          <span class="tag-detail-count">{{ .Count }} 篇文章</span>
+        </h3>
+        <div class="tag-detail-posts">
+          {{ range first 5 .Pages }}
+          <a href="{{ .Permalink }}" class="tag-post-item">
+            <span class="tag-post-date">{{ .Date.Format "01.02" }}</span>
+            <span class="tag-post-title">{{ .Title }}</span>
+          </a>
+          {{ end }}
+          {{ if gt .Count 5 }}
+          <a href="{{ .Page.Permalink }}" class="tag-post-more">查看全部 {{ .Count }} 篇 →</a>
+          {{ end }}
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }}

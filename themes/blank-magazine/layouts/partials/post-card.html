@@ -15,6 +15,11 @@
     <h2 class="post-card-title">
       <a href="{{ .Permalink }}">{{ .Title }}</a>
     </h2>
+    {{ with .Params.author }}
+    {{ $authors := . }}
+    {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+    <p class="post-card-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+    {{ end }}
     {{ with .Description }}
     <p class="post-card-excerpt">{{ . | plainify | truncate 140 }}</p>
     {{ else }}

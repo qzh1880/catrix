@@ -18,7 +18,7 @@
     {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
     <p class="single-author" style="margin-top: 12px; margin-bottom: 8px; font-size: 1.15rem; opacity: 0.9;">
       <span class="by-line" style="font-weight: 400;">By </span>
-      {{ range $i, $name := $authors }}{{ if $i }}<span class="by-line"> &amp; </span>{{ end }}<a href="{{ "/author/" | relURL }}{{ $name | urlize }}/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">{{ $name }}</a>{{ end }}
+      {{ range $i, $name := $authors }}{{ if $i }}<span class="by-line">, </span>{{ end }}<a href="{{ "/author/" | relURL }}{{ $name | urlize }}/" class="author-link" style="color: inherit; text-decoration: underline; font-weight: 600; letter-spacing: 0.01em;">{{ $name }}</a>{{ end }}
     </p>
     {{ end }}
 
@@ -44,6 +44,9 @@
   <div class="single-cover">
     <div class="container">
       <img src="{{ .Params.cover }}" alt="{{ .Title }}">
+      {{ with or .Params.coverSource .Params.coversource }}
+      <p class="single-cover-source">封面：{{ . | markdownify }}</p>
+      {{ end }}
     </div>
   </div>
   {{ end }}

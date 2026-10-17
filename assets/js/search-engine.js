@@ -6,7 +6,7 @@
     return index.filter(item => (!tag || (item.tags || []).includes(tag)) && (!category || (item.categories || []).includes(category)))
       .map(item => {
         const title = normalize(item.title);
-        const metadata = normalize([item.author, ...(item.tags || []), ...(item.categories || [])].join(' '));
+        const metadata = normalize([item.author, ...(item.tags || []), ...(item.categories || [])].flat().join(' '));
         const text = title + ' ' + metadata + ' ' + normalize(item.content);
         const score = words.every(word => text.includes(word)) ? words.reduce((n, word) => n + (title.includes(word) ? 10 : metadata.includes(word) ? 5 : 1), 0) : -1;
         return { item, score };

@@ -27,6 +27,11 @@
             {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
           </div>
           <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Params.author }}
+          {{ $authors := . }}
+          {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+          <p class="post-list-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+          {{ end }}
           {{ with .Description }}
           <p class="post-list-excerpt">{{ . | plainify | truncate 120 }}</p>
           {{ else }}

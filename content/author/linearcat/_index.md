@@ -3,7 +3,7 @@ title: "线性小猫"
 bio: "Catrix 创始人"
 
 avatar: "https://avatars.githubusercontent.com/u/104124634?v=4"
+sociallinks:
+  Blog: "https://tallcat.cn"
 
 ---
-
-Blog [tallcat.cn](https://tallcat.cn)

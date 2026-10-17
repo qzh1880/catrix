@@ -1,11 +1,21 @@
 {{ define "main" }}
 {{ $isCat := eq .Data.Plural "categories" }}
+{{ $isAuthor := or (eq .Data.Plural "author") (eq .Data.Plural "authors") }}
 {{ if $isCat }}
 <section class="page-header">
   <div class="container">
     <p class="page-eyebrow">CATEGORIES</p>
     <h1 class="page-title">往期</h1>
     <p class="page-desc">浏览往期所有文章</p>
+    <div class="page-divider"></div>
+  </div>
+</section>
+{{ else if $isAuthor }}
+<section class="page-header">
+  <div class="container">
+    <p class="page-eyebrow">AUTHORS</p>
+    <h1 class="page-title">专栏作者</h1>
+    <p class="page-desc">浏览所有创作者及其作品</p>
     <div class="page-divider"></div>
   </div>
 </section>
@@ -25,7 +35,7 @@
     <div class="tags-cloud">
       {{ range .Data.Terms.ByCount }}
       <a href="{{ .Page.Permalink }}" class="tag-cloud-item" style="font-size: {{ add 14 (mul .Count 2) }}px;">
-        <span class="tag-name">{{ if not $isCat }}#{{ end }}{{ .Page.Title }}</span>
+        <span class="tag-name">{{ if and (not $isCat) (not $isAuthor) }}#{{ end }}{{ .Page.Title }}</span>
         <span class="tag-count">{{ .Count }}</span>
       </a>
       {{ end }}
@@ -36,7 +46,7 @@
       {{ range .Data.Terms.Alphabetical }}
       <div class="tag-detail-group">
         <h3 class="tag-detail-title">
-          <a href="{{ .Page.Permalink }}">{{ if not $isCat }}#{{ end }}{{ .Page.Title }}</a>
+          <a href="{{ .Page.Permalink }}">{{ if and (not $isCat) (not $isAuthor) }}#{{ end }}{{ .Page.Title }}</a>
           <span class="tag-detail-count">{{ .Count }} 篇文章</span>
         </h3>
         <div class="tag-detail-posts">

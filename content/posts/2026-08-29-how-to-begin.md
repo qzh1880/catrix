@@ -2,7 +2,7 @@
 date: '2026-08-29T11:40:17+08:00'
 draft: false
 title: "Catrix.net 创作者投稿与协作指南"
-author: "linearcat"
+author: ["longzimao","linearcat"]
 description: 面向 catrix.net 创作者的完整协作与提交流程指南，涵盖从拉取代码到文章发布的每一步
 # cover:
 #     image: "https://avatars.githubusercontent.com/u/104124634?v=4" # image path/url

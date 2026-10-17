@@ -1,0 +1,401 @@
+{{ $id := .Get "id" | default (printf "cie-compare-%d" now.UnixNano) }}
+<div class="catrix-cie-wrapper" id="{{ $id }}">
+  <style>
+    #{{ $id }} {
+      width: 100%;
+      max-width: 860px;
+      margin: 20px auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #111827;
+      box-sizing: border-box;
+    }
+    #{{ $id }} * {
+      box-sizing: border-box;
+      border-radius: 0 !important;
+    }
+    #{{ $id }} .cie-container {
+      width: 100%;
+      border: 1px solid #111827;
+      padding: 16px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #{{ $id }} .cie-header {
+      border-bottom: 2px solid #111827;
+      padding-bottom: 10px;
+    }
+    #{{ $id }} .cie-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+    #{{ $id }} .cie-subtitle {
+      margin: 4px 0 0 0;
+      font-size: 12px;
+      color: #4b5563;
+      font-family: ui-monospace, monospace;
+      line-height: 1.5;
+    }
+    #{{ $id }} .cie-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    @media (max-width: 640px) {
+      #{{ $id }} .cie-kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    #{{ $id }} .cie-kpi-card {
+      background: #fafafa;
+      border: 1px solid #d1d5db;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-family: ui-monospace, monospace;
+    }
+    #{{ $id }} .cie-kpi-label {
+      font-size: 11px;
+      color: #6b7280;
+    }
+    #{{ $id }} .cie-kpi-value {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    #{{ $id }} .cie-control-deck {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      border: 1px solid #111827;
+      padding: 6px;
+      background: #fafafa;
+    }
+    #{{ $id }} .cie-btn {
+      flex: 1 1 auto;
+      min-width: 100px;
+      padding: 6px 12px;
+      border: 1px solid #111827;
+      background: #ffffff;
+      color: #111827;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: none;
+    }
+    #{{ $id }} .cie-btn:hover {
+      background: #f3f4f6;
+    }
+    #{{ $id }} .cie-btn.is-active {
+      background: #111827;
+      color: #ffffff;
+    }
+    #{{ $id }} .cie-viz-wrapper {
+      position: relative;
+      width: 100%;
+      height: 380px;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      overflow: hidden;
+    }
+    #{{ $id }} canvas.cie-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #{{ $id }} .cie-legend-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-family: ui-monospace, monospace;
+      font-size: 11.5px;
+      color: #374151;
+    }
+    #{{ $id }} .cie-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #{{ $id }} .cie-legend-dot {
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+    }
+    #{{ $id }} .cie-takeaway-card {
+      border: 1px solid #111827;
+      background: #fafafa;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #374151;
+      font-family: ui-monospace, monospace;
+    }
+  </style>
+
+  <div class="cie-container">
+    <div class="cie-header">
+      <h3 class="cie-title">CIE 1931 色域覆盖对比：极端光谱顶点 vs. 中间基色</h3>
+      <p class="cie-subtitle">EXTREME PRIMARIES (RGB) VS. INTERMEDIATE WAVELENGTHS (CMY) ON 2D LOCUS</p>
+    </div>
+
+    <div class="cie-kpi-grid">
+      <div class="cie-kpi-card">
+        <span class="cie-kpi-label">标准 sRGB 覆盖</span>
+        <span class="cie-kpi-value kpi-srgb" style="color: #0284c7;">33.5%</span>
+        <span class="cie-kpi-label">占可见光谱总面积</span>
+      </div>
+      <div class="cie-kpi-card">
+        <span class="cie-kpi-label">替代基色覆盖</span>
+        <span class="cie-kpi-value kpi-alt" style="color: #c026d3;">15.2%</span>
+        <span class="cie-kpi-label">黄/青/紫 (575/495/410nm)</span>
+      </div>
+      <div class="cie-kpi-card">
+        <span class="cie-kpi-label">色域覆盖削减</span>
+        <span class="cie-kpi-value kpi-loss" style="color: #dc2626;">-54.6%</span>
+        <span class="cie-kpi-label">相对 sRGB 面积损失率</span>
+      </div>
+    </div>
+
+    <div class="cie-control-deck">
+      <button type="button" class="cie-btn is-active" data-mode="both">双色域对比</button>
+      <button type="button" class="cie-btn" data-mode="srgb">仅标准 sRGB</button>
+      <button type="button" class="cie-btn" data-mode="alt">仅黄/青/紫基色</button>
+      <button type="button" class="cie-btn" data-mode="overlap">重叠与丢失区域</button>
+    </div>
+
+    <div class="cie-viz-wrapper">
+      <canvas class="cie-canvas"></canvas>
+    </div>
+
+    <div class="cie-legend-row">
+      <div class="cie-legend-item">
+        <span class="cie-legend-dot" style="background: #0284c7;"></span>
+        <span>标准 sRGB (红:0.64,0.33 / 绿:0.30,0.60 / 蓝:0.15,0.06)</span>
+      </div>
+      <div class="cie-legend-item">
+        <span class="cie-legend-dot" style="background: #c026d3;"></span>
+        <span>替代基色 (黄:0.48,0.51 / 青:0.08,0.53 / 紫:0.18,0.03)</span>
+      </div>
+    </div>
+
+    <div class="cie-takeaway-card">
+      <b>结论：</b>三基色越靠近 CIE 色度图边缘凸起顶点（极远红、顶端深绿、极远蓝紫），所围成的三角形包含面积越大。若换用非极端光谱点（如黄色 575nm 或青色 495nm），三角形顶角被严重截断，导致纯红与深绿区域几乎完全无法再现。
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const scope = document.getElementById("{{ $id }}");
+    if (!scope) return;
+
+    const canvas = scope.querySelector('canvas.cie-canvas');
+    const ctx = canvas.getContext('2d');
+    const buttons = scope.querySelectorAll('.cie-btn');
+
+    let currentMode = 'both';
+
+    const CIE_LOCUS = [
+      {x: 0.1741, y: 0.0050}, {x: 0.1727, y: 0.0048}, {x: 0.1708, y: 0.0054}, 
+      {x: 0.1669, y: 0.0076}, {x: 0.1603, y: 0.0125}, {x: 0.1511, y: 0.0210}, 
+      {x: 0.1355, y: 0.0399}, {x: 0.1141, y: 0.0744}, {x: 0.0869, y: 0.1347}, 
+      {x: 0.0580, y: 0.2231}, {x: 0.0308, y: 0.3362}, {x: 0.0139, y: 0.4607}, 
+      {x: 0.0119, y: 0.5936}, {x: 0.0322, y: 0.7070}, {x: 0.0743, y: 0.7832}, 
+      {x: 0.1142, y: 0.8262}, {x: 0.1547, y: 0.8059}, {x: 0.2296, y: 0.7543}, 
+      {x: 0.3016, y: 0.6923}, {x: 0.3731, y: 0.6245}, {x: 0.4441, y: 0.5547}, 
+      {x: 0.5125, y: 0.4866}, {x: 0.5752, y: 0.4242}, {x: 0.6270, y: 0.3725}, 
+      {x: 0.6658, y: 0.3340}, {x: 0.6915, y: 0.3083}, {x: 0.7079, y: 0.2920}, 
+      {x: 0.7190, y: 0.2809}, {x: 0.7347, y: 0.2653}
+    ];
+
+    const sRGB_TRIANGLE = [
+      {x: 0.64, y: 0.33, label: 'Red (0.64, 0.33)'},
+      {x: 0.30, y: 0.60, label: 'Green (0.30, 0.60)'},
+      {x: 0.15, y: 0.06, label: 'Blue (0.15, 0.06)'}
+    ];
+
+    const ALT_TRIANGLE = [
+      {x: 0.48, y: 0.51, label: 'Yellow (0.48, 0.51)'},
+      {x: 0.08, y: 0.53, label: 'Cyan (0.08, 0.53)'},
+      {x: 0.18, y: 0.03, label: 'Purple (0.18, 0.03)'}
+    ];
+
+    function calcPolygonArea(pts) {
+      let area = 0;
+      const n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        area += pts[i].x * pts[j].y;
+        area -= pts[j].x * pts[i].y;
+      }
+      return Math.abs(area) / 2;
+    }
+
+    const locusArea = calcPolygonArea(CIE_LOCUS);
+    const srgbArea = calcPolygonArea(sRGB_TRIANGLE);
+    const altArea = calcPolygonArea(ALT_TRIANGLE);
+
+    scope.querySelector('.kpi-srgb').textContent = ((srgbArea / locusArea) * 100).toFixed(1) + '%';
+    scope.querySelector('.kpi-alt').textContent = ((altArea / locusArea) * 100).toFixed(1) + '%';
+    scope.querySelector('.kpi-loss').textContent = '-' + (((srgbArea - altArea) / srgbArea) * 100).toFixed(1) + '%';
+
+    function renderChart() {
+      const parent = canvas.parentElement;
+      const width = parent.clientWidth || 600;
+      const height = parent.clientHeight || 380;
+      const dpr = window.devicePixelRatio || 1;
+
+      if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      const padding = 36;
+      const plotWidth = width - padding * 2;
+      const plotHeight = height - padding * 2;
+      const scaleX = plotWidth / 0.8;
+      const scaleY = plotHeight / 0.85;
+      const scale = Math.min(scaleX, scaleY);
+
+      const originX = padding + 15;
+      const originY = height - padding;
+
+      function toPx(x, y) {
+        return {
+          px: originX + x * scale,
+          py: originY - y * scale
+        };
+      }
+
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '11px ui-monospace, monospace';
+
+      for (let v = 0; v <= 0.8; v += 0.1) {
+        const p1 = toPx(v, 0);
+        const p2 = toPx(v, 0.85);
+        ctx.beginPath();
+        ctx.moveTo(p1.px, p1.py);
+        ctx.lineTo(p2.px, p2.py);
+        ctx.stroke();
+
+        ctx.fillText(v.toFixed(1), p1.px - 8, originY + 16);
+
+        const p3 = toPx(0, v);
+        const p4 = toPx(0.8, v);
+        ctx.beginPath();
+        ctx.moveTo(p3.px, p3.py);
+        ctx.lineTo(p4.px, p4.py);
+        ctx.stroke();
+
+        if (v > 0) {
+          ctx.fillText(v.toFixed(1), originX - 28, p3.py + 4);
+        }
+      }
+
+      ctx.beginPath();
+      CIE_LOCUS.forEach((pt, i) => {
+        const {px, py} = toPx(pt.x, pt.y);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+
+      ctx.fillStyle = '#f9fafb';
+      ctx.fill();
+
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      const showSRGB = currentMode === 'both' || currentMode === 'srgb' || currentMode === 'overlap';
+      const showAlt = currentMode === 'both' || currentMode === 'alt' || currentMode === 'overlap';
+
+      function drawGamut(pts, strokeColor, fillColor) {
+        ctx.beginPath();
+        pts.forEach((pt, i) => {
+          const {px, py} = toPx(pt.x, pt.y);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        pts.forEach(pt => {
+          const {px, py} = toPx(pt.x, pt.y);
+          ctx.beginPath();
+          ctx.arc(px, py, 4, 0, Math.PI * 2);
+          ctx.fillStyle = strokeColor;
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        });
+      }
+
+      if (showSRGB) {
+        const fillAlpha = (currentMode === 'overlap') ? 'rgba(2, 132, 199, 0.18)' : 'rgba(2, 132, 199, 0.28)';
+        drawGamut(sRGB_TRIANGLE, '#0284c7', fillAlpha);
+      }
+
+      if (showAlt) {
+        const fillAlpha = (currentMode === 'overlap') ? 'rgba(192, 38, 211, 0.25)' : 'rgba(192, 38, 211, 0.32)';
+        drawGamut(ALT_TRIANGLE, '#c026d3', fillAlpha);
+      }
+
+      if (currentMode === 'overlap') {
+        ctx.fillStyle = '#dc2626';
+        ctx.font = '700 11px ui-monospace, monospace';
+
+        const rPos = toPx(0.60, 0.24);
+        ctx.fillText("缺失: 纯红区域", rPos.px, rPos.py);
+
+        const gPos = toPx(0.24, 0.66);
+        ctx.fillText("缺失: 饱和深绿", gPos.px, gPos.py);
+      }
+
+      ctx.fillStyle = '#111827';
+      ctx.font = '700 12px ui-monospace, monospace';
+      ctx.fillText('x (色度坐标)', originX + plotWidth / 2 - 30, originY + 34);
+
+      ctx.save();
+      ctx.translate(originX - 32, originY - plotHeight / 2 + 20);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('y (色度坐标)', 0, 0);
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', e => {
+        buttons.forEach(b => b.classList.remove('is-active'));
+        e.target.classList.add('is-active');
+        currentMode = e.target.dataset.mode;
+        renderChart();
+      });
+    });
+
+    window.addEventListener('resize', renderChart);
+    renderChart();
+  })();
+  </script>
+</div>

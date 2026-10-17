@@ -43,6 +43,11 @@
           {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span>{{ . }}</span>{{ end }}{{ end }}
         </div>
         <h2 class="featured-title">{{ .Title }}</h2>
+        {{ with .Params.author }}
+        {{ $authors := . }}
+        {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+        <p class="featured-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+        {{ end }}
         {{ with .Description }}
         <p class="featured-excerpt">{{ . | plainify | truncate 160 }}</p>
         {{ end }}
@@ -78,6 +83,11 @@
             {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
           </div>
           <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Params.author }}
+          {{ $authors := . }}
+          {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+          <p class="post-list-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+          {{ end }}
           {{ with .Description }}
           <p class="post-list-excerpt">{{ . | plainify | truncate 100 }}</p>
           {{ end }}

@@ -1,0 +1,168 @@
+{{ define "main" }}
+{{ $authorTerm := .Data.Term }}
+{{ $authorPage := . }}
+{{ if not (or $authorPage.Params.avatar $authorPage.Params.avator $authorPage.Params.bio $authorPage.Content) }}
+  {{ $authorPage = or (site.GetPage (printf "author/%s" $authorTerm)) (site.GetPage (printf "authors/%s" $authorTerm)) (site.GetPage (printf "/author/%s" $authorTerm)) (site.GetPage (printf "/authors/%s" $authorTerm)) . }}
+{{ end }}
+
+{{ $avatar := or .Params.avatar .Params.avator $authorPage.Params.avatar $authorPage.Params.avator }}
+{{ $bio := or .Params.bio .Params.description $authorPage.Params.bio $authorPage.Params.description }}
+{{ $sociallinks := or .Params.sociallinks .Params.social_links .Params.socialLinks .Params.social $authorPage.Params.sociallinks $authorPage.Params.social_links $authorPage.Params.socialLinks $authorPage.Params.social }}
+{{ $content := or .Content $authorPage.Content }}
+
+<section class="page-header author-page-header">
+  <div class="container">
+    <div class="author-header-nav">
+      <p class="page-eyebrow">AUTHOR</p>
+      <div class="author-back-link">
+        <a href="{{ "/author/" | relURL }}">← 所有作者</a>
+      </div>
+    </div>
+
+    <div class="author-hero-card">
+      <div class="author-hero-avatar">
+        {{ if $avatar }}
+        <img src="{{ $avatar | relURL }}" alt="{{ $authorPage.Title }}">
+        {{ else }}
+        <span class="author-hero-fallback" aria-hidden="true">{{ substr $authorPage.Title 0 1 }}</span>
+        {{ end }}
+      </div>
+
+      <h1 class="author-hero-title">{{ $authorPage.Title }}</h1>
+
+      {{ with $bio }}
+      <p class="author-hero-bio">{{ . }}</p>
+      {{ end }}
+
+      <p class="author-hero-count">共 {{ len .Pages }} 篇文章</p>
+
+      {{ with $sociallinks }}
+      <div class="author-hero-social">
+        {{ if reflect.IsMap . }}
+          {{ range $platform, $val := . }}
+            {{ $url := "" }}
+            {{ $label := $platform | humanize }}
+            {{ if reflect.IsMap $val }}
+              {{ $url = or $val.url $val.link "" }}
+              {{ $label = or $val.name $val.title $label }}
+            {{ else }}
+              {{ $url = printf "%s" $val }}
+            {{ end }}
+            {{ if $url }}
+            <a href="{{ $url }}" target="_blank" rel="noopener noreferrer" class="author-social-btn" title="{{ $label }}">
+              {{ $p := $platform | lower }}
+              {{ if eq $p "github" }}<i class="fa-brands fa-github"></i>
+              {{ else if or (eq $p "twitter") (eq $p "x") }}<i class="fa-brands fa-x-twitter"></i>
+              {{ else if eq $p "weibo" }}<i class="fa-brands fa-weibo"></i>
+              {{ else if eq $p "bilibili" }}<i class="fa-brands fa-bilibili"></i>
+              {{ else if eq $p "zhihu" }}<i class="fa-brands fa-zhihu"></i>
+              {{ else if eq $p "telegram" }}<i class="fa-brands fa-telegram"></i>
+              {{ else if or (eq $p "email") (eq $p "mail") }}<i class="fa-regular fa-envelope"></i>
+              {{ else if or (eq $p "website") (eq $p "blog") (eq $p "site") }}<i class="fa-solid fa-globe"></i>
+              {{ else }}<i class="fa-solid fa-link"></i>{{ end }}
+              <span>{{ $label }}</span>
+            </a>
+            {{ end }}
+          {{ end }}
+        {{ else if reflect.IsSlice . }}
+          {{ range . }}
+            {{ if reflect.IsMap . }}
+              {{ $name := or .name .title .platform "Link" }}
+              {{ $url := or .url .link .href "" }}
+              {{ if $url }}
+              <a href="{{ $url }}" target="_blank" rel="noopener noreferrer" class="author-social-btn" title="{{ $name }}">
+                {{ $n := $name | lower }}
+                {{ $u := $url | lower }}
+                {{ if or (eq $n "github") (in $u "github") }}<i class="fa-brands fa-github"></i>
+                {{ else if or (eq $n "twitter") (eq $n "x") (in $u "twitter") (in $u "x.com") }}<i class="fa-brands fa-x-twitter"></i>
+                {{ else if or (eq $n "weibo") (in $u "weibo") }}<i class="fa-brands fa-weibo"></i>
+                {{ else if or (eq $n "bilibili") (in $u "bilibili") }}<i class="fa-brands fa-bilibili"></i>
+                {{ else if or (eq $n "zhihu") (in $u "zhihu") }}<i class="fa-brands fa-zhihu"></i>
+                {{ else if or (eq $n "telegram") (in $u "t.me") }}<i class="fa-brands fa-telegram"></i>
+                {{ else if or (eq $n "email") (eq $n "mail") (in $u "mailto") }}<i class="fa-regular fa-envelope"></i>
+                {{ else if or (eq $n "website") (eq $n "blog") }}<i class="fa-solid fa-globe"></i>
+                {{ else }}<i class="fa-solid fa-link"></i>{{ end }}
+                <span>{{ $name }}</span>
+              </a>
+              {{ end }}
+            {{ else }}
+              {{ $url := printf "%s" . }}
+              {{ if $url }}
+              {{ $u := $url | lower }}
+              <a href="{{ $url }}" target="_blank" rel="noopener noreferrer" class="author-social-btn">
+                {{ if in $u "github" }}<i class="fa-brands fa-github"></i><span>GitHub</span>
+                {{ else if or (in $u "twitter") (in $u "x.com") }}<i class="fa-brands fa-x-twitter"></i><span>Twitter</span>
+                {{ else if in $u "weibo" }}<i class="fa-brands fa-weibo"></i><span>微博</span>
+                {{ else if in $u "bilibili" }}<i class="fa-brands fa-bilibili"></i><span>Bilibili</span>
+                {{ else if in $u "zhihu" }}<i class="fa-brands fa-zhihu"></i><span>知乎</span>
+                {{ else if in $u "t.me" }}<i class="fa-brands fa-telegram"></i><span>Telegram</span>
+                {{ else if in $u "mailto" }}<i class="fa-regular fa-envelope"></i><span>Email</span>
+                {{ else }}<i class="fa-solid fa-globe"></i><span>Link</span>{{ end }}
+              </a>
+              {{ end }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      </div>
+      {{ end }}
+    </div>
+
+    {{ with $content }}
+    <div class="author-hero-content post-content">
+      {{ . }}
+    </div>
+    {{ end }}
+
+    <div class="page-divider" style="margin-top: 36px;"></div>
+  </div>
+</section>
+
+<!-- 所有内容之后显示该作者的作品列表 -->
+<section class="post-list-section">
+  <div class="container">
+    <div class="section-label" style="margin-bottom: 24px;">
+      <span class="label-line"></span>
+      <span class="label-text">ARTICLES · 作品列表</span>
+      <span class="label-line"></span>
+    </div>
+
+    {{ $paginator := .Paginate .Pages }}
+    <div class="post-list">
+      {{ range $paginator.Pages }}
+      <a href="{{ .Permalink }}" class="post-list-item">
+        {{ if .Params.cover }}
+        <div class="post-list-cover">
+          <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+        </div>
+        {{ end }}
+        <div class="post-list-content">
+          <div class="post-list-meta">
+            <time>{{ .Date.Format "January 2, 2006" }}</time>
+            {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
+          </div>
+          <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Params.author }}
+          {{ $authors := . }}
+          {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+          <p class="post-list-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+          {{ end }}
+          {{ with .Description }}
+          <p class="post-list-excerpt">{{ . | plainify | truncate 120 }}</p>
+          {{ else }}
+          <p class="post-list-excerpt">{{ .Summary | plainify | truncate 120 }}</p>
+          {{ end }}
+          {{ if .Params.tags }}
+          <div class="post-list-tags">
+            {{ range first 3 .Params.tags }}
+            <span>#{{ . }}</span>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    {{ partial "pagination.html" . }}
+  </div>
+</section>
+{{ end }}

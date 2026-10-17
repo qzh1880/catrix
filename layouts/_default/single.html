@@ -60,7 +60,15 @@
     </aside>
 
     <!-- Main Content -->
-    <div class="post-content">
+    {{ $firstlarge := true }}
+    {{ if isset site.Params "firstlarge" }}
+      {{ $firstlarge = site.Params.firstlarge }}
+    {{ end }}
+    {{ if isset .Params "firstlarge" }}
+      {{ $firstlarge = .Params.firstlarge }}
+    {{ end }}
+    {{ $isFirstLarge := not (or (eq $firstlarge false) (eq $firstlarge "false") (eq $firstlarge 0) (eq $firstlarge "0")) }}
+    <div class="post-content{{ if not $isFirstLarge }} no-first-large{{ end }}">
       {{ .Content }}
     </div>
   </div>
@@ -90,6 +98,17 @@
   </div>
 </article>
 <style>
+  .post-content.no-first-large > p:first-of-type::first-letter {
+    font: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    float: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+  }
   .single-share-bottom { display: none; justify-content: center; }
   @media (max-width: 1024px) {
     .single-share-bottom { display: flex; flex-direction: row; }

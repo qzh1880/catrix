@@ -68,7 +68,15 @@
     </aside>
 
     <!-- Main Content -->
-    <div class="post-content">
+    {{ $firstlarge := true }}
+    {{ if isset site.Params "firstlarge" }}
+      {{ $firstlarge = site.Params.firstlarge }}
+    {{ end }}
+    {{ if isset .Params "firstlarge" }}
+      {{ $firstlarge = .Params.firstlarge }}
+    {{ end }}
+    {{ $isFirstLarge := not (or (eq $firstlarge false) (eq $firstlarge "false") (eq $firstlarge 0) (eq $firstlarge "0")) }}
+    <div class="post-content{{ if not $isFirstLarge }} no-first-large{{ end }}">
       {{ .Content }}
     </div>
   </div>

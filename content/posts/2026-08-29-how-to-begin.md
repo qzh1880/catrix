@@ -66,6 +66,7 @@ author: ["zhangsan"]  # 这里一定要填你在 content/author/ 下创建的那
 tags: ["Maths"]
 draft: false  # 设置为 false 表示文章准备发布；若是草稿请设为 true
 summary: "用一两句话简短概括这篇文章的内容，用于列表页展示。"
+# firstlarge: true # 首字是否放大，默认为 true；如需正常大小请设为 false
 ---
 
 这里开始写你的正文...

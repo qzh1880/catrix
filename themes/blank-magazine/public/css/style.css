@@ -786,6 +786,18 @@ input, textarea {
   color: var(--color-text);
 }
 
+.post-content.no-first-large > p:first-of-type::first-letter {
+  font: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  float: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+}
+
 .post-content h2 {
   font-family: var(--font-serif);
   font-size: 1.6rem;

@@ -18,6 +18,7 @@ enableRobotsTXT = true
   slogan = ""
   email = "contact@catrix.net"
   mainSections = ["posts"]
+  firstlarge = true
 
 [menu]
   [[menu.main]]

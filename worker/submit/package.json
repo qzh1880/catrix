@@ -1,0 +1,11 @@
+{
+  "name": "catrix-submit",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy -c ../../wrangler.submit.jsonc && wrangler d1 execute DB -c ../../wrangler.submit.jsonc --remote --command \"CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, contact TEXT, title TEXT, tags TEXT DEFAULT '[]', description TEXT DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, r2_prefix TEXT NOT NULL UNIQUE, approved INTEGER NOT NULL DEFAULT 0, published_commit TEXT NOT NULL DEFAULT '');\""
+  },
+  "devDependencies": {
+    "wrangler": "4.148.0"
+  }
+}

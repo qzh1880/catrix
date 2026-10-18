@@ -1,8 +1,8 @@
 /*!
- * life-bg.js —— 首页背景：康威生命游戏 (Conway's Game of Life)
+ * life-bg.js —— 背景：康威生命游戏 (Conway's Game of Life)
  *
  * 行为：
- *   1. 每次刷新页面都会重新随机挑选一种预设图案作为初始状态；
+ *   1. 首次打开时随机初始化；同一标签页内换页、刷新都会接着上一盘演化；
  *   2. 之后以固定节奏（约 16 代/秒）在环形网格上演化：纯白底 + #e9eddf 像素点，
  *      只有这两个颜色；网格按屏幕分辨率自适应，桌面端约 320×180 个像素点；
  *   3. 规则 = 标准 B3/S23 + 两条「防结壳」的补充（见 MAX_AGE）：
@@ -14,7 +14,7 @@
  *      滑翔机、随机汤这类细胞寿命只有 1~3 代、邻域一直在变的动态结构不受影响；
  *   4. 活细胞数量有下限（MIN_POP）：掉下去就随机补种，同时变化率过低也补，
  *      所以画面会一直维持在一个"乱 → 衰 → 补新乱"的循环里，不会越跑越冷清；
- *   5. 右下角按钮可一键切回原有纯白背景，选择记在 localStorage 里。
+ *   5. 背景开关记在 localStorage，当前棋盘记在 sessionStorage 里。
  *
  * 把 MAX_AGE 设成 0 就退回纯正的 B3/S23（MIN_POP 也可以设 0 关掉补种）。
  *
@@ -34,6 +34,7 @@
   var toggle = doc.getElementById('bg-toggle');
   var ROOT = doc.documentElement;
   var STORAGE_KEY = 'catrix-bg';
+  var STATE_KEY = 'catrix-life-state';
   var MODE_LIFE = 'life';
   var MODE_WHITE = 'white';
 
@@ -220,6 +221,39 @@
     try {
       if (global.localStorage) { global.localStorage.setItem(STORAGE_KEY, mode); }
     } catch (e) { /* 隐私模式下忽略 */ }
+  }
+
+  /* 同一标签页共享棋盘；保存老化信息，让下一代的演化也保持一致。 */
+  function snapshotState() {
+    if (!cur) { return null; }
+    return {
+      version: 1, cols: cols, rows: rows,
+      cells: Array.prototype.slice.call(cur),
+      ages: Array.prototype.slice.call(age),
+      frozen: Array.prototype.slice.call(frozen),
+      signatures: Array.prototype.slice.call(prevSig),
+      still: still,
+      preset: ROOT.getAttribute('data-life-preset')
+    };
+  }
+
+  function saveState() {
+    if (!cur) { return; }
+    try {
+      global.sessionStorage.setItem(STATE_KEY, JSON.stringify(snapshotState()));
+    } catch (e) { /* 存储不可用时，动画仍可运行。 */ }
+  }
+
+  function readState() {
+    try {
+      var state = JSON.parse(global.sessionStorage.getItem(STATE_KEY));
+      if (!state || state.version !== 1 || state.cols <= 0 || state.rows <= 0 ||
+          (state.cols | 0) !== state.cols || (state.rows | 0) !== state.rows) { return null; }
+      var valid = ['cells', 'ages', 'frozen', 'signatures'].every(function (key) {
+        return Array.isArray(state[key]) && state[key].length === state.cols * state.rows;
+      });
+      return valid ? state : null;
+    } catch (e) { return null; }
   }
 
   function parsePattern(p) {
@@ -648,7 +682,7 @@
     render();
 
     /* 活性维持：默认已关闭（AUTO_REPLENISH = false），不在运行中自动刷新增添新方块。
-       只在浏览器刷新页面时初始化一次，页面未刷新情况下只持续进行现有的生命游戏。
+       仅在没有保存的棋盘时初始化，换页和刷新都恢复已有棋盘。
        若在配置中开启 autoReplenish: true，则启用原有自动补种逻辑。 */
     if (AUTO_REPLENISH) {
       var floorPop = MIN_POP > 0 ? Math.round(cols * rows * MIN_POP) : 0;
@@ -689,7 +723,8 @@
   /* ------------------------------------------------------------------ *
    * 尺寸与模式
    * ------------------------------------------------------------------ */
-  function resize() {
+  function resize(state) {
+    state = state || snapshotState() || readState();
     var w = global.innerWidth || 1024;
     var h = global.innerHeight || 768;
     var dpr = Math.min(global.devicePixelRatio || 1, 2);
@@ -732,7 +767,26 @@
     age = new Uint16Array(n);
     frozen = new Uint16Array(n);
     prevSig = new Uint16Array(n);
-    seed();
+    if (state) {
+      /* 窗口大小改变时保留重叠区域，新增区域留空，不重新随机。 */
+      var copyCols = Math.min(cols, state.cols);
+      var copyRows = Math.min(rows, state.rows);
+      for (var y = 0; y < copyRows; y++) {
+        for (var x = 0; x < copyCols; x++) {
+          var i = y * cols + x;
+          var j = y * state.cols + x;
+          cur[i] = state.cells[j];
+          age[i] = state.ages[j];
+          frozen[i] = state.frozen[j];
+          prevSig[i] = state.signatures[j];
+        }
+      }
+      still = state.still || 0;
+      if (state.preset) { ROOT.setAttribute('data-life-preset', state.preset); }
+      countPopulation();
+    } else {
+      seed();
+    }
   }
 
   function updateToggle(life) {
@@ -752,16 +806,15 @@
     var life = mode === MODE_LIFE;
     if (life) {
       ROOT.classList.add('life-mode');
-      if (!cur) {
-        resize();                       // 首次：建网格 + 随机播种
-      } else if (opts.reseed) {
-        seed();
+      if (!cur || viewW !== (global.innerWidth || 1024) || viewH !== (global.innerHeight || 768)) {
+        resize();
       }
       render();
       start();
     } else {
       ROOT.classList.remove('life-mode');
       stop();
+      saveState();
     }
     updateToggle(life);
     if (opts.persist) { saveMode(mode); }
@@ -783,21 +836,33 @@
   if (toggle) {
     toggle.addEventListener('click', function () {
       var life = ROOT.classList.contains('life-mode');
-      applyMode(life ? MODE_WHITE : MODE_LIFE, { persist: true, reseed: true });
+      applyMode(life ? MODE_WHITE : MODE_LIFE, { persist: true });
     });
   }
 
   global.addEventListener('resize', onResize);
+  global.addEventListener('pagehide', function () {
+    stop();
+    saveState();
+  });
+  global.addEventListener('pageshow', function (event) {
+    if (!event.persisted) { return; }
+    /* 后退恢复的页面可能带着旧棋盘，优先读取最近一页保存的状态。 */
+    stop();
+    resize(readState());
+    applyMode(readMode());
+  });
   doc.addEventListener('visibilitychange', function () {
     if (doc.hidden) {
       stop();
+      saveState();
     } else if (ROOT.classList.contains('life-mode')) {
       lastStep = 0;
       start();
     }
   });
 
-  applyMode(readMode(), { reseed: true });
+  applyMode(readMode());
 
   /* 调试接口：控制台里 __catrixLife.seedPreset('pulsar') 之类可以用 */
   global.__catrixLife = {
@@ -816,7 +881,7 @@
     seedRandom: seedRandomMode,
     step: stepOnce,
     render: render,
-    setMode: function (m) { applyMode(m === MODE_WHITE ? MODE_WHITE : MODE_LIFE, { reseed: true, persist: true }); },
+    setMode: function (m) { applyMode(m === MODE_WHITE ? MODE_WHITE : MODE_LIFE, { persist: true }); },
     stats: function () {
       var stillCells = 0;
       for (var i = 0; i < cur.length; i++) { if (cur[i] && frozen[i] >= 4) { stillCells++; } }

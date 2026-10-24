@@ -78,6 +78,36 @@ block  = [['$$', '$$']]
   enabled = true
   apiURL = "https://comments-api.catrix.net/comments"
 
+# -----------------------------------------------------------------------------
+# 侧栏文章预览图 CDN 缩略图配置
+# 作用：仅在首页右侧栏“最新文章”列表中将原图代理为尺寸较小（约 200px）的压缩图，
+#       大幅提升首屏加载速度；点击文章后进入详情页依然加载原版高清大图。
+# -----------------------------------------------------------------------------
+[params.sidebarThumb]
+  # 是否开启侧栏缩略图代理（设为 false 则直接加载原图）
+  enabled = false
+
+  # 缩略图链接模板：模板中的 %s 将自动替换为封面图片的原始完整 URL
+  # 当前生效模板 (wsrv.nl): 缩放到宽度 200px，输出 WebP 格式，质量 75
+  template = "https://wsrv.nl/?url=%s&w=200&output=webp&q=75"
+
+  # ======================== 备选 CDN 模板参考 ========================
+  # 切换方法：直接将上方 template 的内容替换为下列任意一行即可
+  #
+  # 1. wsrv.nl 居中裁剪版 (符合侧栏 16:10 比例，体积更小):
+  #    template = "https://wsrv.nl/?url=%s&w=200&h=125&fit=cover&output=webp&q=75"
+  #
+  # 2. 自建反代 / Cloudflare Worker 版 (大陆访问最推荐，避免公共 CDN 域名被阻断):
+  #    如果使用自己的域名或 Worker 部署（如 img.catrix.net）：
+  #    template = "https://img.catrix.net/?url=%s&w=200&output=webp&q=75"
+  #
+  # 3. Cloudflare 官方 Image Resizing (需域名开启 Pro 计划或付费版):
+  #    template = "https://catrix.net/cdn-cgi/image/width=200,quality=75,format=webp/%s"
+  #
+  # 4. Statically 免费图片 CDN (海外节点):
+  #    template = "https://cdn.statically.io/img/%s?w=200"
+  # ====================================================================
+
 # 首页生命游戏背景配置（推荐直接编辑 static/js/life-config.js，亦可在此覆盖）
 # [params.life]
 #   stepMs = 60              # 演化速度（每代间隔毫秒数，越小越快）

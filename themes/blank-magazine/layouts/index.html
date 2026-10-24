@@ -20,7 +20,7 @@
   <div class="container">
     <div class="section-label">
       <span class="label-line"></span>
-      <span class="label-text">FEATURED · 精选</span>
+      <span class="label-text">广告位招租</span>
       <span class="label-line"></span>
     </div>
 
@@ -83,8 +83,38 @@
               {{ end }}
             </div>
             {{ if .Params.cover }}
+            {{ $coverUrl := .Params.cover }}
+            {{ if not (hasPrefix $coverUrl "http") }}
+              {{ $coverUrl = absURL $coverUrl }}
+            {{ end }}
+            {{ $thumbUrl := $coverUrl }}
+            {{ $cdnConf := site.Params.sidebarThumb }}
+
+            {{/* 方案一：Hugo 构建期自动拉取原图并生成本地 200px WebP 缩略图（随 Cloudflare Pages 静态托管） */}}
+            {{ $imgRes := false }}
+            {{ if or (hasPrefix $coverUrl "http://") (hasPrefix $coverUrl "https://") }}
+              {{ with try (resources.GetRemote $coverUrl) }}
+                {{ with .Err }}
+                  {{/* 远端图片拉取失败，将回退原图链接 */}}
+                {{ else with .Value }}
+                  {{ $imgRes = . }}
+                {{ end }}
+              {{ end }}
+            {{ else }}
+              {{ with resources.Get .Params.cover }}
+                {{ $imgRes = . }}
+              {{ end }}
+            {{ end }}
+
+            {{ if $imgRes }}
+              {{ with $imgRes.Process "resize 200x webp q80" }}
+                {{ $thumbUrl = .RelPermalink }}
+              {{ end }}
+            {{ else if and $cdnConf $cdnConf.enabled $cdnConf.template }}
+              {{ $thumbUrl = printf $cdnConf.template $coverUrl }}
+            {{ end }}
             <div class="sidebar-post-thumb">
-              <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+              <img src="{{ $thumbUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" onerror="if(this.src!=='{{ $coverUrl }}'){this.onerror=null;this.src='{{ $coverUrl }}';}">
             </div>
             {{ end }}
           </a>

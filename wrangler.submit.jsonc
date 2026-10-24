@@ -2,6 +2,9 @@
   "name": "catrix-submit",
   "main": "worker/submit/worker.js",
   "compatibility_date": "2026-10-01",
+  "routes": [
+    { "pattern": "api.catrix.net", "custom_domain": true }
+  ],
   "vars": {
     "GITHUB_REPO": "qzh1880/catrix"
   },

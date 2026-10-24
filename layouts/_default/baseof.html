@@ -2,8 +2,8 @@
 <html lang="{{ .Site.LanguageCode | default "zh-cn" }}">
 <head>
   {{ partial "head.html" . }}
-  {{- if .IsHome }}
-  {{/* 首页背景：康威生命游戏（static/css/life-bg.css + static/js/life-bg.js） */}}
+  {{- if not (and .IsPage (eq .Section "posts")) }}
+  {{/* 生命游戏背景：文章正文页除外。 */}}
   <link rel="stylesheet" href="{{ "css/life-bg.css" | relURL }}?v={{ now.Unix }}">
   <script>
     /* 在首次绘制前定好背景模式，避免白底闪一下：
@@ -23,7 +23,7 @@
   </main>
   {{ partial "footer.html" . }}
 
-  {{- if .IsHome }}
+  {{- if not (and .IsPage (eq .Section "posts")) }}
   <canvas id="life-canvas" class="life-canvas" aria-hidden="true"
           style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;background:#fff"></canvas>
   <button id="bg-toggle" class="bg-toggle" type="button" data-mode="life" aria-pressed="true"

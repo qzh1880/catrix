@@ -1,76 +1,115 @@
 {{ define "main" }}
 
-<!-- Hero Section
-<section class="home-hero">
-  <div class="container">
-    <div class="home-hero-inner">
-      <p class="home-hero-eyebrow">{{ .Site.Params.author | upper }}</p>
-      <h1 class="home-hero-title">{{ .Site.Params.slogan | default .Site.Title }}</h1>
-      <p class="home-hero-desc">{{ .Site.Params.description }}</p>
-      <div class="home-hero-meta">
-        <span>{{ len (where .Site.RegularPages "Section" "posts") }} 篇文章</span>
-        <span class="dot">·</span>
-        <span>{{ len .Site.Taxonomies.tags }} 个标签</span>
-        <span class="dot">·</span>
-        <span>{{ len (where .Site.RegularPages "Section" "gallery") }} 本相册</span>
-      </div>
-    </div>
-  </div>
-</section>-->
-
-<!-- Featured Post -->
-{{ $featured := where (where .Site.RegularPages "Section" "posts") "Params.featured" true }}
+<!-- Featured Post & NYTimes Style Hero Section -->
+{{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ $featured := where $posts "Params.featured" true }}
+{{ $lead := false }}
 {{ if $featured }}
-{{ with index $featured 0 }}
+  {{ $lead = index $featured 0 }}
+{{ else if gt (len $posts) 0 }}
+  {{ $lead = index $posts 0 }}
+{{ end }}
+
+{{ if $lead }}
+{{ $otherPosts := where $posts "Permalink" "!=" $lead.Permalink }}
+{{ $sidebarPosts := first 5 $otherPosts }}
+{{ $morePosts := after 5 $otherPosts }}
+
+<!-- Hero: NYTimes Style (Featured Lead + Chronological Sidebar) -->
 <section class="home-featured">
   <div class="container">
-      <!--<span class="featured-stamp">Editor's Pick · 封面精选</span>-->
     <div class="section-label">
       <span class="label-line"></span>
       <span class="label-text">FEATURED · 精选</span>
       <span class="label-line"></span>
     </div>
-    <a href="{{ .Permalink }}" class="featured-card feature-cover">
-      {{ if .Params.cover }}
-      <div class="featured-cover">
-        <img src="{{ .Params.cover }}" alt="{{ .Title }}">
-      </div>
-      {{ end }}
-      <div class="featured-info">
 
-        <div class="featured-meta">
-          <time>{{ .Date.Format "January 2, 2006" }}</time>
-          {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span>{{ . }}</span>{{ end }}{{ end }}
-        </div>
-        <h2 class="featured-title">{{ .Title }}</h2>
-        {{ with .Params.author }}
-        {{ $authors := . }}
-        {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
-        <p class="featured-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
-        {{ end }}
-        {{ with .Description }}
-        <p class="featured-excerpt">{{ . | plainify | truncate 160 }}</p>
-        {{ end }}
-        <span class="featured-read">阅读全文 →</span>
+    <div class="home-hero-grid">
+      <!-- Left Column: Main Featured Article -->
+      <div class="home-hero-main">
+        <a href="{{ $lead.Permalink }}" class="featured-card feature-cover">
+          {{ if $lead.Params.cover }}
+          <div class="featured-cover">
+            <img src="{{ $lead.Params.cover }}" alt="{{ $lead.Title }}">
+          </div>
+          {{ end }}
+          <div class="featured-info">
+            <div class="featured-meta">
+              <time>{{ $lead.Date.Format "January 2, 2006" }}</time>
+              {{ with $lead.Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+            </div>
+            <h2 class="featured-title">{{ $lead.Title }}</h2>
+            {{ with $lead.Params.author }}
+            {{ $authors := . }}
+            {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+            <p class="featured-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+            {{ end }}
+            {{ with $lead.Description }}
+            <p class="featured-excerpt">{{ . | plainify | truncate 150 }}</p>
+            {{ else }}
+            <p class="featured-excerpt">{{ $lead.Summary | plainify | truncate 150 }}</p>
+            {{ end }}
+            <div class="featured-action">
+              <span class="featured-read">阅读全文 →</span>
+            </div>
+          </div>
+        </a>
       </div>
-    </a>
+
+      <!-- Right Column: Sidebar (Other Articles in Chronological Order) -->
+      {{ if gt (len $sidebarPosts) 0 }}
+      <aside class="home-hero-sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-header-label">LATEST · 最新文章</span>
+        </div>
+        <div class="sidebar-post-list">
+          {{ range $sidebarPosts }}
+          <a href="{{ .Permalink }}" class="sidebar-post-item">
+            <div class="sidebar-post-info">
+              <div class="sidebar-post-meta">
+                <time>{{ .Date.Format "January 2, 2006" }}</time>
+                {{ with .Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+              </div>
+              <h3 class="sidebar-post-title">{{ .Title }}</h3>
+              {{ with .Params.author }}
+              {{ $authors := . }}
+              {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+              <p class="sidebar-post-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+              {{ end }}
+              {{ with .Description }}
+              <p class="sidebar-post-excerpt">{{ . | plainify | truncate 70 }}</p>
+              {{ else }}
+              <p class="sidebar-post-excerpt">{{ .Summary | plainify | truncate 70 }}</p>
+              {{ end }}
+            </div>
+            {{ if .Params.cover }}
+            <div class="sidebar-post-thumb">
+              <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+            </div>
+            {{ end }}
+          </a>
+          {{ end }}
+        </div>
+        <div class="sidebar-footer">
+          <a href="{{ "/posts/" | relURL }}" class="sidebar-more-link">查看全部文章 →</a>
+        </div>
+      </aside>
+      {{ end }}
+    </div>
   </div>
 </section>
-{{ end }}
-{{ end }}
 
-<!-- Latest Posts List -->
+<!-- Additional Posts Section (if there are more than 5 other posts) -->
+{{ if gt (len $morePosts) 0 }}
 <section class="home-latest">
   <div class="container">
     <div class="section-label">
       <span class="label-line"></span>
-      <span class="label-text">LATEST · 最新文章</span>
+      <span class="label-text">MORE STORIES · 更多文章</span>
       <span class="label-line"></span>
     </div>
     <div class="post-list">
-      {{ $posts := where .Site.RegularPages "Section" "posts" }}
-      {{ $posts = $posts | first 6 }}
-      {{ range $posts }}
+      {{ range first 6 $morePosts }}
       <a href="{{ .Permalink }}" class="post-list-item">
         {{ if .Params.cover }}
         <div class="post-list-cover">
@@ -80,7 +119,7 @@
         <div class="post-list-content">
           <div class="post-list-meta">
             <time>{{ .Date.Format "January 2, 2006" }}</time>
-            {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
+            {{ with .Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
           </div>
           <h3 class="post-list-title">{{ .Title }}</h3>
           {{ with .Params.author }}
@@ -90,6 +129,8 @@
           {{ end }}
           {{ with .Description }}
           <p class="post-list-excerpt">{{ . | plainify | truncate 100 }}</p>
+          {{ else }}
+          <p class="post-list-excerpt">{{ .Summary | plainify | truncate 100 }}</p>
           {{ end }}
           {{ if .Params.tags }}
           <div class="post-list-tags">
@@ -107,6 +148,9 @@
     </div>
   </div>
 </section>
+{{ end }}
+
+{{ end }}
 
 <!-- Gallery Preview -->
 {{ $gallery := where .Site.RegularPages "Section" "gallery" }}
@@ -154,15 +198,6 @@
           <a href="{{ "/submit/" | relURL }}" class="more-link">了解更多 →</a>
         </div>
       </div>
-      <!-- <div class="home-subscribe">
-        <p class="section-label-text">SUBSCRIBE</p>
-        <h3 class="home-subscribe-title">订阅更新</h3>
-        <p class="home-subscribe-desc">第一时间收到新文章通知</p>
-        <form class="subscribe-form" onsubmit="event.preventDefault(); this.querySelector('input').value=''; alert('感谢订阅！');">
-          <input type="email" placeholder="输入你的邮箱" required>
-          <button type="submit">订阅</button>
-        </form>
-      </div> -->
     </div>
   </div>
 </section>

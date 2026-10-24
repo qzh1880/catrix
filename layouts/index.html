@@ -1,0 +1,205 @@
+{{ define "main" }}
+
+<!-- Featured Post & NYTimes Style Hero Section -->
+{{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ $featured := where $posts "Params.featured" true }}
+{{ $lead := false }}
+{{ if $featured }}
+  {{ $lead = index $featured 0 }}
+{{ else if gt (len $posts) 0 }}
+  {{ $lead = index $posts 0 }}
+{{ end }}
+
+{{ if $lead }}
+{{ $otherPosts := where $posts "Permalink" "!=" $lead.Permalink }}
+{{ $sidebarPosts := first 5 $otherPosts }}
+{{ $morePosts := after 5 $otherPosts }}
+
+<!-- Hero: NYTimes Style (Featured Lead + Chronological Sidebar) -->
+<section class="home-featured">
+  <div class="container">
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">广告位招租</span>
+      <span class="label-line"></span>
+    </div>
+
+    <div class="home-hero-grid">
+      <!-- Left Column: Main Featured Article -->
+      <div class="home-hero-main">
+        <a href="{{ $lead.Permalink }}" class="featured-card feature-cover">
+          {{ if $lead.Params.cover }}
+          <div class="featured-cover">
+            <img src="{{ $lead.Params.cover }}" alt="{{ $lead.Title }}">
+          </div>
+          {{ end }}
+          <div class="featured-info">
+            <div class="featured-meta">
+              <time>{{ $lead.Date.Format "January 2, 2006" }}</time>
+              {{ with $lead.Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+            </div>
+            <h2 class="featured-title">{{ $lead.Title }}</h2>
+            {{ with $lead.Params.author }}
+            {{ $authors := . }}
+            {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+            <p class="featured-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+            {{ end }}
+            {{ with $lead.Description }}
+            <p class="featured-excerpt">{{ . | plainify | truncate 150 }}</p>
+            {{ else }}
+            <p class="featured-excerpt">{{ $lead.Summary | plainify | truncate 150 }}</p>
+            {{ end }}
+            <div class="featured-action">
+              <span class="featured-read">阅读全文 →</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Right Column: Sidebar (Other Articles in Chronological Order) -->
+      {{ if gt (len $sidebarPosts) 0 }}
+      <aside class="home-hero-sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-header-label">LATEST · 最新文章</span>
+        </div>
+        <div class="sidebar-post-list">
+          {{ range $sidebarPosts }}
+          <a href="{{ .Permalink }}" class="sidebar-post-item">
+            <div class="sidebar-post-info">
+              <div class="sidebar-post-meta">
+                <time>{{ .Date.Format "January 2, 2006" }}</time>
+                {{ with .Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+              </div>
+              <h3 class="sidebar-post-title">{{ .Title }}</h3>
+              {{ with .Params.author }}
+              {{ $authors := . }}
+              {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+              <p class="sidebar-post-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+              {{ end }}
+              {{ with .Description }}
+              <p class="sidebar-post-excerpt">{{ . | plainify | truncate 70 }}</p>
+              {{ else }}
+              <p class="sidebar-post-excerpt">{{ .Summary | plainify | truncate 70 }}</p>
+              {{ end }}
+            </div>
+            {{ if .Params.cover }}
+            <div class="sidebar-post-thumb">
+              <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+            </div>
+            {{ end }}
+          </a>
+          {{ end }}
+        </div>
+        <div class="sidebar-footer">
+          <a href="{{ "/posts/" | relURL }}" class="sidebar-more-link">查看全部文章 →</a>
+        </div>
+      </aside>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- Additional Posts Section (if there are more than 5 other posts) -->
+{{ if gt (len $morePosts) 0 }}
+<section class="home-latest">
+  <div class="container">
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">MORE STORIES · 更多文章</span>
+      <span class="label-line"></span>
+    </div>
+    <div class="post-list">
+      {{ range first 6 $morePosts }}
+      <a href="{{ .Permalink }}" class="post-list-item">
+        {{ if .Params.cover }}
+        <div class="post-list-cover">
+          <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+        </div>
+        {{ end }}
+        <div class="post-list-content">
+          <div class="post-list-meta">
+            <time>{{ .Date.Format "January 2, 2006" }}</time>
+            {{ with .Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+          </div>
+          <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Params.author }}
+          {{ $authors := . }}
+          {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+          <p class="post-list-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+          {{ end }}
+          {{ with .Description }}
+          <p class="post-list-excerpt">{{ . | plainify | truncate 100 }}</p>
+          {{ else }}
+          <p class="post-list-excerpt">{{ .Summary | plainify | truncate 100 }}</p>
+          {{ end }}
+          {{ if .Params.tags }}
+          <div class="post-list-tags">
+            {{ range first 3 .Params.tags }}
+            <span>#{{ . }}</span>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    <div class="home-more">
+      <a href="{{ "/posts/" | relURL }}" class="more-link">查看全部文章 →</a>
+    </div>
+  </div>
+</section>
+{{ end }}
+
+{{ end }}
+
+<!-- Gallery Preview -->
+{{ $gallery := where .Site.RegularPages "Section" "gallery" }}
+{{ if $gallery }}
+<section class="home-gallery">
+  <div class="container">
+    <div class="section-label">
+      <span class="label-line"></span>
+      <span class="label-text">GALLERY · 相册</span>
+      <span class="label-line"></span>
+    </div>
+    <div class="home-gallery-grid">
+      {{ range first 4 $gallery }}
+      {{ $photos := partial "gallery-photos.html" . }}
+      <a href="{{ .Permalink }}" class="home-gallery-item">
+        {{ with .Params.cover }}
+        <img src="{{ . }}" alt="{{ $.Title }}" loading="lazy">
+        {{ else with $photos }}
+        <img src="{{ index . 0 }}" alt="{{ $.Title }}" loading="lazy">
+        {{ end }}
+        <div class="home-gallery-overlay">
+          <h3>{{ .Title }}</h3>
+          <p>{{ len $photos }} 张照片</p>
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    <div class="home-more">
+      <a href="{{ "/gallery/" | relURL }}" class="more-link">进入相册 →</a>
+    </div>
+  </div>
+</section>
+{{ end }}
+
+<!-- About / Subscribe -->
+<section class="home-about">
+  <div class="container">
+    <div class="home-about-inner">
+      <div class="home-about-text">
+        <p class="section-label-text">Submit</p>
+        <h2 class="home-about-title">投稿{{ .Site.Params.author }}</h2>
+        <p class="home-about-desc">投稿邮箱：contact@catrix.net</p>
+        <p class="home-about-desc">在线投稿请戳下方按钮</p>
+        <div class="home-about-links">
+          <a href="{{ "/submit/" | relURL }}" class="more-link">了解更多 →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{ end }}

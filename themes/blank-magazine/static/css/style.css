@@ -110,14 +110,125 @@ input, textarea {
   min-height: 60vh;
 }
 
-/* ---------- Header ---------- */
+/* ==========================================================================
+   Liquid Glass & Convex Water Drop Lens (水滴凸透镜液态玻璃核心物理参数)
+   ========================================================================== */
+
+:root {
+  /* 【调试参数 2: 磨砂模糊度】
+     设为 0px ~ 0.8px 为真实纯水的高通透清澈感；设为 3px 以上即偏向传统毛玻璃。当前：0.5px */
+  --water-blur: 0.9px;
+
+  /* 【调试参数 3: 水体底色通透度】
+     极高通透水感，白度推荐 0.08 ~ 0.16，让底层清晰透出。当前默认：rgba(255, 255, 255, 0.12) */
+  --water-tint-base: rgba(255, 255, 255, 0.12);
+  --water-tint-scrolled: rgba(255, 255, 255, 0.22);
+  --water-tint-dropdown: rgba(255, 255, 255, 0.72);
+
+  /* 【调试参数 4: 边缘凸透镜遮罩范围】
+     中间 transparent 区域保持完全通透不扭曲；外围渐变到 black 产生强烈凸透镜折射弯曲 */
+  --water-lens-mask-pill: radial-gradient(ellipse at center, transparent 35%, black 80%);
+  --water-lens-mask-header: linear-gradient(to bottom, black 0%, transparent 25%, transparent 75%, black 100%);
+
+  /* 【调试参数 5: 水滴表面张力高光与边缘色散】
+     模拟水珠外圈聚集的高光线与微弱折射色散 */
+  --water-shine-pill: 
+    inset 1.5px 1.5px 2px 0 rgba(255, 255, 255, 0.85),
+    inset -1.5px -1.5px 2px 0 rgba(80, 160, 255, 0.25),
+    inset -0.5px 1px 1.5px 0 rgba(255, 120, 150, 0.15);
+  
+  --water-shine-header:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1px 1px 0 rgba(80, 160, 255, 0.2);
+}
+
+/* 容器基础 */
+.liquidGlass-wrapper {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  padding: 0.6rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12), 0 0 20px rgba(0, 0, 0, 0.06);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+}
+
+/* Hover效果 */
+.liquidGlass-wrapper:hover {
+  padding: 0.8rem;
+  border-radius: 2.5rem;
+}
+
+/* 扭曲层 (凸透镜边缘折射) */
+.liquidGlass-effect {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  backdrop-filter: blur(var(--water-blur, 0.5px));
+  -webkit-backdrop-filter: blur(var(--water-blur, 0.5px));
+  filter: url(#glass-distortion);
+  -webkit-mask-image: var(--water-lens-mask-pill);
+  mask-image: var(--water-lens-mask-pill);
+  pointer-events: none;
+}
+
+/* 色调层 (清澈水体) */
+.liquidGlass-tint {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: var(--water-tint-base, rgba(255, 255, 255, 0.12));
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+
+/* 光泽层 (水滴表面张力高光) */
+.liquidGlass-shine {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: inherit;
+  box-shadow: var(--water-shine-pill);
+  pointer-events: none;
+}
+
+/* 内容层 */
+.liquidGlass-text {
+  position: relative;
+  z-index: 3;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+}
+
+.liquidGlass-wrapper:hover .liquidGlass-text {
+  transform: scale(0.95);
+}
+
+/* 子项样式 */
+.menu-item {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.8rem;
+  transition: all 0.1s ease-in;
+}
+
+.menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+  box-shadow: inset -2px -2px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ---------- Header (经典原版顶栏) ---------- */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 100;
   background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-border-light);
+  transition: box-shadow 0.3s ease;
 }
 
 .header-inner {
@@ -155,7 +266,7 @@ input, textarea {
   align-items: center;
   font-family: var(--font-serif);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.3px;
   color: var(--color-text-secondary);
   padding: 6px 4px;
@@ -168,7 +279,7 @@ input, textarea {
 }
 
 .header-nav-link:hover {
-  color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .header-nav-link:hover i {
@@ -188,6 +299,76 @@ input, textarea {
   right: 4px;
   height: 1px;
   background: var(--color-accent);
+}
+
+/* ---------- Header: Liquid Glass 水滴透镜模式生效时 ---------- */
+.site-header.is-liquid-glass {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: none;
+}
+
+.site-header.is-liquid-glass > .liquidGlass-effect {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  backdrop-filter: blur(var(--water-blur, 0.5px));
+  -webkit-backdrop-filter: blur(var(--water-blur, 0.5px));
+  filter: url(#glass-distortion);
+  -webkit-mask-image: var(--water-lens-mask-header);
+  mask-image: var(--water-lens-mask-header);
+  pointer-events: none;
+}
+
+.site-header.is-liquid-glass > .liquidGlass-tint {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: var(--water-tint-base, rgba(255, 255, 255, 0.12));
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+
+.site-header.is-liquid-glass > .liquidGlass-shine {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: var(--water-shine-header);
+  pointer-events: none;
+}
+
+.site-header.is-liquid-glass.is-scrolled > .liquidGlass-tint {
+  background: var(--water-tint-scrolled, rgba(255, 255, 255, 0.22));
+}
+
+.site-header.is-liquid-glass.is-scrolled {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.site-header.is-liquid-glass .header-nav-link {
+  font-weight: 600;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.8rem;
+  transition: all 0.1s ease-in;
+}
+
+.site-header.is-liquid-glass .header-nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+  box-shadow: inset -2px -2px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: var(--color-accent);
+}
+
+.site-header.is-liquid-glass .header-nav-link.active::after {
+  bottom: 2px;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  border-radius: 1px;
 }
 
 .header-actions {
@@ -2617,6 +2798,109 @@ input, textarea {
   margin-bottom: var(--spacing-sm);
 }
 
+/* Home Feedback */
+.home-feedback {
+  min-width: 0;
+}
+
+.home-feedback-form {
+  margin-top: 4px;
+}
+
+.home-feedback-fields {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.home-feedback-fields textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  background: var(--color-bg, #ffffff);
+  color: var(--color-text, #1a1a1a);
+  border: 1px solid var(--color-border, #e8e8e8);
+  border-radius: 0;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 88px;
+  transition: border-color var(--transition-fast);
+}
+
+.home-feedback-fields textarea:focus {
+  outline: none;
+  border-color: var(--color-text, #1a1a1a);
+}
+
+.home-feedback-fields textarea::placeholder {
+  color: var(--color-text-muted, #888888);
+  font-size: 0.85rem;
+}
+
+.home-feedback-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 14px;
+}
+
+.home-feedback-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: var(--color-text, #1a1a1a);
+  color: #fff;
+  border: 1px solid var(--color-text, #1a1a1a);
+  border-radius: 0;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.home-feedback-submit:hover:not(:disabled) {
+  background: var(--color-link, #2b5aa7);
+  border-color: var(--color-link, #2b5aa7);
+}
+
+.home-feedback-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.home-feedback-submit:focus-visible,
+.home-feedback-fields textarea:focus-visible {
+  outline: 2px solid var(--color-text, #1a1a1a);
+  outline-offset: 2px;
+}
+
+.home-feedback-status {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+
+.home-feedback-status:empty {
+  display: none;
+}
+
+.home-feedback-status[data-state="success"] {
+  color: #356148;
+}
+
+.home-feedback-status[data-state="error"] {
+  color: #a33434;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
   .single-share-side {
@@ -2802,77 +3086,6 @@ input, textarea {
     display: none;
   }
 }
-/* ==========================================================================
-   二级下拉菜单样式 (Magazine Theme Refinement)
-   ========================================================================== */
-
-/* 顶部菜单项定位：增加底部 padding 与负 margin 形成连续响应区 */
-.header-nav-item.has-dropdown {
-  position: relative;
-  display: inline-block;
-  padding-bottom: 8px;
-  margin-bottom: -8px;
-}
-
-.header-nav-item .dropdown-arrow {
-  margin-left: 4px;
-  vertical-align: middle;
-  transition: transform 0.2s ease;
-}
-
-/* 桌面端下拉菜单面板：清除 margin-top，防止断层 */
-.dropdown-menu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 180px;
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-  padding: 10px 0;
-  margin-top: 0; /* 关键修改：移除 8px 间距，紧贴父容器 */
-  z-index: 100;
-}
-
-/* 隐形桥梁：在面板上方向上延伸 10px 的透明防断层热区 */
-.dropdown-menu::before {
-  content: "";
-  position: absolute;
-  top: -10px;
-  left: 0;
-  right: 0;
-  height: 10px;
-  background: transparent;
-}
-
-/* 悬停展开与箭头旋转 */
-.header-nav-item.has-dropdown:hover .dropdown-menu {
-  display: block;
-}
-
-.header-nav-item.has-dropdown:hover .dropdown-arrow {
-  transform: rotate(180deg);
-}
-
-/* 下拉菜单链接 */
-.dropdown-link {
-  display: block;
-  padding: 8px 20px;
-  color: inherit;
-  text-decoration: none;
-  font-size: 0.9rem;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.dropdown-link:hover,
-.dropdown-link.active {
-  background-color: rgba(0, 0, 0, 0.04);
-  opacity: 1;
-}
-
 /* 移动端/全屏 Overlay 菜单中的子菜单结构 */
 .menu-group {
   margin-bottom: 20px;
@@ -2906,10 +3119,10 @@ input, textarea {
   opacity: 1;
 }
 /* ==========================================================================
-   二级下拉菜单样式 (支持悬停 + 点击固定)
+   二级下拉菜单样式 (Magazine Theme Refinement - 经典原版)
    ========================================================================== */
 
-/* 顶部菜单项定位 */
+/* 顶部菜单项定位：增加底部 padding 与负 margin 形成连续响应区 */
 .header-nav-item.has-dropdown {
   position: relative;
   display: inline-block;
@@ -2923,7 +3136,7 @@ input, textarea {
   transition: transform 0.2s ease;
 }
 
-/* 桌面端下拉菜单面板 */
+/* 桌面端下拉菜单面板 (经典原版) */
 .dropdown-menu {
   display: none;
   position: absolute;
@@ -2938,7 +3151,7 @@ input, textarea {
   z-index: 100;
 }
 
-/* 隐形防断层桥梁 */
+/* 隐形桥梁：在面板上方向上延伸 10px 的透明防断层热区 */
 .dropdown-menu::before {
   content: "";
   position: absolute;
@@ -2949,19 +3162,18 @@ input, textarea {
   background: transparent;
 }
 
-/* 悬停展开 OR 点击固定（.is-pinned）时显示菜单 */
+/* 悬停展开与箭头旋转 */
 .header-nav-item.has-dropdown:hover .dropdown-menu,
 .header-nav-item.has-dropdown.is-pinned .dropdown-menu {
   display: block;
 }
 
-/* 悬停 OR 点击固定时旋转箭头 */
 .header-nav-item.has-dropdown:hover .dropdown-arrow,
 .header-nav-item.has-dropdown.is-pinned .dropdown-arrow {
   transform: rotate(180deg);
 }
 
-/* 下拉菜单链接 */
+/* 下拉菜单链接 (经典原版) */
 .dropdown-link {
   display: block;
   padding: 8px 20px;
@@ -2977,6 +3189,70 @@ input, textarea {
 .dropdown-link.active {
   background-color: rgba(0, 0, 0, 0.04);
   opacity: 1;
+}
+
+/* ---------- 桌面端下拉菜单面板 (Liquid Glass 水滴透镜模式) ---------- */
+.dropdown-menu.liquidGlass-wrapper {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 175px;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.6rem;
+  border-radius: 1.4rem;
+  cursor: default;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15), 0 0 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  margin-top: 0;
+  z-index: 100;
+  background: transparent;
+  border: none;
+}
+
+.header-nav-item.has-dropdown:hover .dropdown-menu.liquidGlass-wrapper,
+.header-nav-item.has-dropdown.is-pinned .dropdown-menu.liquidGlass-wrapper {
+  display: flex;
+}
+
+.dropdown-menu.liquidGlass-wrapper:hover {
+  padding: 0.75rem;
+  border-radius: 1.7rem;
+}
+
+.dropdown-menu.liquidGlass-wrapper:hover .liquidGlass-text {
+  transform: scale(0.97);
+}
+
+.dropdown-menu.liquidGlass-wrapper .liquidGlass-tint {
+  background: var(--water-tint-dropdown, rgba(255, 255, 255, 0.72));
+}
+
+.dropdown-menu.liquidGlass-wrapper .liquidGlass-shine {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: var(--water-shine-pill);
+}
+
+.dropdown-menu.liquidGlass-wrapper .dropdown-link {
+  display: block;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.8rem;
+  color: var(--color-text, #111111);
+  text-decoration: none;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: all 0.1s ease-in;
+}
+
+.dropdown-menu.liquidGlass-wrapper .dropdown-link:hover,
+.dropdown-menu.liquidGlass-wrapper .dropdown-link.active {
+  background-color: rgba(255, 255, 255, 0.75);
+  box-shadow: inset -2px -2px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: var(--color-accent, #c32026);
 }
 
 /* ---------- Author Detail Page ---------- */

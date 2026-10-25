@@ -5,3 +5,4 @@ resources/
 .dev.vars
 .wrangler/
 TODO.html
+node_modules/

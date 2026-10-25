@@ -34,13 +34,22 @@
   // ---------- Header Shadow on Scroll ----------
   const header = document.querySelector('.site-header');
   if (header) {
-    window.addEventListener('scroll', function () {
-      if (window.pageYOffset > 50) {
-        header.style.boxShadow = '0 1px 12px rgba(0,0,0,0.06)';
+    const isLiquid = header.classList.contains('is-liquid-glass');
+    const handleScroll = function () {
+      if (window.pageYOffset > (isLiquid ? 20 : 50)) {
+        header.classList.add('is-scrolled');
+        if (!isLiquid) {
+          header.style.boxShadow = '0 1px 12px rgba(0,0,0,0.06)';
+        }
       } else {
-        header.style.boxShadow = 'none';
+        header.classList.remove('is-scrolled');
+        if (!isLiquid) {
+          header.style.boxShadow = 'none';
+        }
       }
-    }, { passive: true });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
   }
 
   // ---------- Reading Progress Bar (single post) ----------

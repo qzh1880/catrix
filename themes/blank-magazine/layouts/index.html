@@ -215,8 +215,8 @@
 </section>
 {{ end }}
 
-<!-- About / Subscribe -->
-<section class="home-about">
+<!-- About / Submit & Feedback -->
+<section class="home-about" id="feedback">
   <div class="container">
     <div class="home-about-inner">
       <div class="home-about-text">
@@ -225,11 +225,43 @@
         <p class="home-about-desc">投稿邮箱：contact@catrix.net</p>
         <p class="home-about-desc">在线投稿请戳下方按钮</p>
         <div class="home-about-links">
-          <a href="{{ "/submit/" | relURL }}" class="more-link">了解更多 →</a>
+          <a href="{{ "/submit/" | relURL }}" class="more-link">在线投稿 →</a>
         </div>
+      </div>
+
+      <div class="home-feedback" id="home-feedback" data-api="{{ replaceRE "/comments/?$" "" (.Site.Params.comments.apiURL | default "") }}">
+        <p class="section-label-text">Feedback</p>
+        <h2 class="home-about-title">网站反馈</h2>
+        <form id="feedback-form" class="home-feedback-form">
+          <fieldset id="feedback-fields" class="home-feedback-fields">
+            <textarea
+              id="feedback-body"
+              name="body"
+              rows="3"
+              minlength="2"
+              maxlength="2000"
+              required
+              placeholder="留下宝贵的建议，让CATRIX变得更好"
+              aria-label="留下宝贵的建议，让CATRIX变得更好"
+            ></textarea>
+            <div class="home-feedback-actions">
+              <button id="feedback-submit" type="submit" class="home-feedback-submit">
+                <span>提交建议</span>
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </fieldset>
+          <p id="feedback-status" class="home-feedback-status" role="status" aria-live="polite"></p>
+        </form>
       </div>
     </div>
   </div>
 </section>
+
+{{ with .Site.Params.comments.apiURL }}
+{{ $feedbackJs := resources.Get "js/feedback.js" | minify | fingerprint }}
+<script src="{{ "js/community-client.js" | relURL }}?v=3" defer></script>
+<script src="{{ $feedbackJs.RelPermalink }}" integrity="{{ $feedbackJs.Data.Integrity }}" defer></script>
+{{ end }}
 
 {{ end }}

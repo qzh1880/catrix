@@ -41,6 +41,10 @@ html.life-mode .site-header {
   background: rgba(255, 255, 255, 0.86);
 }
 
+html.life-mode .site-header.is-liquid-glass {
+  background: transparent;
+}
+
 html.life-mode .site-footer {
   background: rgba(255, 255, 255, 0.86);
 }
@@ -54,7 +58,7 @@ html.life-mode .featured-card {
   background: transparent;
 }
 
-/* ---------- 右下角的“背景”设置按钮（浅色页面上用深色胶囊） ---------- */
+/* ---------- 右下角的“背景”设置按钮（默认经典深色胶囊样式） ---------- */
 .bg-toggle {
   position: fixed;
   right: 22px;
@@ -106,6 +110,63 @@ html.life-mode .featured-card {
   opacity: 0.75;
 }
 
+/* ---------- 液态玻璃风格（Liquid Glass 水滴透镜模式） ---------- */
+.bg-toggle.liquidGlass-wrapper {
+  border: none;
+  outline: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 2rem;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15), 0 0 20px rgba(0, 0, 0, 0.06);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  overflow: hidden;
+  background: transparent;
+}
+
+.bg-toggle.liquidGlass-wrapper:hover {
+  padding: 0.75rem 1.25rem;
+  border-radius: 2.5rem;
+  transform: none;
+}
+
+.bg-toggle.liquidGlass-wrapper .liquidGlass-tint {
+  background: var(--water-tint-base, rgba(255, 255, 255, 0.14));
+}
+
+.bg-toggle.liquidGlass-wrapper[data-mode='white'] .liquidGlass-tint {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bg-toggle.liquidGlass-wrapper .liquidGlass-shine {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: var(--water-shine-pill);
+}
+
+.bg-toggle.liquidGlass-wrapper .liquidGlass-text {
+  position: relative;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1a1a1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", var(--font-sans, sans-serif);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  line-height: 1;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.7);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  user-select: none;
+}
+
+.bg-toggle.liquidGlass-wrapper:hover .liquidGlass-text {
+  transform: scale(0.95);
+}
+
+.bg-toggle.liquidGlass-wrapper svg {
+  stroke: currentColor;
+  filter: drop-shadow(0 1px 0.5px rgba(255, 255, 255, 0.8));
+}
+
 /* ---------- 窄屏适配 ---------- */
 @media (max-width: 768px) {
   .bg-toggle {
@@ -114,6 +175,14 @@ html.life-mode .featured-card {
     padding: 8px 13px;
     font-size: 0.68rem;
     letter-spacing: 0.8px;
+  }
+
+  .bg-toggle.liquidGlass-wrapper {
+    padding: 0.5rem 0.9rem;
+  }
+
+  .bg-toggle.liquidGlass-wrapper:hover {
+    padding: 0.6rem 1rem;
   }
 }
 

@@ -1,3 +1,76 @@
+{{ $isLiquid := site.Params.liquidGlass | default false }}
+{{ if $isLiquid }}
+<!-- 全局 SVG 滤镜：用于 liquidGlass 水滴透镜折射扭曲效果 -->
+<svg style="position: absolute; width: 0; height: 0; pointer-events: none;" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- 
+      【调试参数 1: 凸透镜扭曲滤镜】
+      - scale: 边缘凸透镜折射弯曲强度（推荐 18 ~ 38，当前 34；越大折射拉伸越明显）
+      - baseFrequency: 水体表面曲率起伏频率（推荐 0.008 ~ 0.015，当前 0.01；越小水体越平滑）
+    -->
+    <filter id="glass-distortion" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.01" numOctaves="1" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="34" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+</svg>
+<header class="site-header is-liquid-glass">
+  <div class="liquidGlass-effect" aria-hidden="true"></div>
+  <div class="liquidGlass-tint" aria-hidden="true"></div>
+  <div class="liquidGlass-shine" aria-hidden="true"></div>
+  <div class="header-inner liquidGlass-text">
+    <a class="site-logo" href="{{ .Site.BaseURL }}">{{ .Site.Title }}</a>
+
+    <nav class="header-nav">
+      {{ $currentURL := $.RelPermalink }}
+      {{ range .Site.Menus.main }}
+        {{ $isActive := false }}
+        {{ if and $.IsHome (eq .URL "/") }}{{ $isActive = true }}{{ end }}
+        {{ if and (not $.IsHome) (ne .URL "/") (hasPrefix $currentURL .URL) }}{{ $isActive = true }}{{ end }}
+
+        {{ if .HasChildren }}
+          <!-- 包含二级菜单的父项（如“更多”） -->
+          <div class="header-nav-item has-dropdown">
+            <a href="javascript:void(0);" class="header-nav-link menu-item{{ if $isActive }} active{{ end }}" onclick="togglePinDropdown(this, event)">
+              <span>{{ .Name }}</span>
+              <svg class="dropdown-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </a>
+            <div class="dropdown-menu liquidGlass-wrapper">
+              <div class="liquidGlass-effect" aria-hidden="true"></div>
+              <div class="liquidGlass-tint" aria-hidden="true"></div>
+              <div class="liquidGlass-shine" aria-hidden="true"></div>
+              <div class="liquidGlass-text">
+                {{ range .Children }}
+                  {{ $childActive := hasPrefix $currentURL .URL }}
+                  <a href="{{ .URL }}" class="dropdown-link menu-item{{ if $childActive }} active{{ end }}">
+                    {{ .Name }}
+                  </a>
+                {{ end }}
+              </div>
+            </div>
+          </div>
+        {{ else }}
+          <!-- 普通单级菜单 -->
+          <a href="{{ .URL }}" class="header-nav-link menu-item{{ if $isActive }} active{{ end }}">
+            <span>{{ .Name }}</span>
+          </a>
+        {{ end }}
+      {{ end }}
+    </nav>
+
+    <div class="header-actions">
+      <button class="search-toggle icon-link" aria-label="搜索" onclick="openSearch()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+      <button class="menu-toggle" aria-label="打开菜单" aria-expanded="false" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+</header>
+{{ else }}
 <header class="site-header">
   <div class="header-inner">
     <a class="site-logo" href="{{ .Site.BaseURL }}">{{ .Site.Title }}</a>
@@ -46,6 +119,7 @@
     </div>
   </div>
 </header>
+{{ end }}
 
 <!-- Fullscreen Menu Overlay -->
 <div class="menu-overlay" id="menu-overlay">

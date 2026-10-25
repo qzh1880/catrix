@@ -20,15 +20,22 @@ enableRobotsTXT = true
   mainSections = ["posts"]
   firstlarge = true
 
+  # -----------------------------------------------------------------------------
+  # 液态玻璃风格（iOS 26 Liquid Glass 水滴凸透镜质感）开关
+  # true:  开启液态玻璃风格（顶栏、二级菜单、背景按钮带有水滴凸透镜折射与高光）
+  # false: 恢复原先经典样式（白色半透磨砂顶栏、经典方正菜单卡片与深色胶囊按钮）
+  # -----------------------------------------------------------------------------
+  liquidGlass = false
+
 [menu]
   [[menu.main]]
     name = "首页"
     url = "/"
     weight = 1
   [[menu.main]]
-    name = "文章"
-    url = "/posts/"
-    weight = 2
+    name = "小游戏"
+    url = "/games/"
+    weight = 6
   [[menu.main]]
     name = "往期"
     url = "/categories/"
@@ -121,7 +128,7 @@ block  = [['$$', '$$']]
 [[menu.main]]
   name = "网站反馈"
   parent = "more"
-  url = "/feedback/"
+  url = "/#feedback"
   weight = 4
 
 [[menu.main]]

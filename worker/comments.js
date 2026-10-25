@@ -164,14 +164,16 @@ export async function handleComments(request, env, url = new URL(request.url)) {
         if (!/^\d+$/.test(pageParam) || !Number.isSafeInteger(page) || page < 1 || page > 10000) {
           throw { status: 400, message: "分页参数不正确。" };
         }
-        const offset = (page - 1) * 20;
+        const limitParam = url.searchParams.get("limit");
+        const limit = limitParam && /^\d+$/.test(limitParam) ? Math.min(Math.max(Number(limitParam), 1), 500) : 20;
+        const offset = (page - 1) * limit;
         const rows = (await env.DB.prepare(
-          "SELECT c.id, c.nickname, c.body, c.created_at, c.parent_id, CASE WHEN p.status = 'approved' AND p.body != '' THEN p.nickname ELSE NULL END AS parent_nickname, CASE WHEN p.status = 'approved' AND p.body != '' THEN substr(p.body, 1, 120) ELSE NULL END AS parent_body FROM comments c LEFT JOIN comments p ON p.id = c.parent_id WHERE c.article = ? AND c.status = 'approved' AND c.body != '' ORDER BY c.id DESC LIMIT 21 OFFSET ?"
-        ).bind(article, offset).all()).results;
+          "SELECT c.id, c.nickname, c.body, c.created_at, c.parent_id, CASE WHEN p.status = 'approved' AND p.body != '' THEN p.nickname ELSE NULL END AS parent_nickname, CASE WHEN p.status = 'approved' AND p.body != '' THEN substr(p.body, 1, 120) ELSE NULL END AS parent_body FROM comments c LEFT JOIN comments p ON p.id = c.parent_id WHERE c.article = ? AND c.status = 'approved' AND c.body != '' ORDER BY c.id DESC LIMIT ? OFFSET ?"
+        ).bind(article, limit + 1, offset).all()).results;
         const totalRow = await env.DB.prepare(
           "SELECT COUNT(*) AS total FROM comments WHERE article = ? AND status = 'approved' AND body != ''"
         ).bind(article).first();
-        return reply({ comments: rows.slice(0, 20), more: rows.length > 20, page, total: totalRow?.total ?? 0, next: rows.length > 20 ? rows[19].id : null });
+        return reply({ comments: rows.slice(0, limit), more: rows.length > limit, page, total: totalRow?.total ?? 0, next: rows.length > limit ? rows[limit - 1].id : null });
       }
       const rows = (await env.DB.prepare(
         "SELECT c.id, c.nickname, c.body, c.created_at, c.parent_id, CASE WHEN p.status = 'approved' AND p.body != '' THEN p.nickname ELSE NULL END AS parent_nickname, CASE WHEN p.status = 'approved' AND p.body != '' THEN substr(p.body, 1, 120) ELSE NULL END AS parent_body FROM comments c LEFT JOIN comments p ON p.id = c.parent_id WHERE c.article = ? AND c.status = 'approved' AND c.id < ? ORDER BY c.id DESC LIMIT 21"
@@ -202,9 +204,9 @@ export async function handleComments(request, env, url = new URL(request.url)) {
       if (existing.article !== data.article || existing.nickname !== nickname || existing.body !== body || existing.parent_id !== parentId) return reply({ error: "请重新提交。" }, 409);
       return reply({ ok: true, message: "评论已提交，请查看留言列表。" });
     }
-    // 仅允许回复同一文章的公开顶层留言，禁止跨文章关联或形成多层嵌套。
+    // 仅允许回复同一文章的公开留言，禁止跨文章关联。
     if (parentId !== null) {
-      const parent = await env.DB.prepare("SELECT id FROM comments WHERE id = ? AND article = ? AND parent_id IS NULL AND status = 'approved' AND body != ''").bind(parentId, data.article).first();
+      const parent = await env.DB.prepare("SELECT id FROM comments WHERE id = ? AND article = ? AND status = 'approved' AND body != ''").bind(parentId, data.article).first();
       if (!parent) return reply({ error: '原留言已删除或无法回复，请取消回复后重试。' }, 409);
     }
     const ip = request.headers.get("CF-Connecting-IP");
@@ -226,7 +228,7 @@ export async function handleComments(request, env, url = new URL(request.url)) {
     if (!limit) return reply({ error: "提交较频繁，请稍后再试。" }, 429, { "Retry-After": String((window + 1) * 600 - now) });
     await env.DB.prepare(
       // 唯一约束处理并发重试；显式写入 approved，新旧数据库均直接公开新留言。
-      "INSERT INTO comments (request_id, article, nickname, body, status, parent_id) SELECT ?, ?, ?, ?, 'approved', ? WHERE ? IS NULL OR EXISTS (SELECT 1 FROM comments WHERE id = ? AND article = ? AND parent_id IS NULL AND status = 'approved' AND body != '') ON CONFLICT(request_id) DO NOTHING"
+      "INSERT INTO comments (request_id, article, nickname, body, status, parent_id) SELECT ?, ?, ?, ?, 'approved', ? WHERE ? IS NULL OR EXISTS (SELECT 1 FROM comments WHERE id = ? AND article = ? AND status = 'approved' AND body != '') ON CONFLICT(request_id) DO NOTHING"
     ).bind(data.requestId, data.article, nickname, body, parentId, parentId, parentId, data.article).run();
     // 并发重试、父留言删除可能与写入交错，按最终数据库状态给出回执。
     const saved = await env.DB.prepare('SELECT article, nickname, body, parent_id FROM comments WHERE request_id = ?').bind(data.requestId).first();

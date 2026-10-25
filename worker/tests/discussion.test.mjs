@@ -25,12 +25,16 @@ test('single-level replies retain context and redact deleted parents', async t =
   assert.equal((await post({ parentId: 1 })).status, 201);
   let rows = await list();
   assert.equal(rows[0].parent_id, 1); assert.equal(rows[0].parent_nickname, '原作者');
-  assert.equal((await post({ parentId: 2 })).status, 409);
+  // 验证支持无限楼中楼：可以回复二级回复
+  assert.equal((await post({ parentId: 2 })).status, 201);
   assert.equal((await post({ parentId: 1, article: '/posts/another/' })).status, 409);
   assert.equal((await post({ parentId: '1' })).status, 400);
   await call('/admin/comments/delete', { id: 1 }, KEY);
-  rows = await list(); assert.equal(rows.length, 1);
-  assert.equal(rows[0].parent_nickname, null); assert.equal(rows[0].parent_body, null);
+  rows = await list(); assert.equal(rows.length, 2);
+  const childOfDeleted = rows.find(r => r.id === 2);
+  assert.equal(childOfDeleted.parent_nickname, null); assert.equal(childOfDeleted.parent_body, null);
+  const grandChild = rows.find(r => r.id === 3);
+  assert.equal(grandChild.parent_nickname, '读者');
   assert.equal((await post({ parentId: 1 })).status, 409);
 });
 
@@ -130,6 +134,22 @@ test('discuss page supports posting, page-based pagination, replies, and communi
   const replyItem = listData2.comments.find(c => c.parent_id === firstId);
   assert.ok(replyItem);
   assert.equal(replyItem.parent_nickname, '讨论发起人');
+
+  // 3b. 楼中楼二次回复 (回复二级留言，形成三级楼中楼)
+  const subReplyRes = await call('/comments', {
+    article: DISCUSS,
+    nickname: '三级回复者',
+    body: '回复你的回复！',
+    parentId: replyItem.id,
+    requestId: crypto.randomUUID()
+  });
+  assert.equal(subReplyRes.status, 201);
+  const listRes2b = await call(`/comments?article=${encodeURIComponent(DISCUSS)}&page=1`);
+  const listData2b = await listRes2b.json();
+  assert.equal(listData2b.total, 3);
+  const subReplyItem = listData2b.comments.find(c => c.parent_id === replyItem.id);
+  assert.ok(subReplyItem);
+  assert.equal(subReplyItem.parent_nickname, '回复者');
 
   // 4. 点赞
   const visitor = crypto.randomUUID();

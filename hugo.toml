@@ -49,8 +49,8 @@ enableRobotsTXT = true
 
   [[menu.main]]
     parent = "more"
-    name = "加入CATRIX"
-    url = "/joinus/"
+    name = "投稿"
+    url = "/submit/"
     weight = 6
   [[menu.main]]
     name = "更多"
@@ -63,9 +63,9 @@ enableRobotsTXT = true
     url = "https://www.jcleague.win/"
     weight = 2
   [[menu.main]]
-    name = "小游戏"
+    name = "[数境] 官网"
     parent = "more"
-    url = "/games/"
+    url = "https://shujingmath.com/"
     weight = 3
 [taxonomies]
   tag = "tags"

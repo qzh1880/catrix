@@ -12,7 +12,7 @@ const json = (body, status = 200, headers = {}) => Response.json(body, {
 
 function origins(env) {
   // 可填写多个逗号分隔的来源，便于为正式站点和测试站点分别开放跨域请求。
-  return (env.COMMENTS_ALLOWED_ORIGINS || "https://catrix.net").split(",").map(s => s.trim()).filter(Boolean);
+  return (env.COMMENTS_ALLOWED_ORIGINS || "https://catrix.net,http://localhost:1313,http://127.0.0.1:1313").split(",").map(s => s.trim()).filter(Boolean);
 }
 
 // 以文章路径关联留言，不使用域名、查询参数或锚点。

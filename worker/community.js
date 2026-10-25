@@ -25,12 +25,12 @@ async function limit(request,env,scope,quota) {
 
 export async function handleCommunity(request,env,url=new URL(request.url)) {
   const origin=request.headers.get('Origin');
-  const allowed=(env.COMMENTS_ALLOWED_ORIGINS||'https://catrix.net').split(',').map(s=>s.trim()).includes(origin);
+  const allowed=(env.COMMENTS_ALLOWED_ORIGINS||'https://catrix.net,http://localhost:1313,http://127.0.0.1:1313').split(',').map(s=>s.trim()).includes(origin);
   const cors=allowed?{'Access-Control-Allow-Origin':origin,Vary:'Origin'}:{};
   const reply=(data,status=200)=>json(data,status,cors);
   try {
     if(origin&&!allowed)return reply({error:'此来源未开放。'},403);
-    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...cors,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, X-Comments-Key'}});
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...cors,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, X-Comments-Key, Cache-Control'}});
     if(!env.DB||!env.COMMENTS_RATE_SALT||env.COMMENTS_RATE_SALT.length<32)return reply({error:'服务尚未配置完整。'},503);
     if(request.method==='GET') {
       if(url.pathname==='/community/mines/rankings')return reply(await minesBoard(env.DB,url.searchParams.get('level')||'easy'));

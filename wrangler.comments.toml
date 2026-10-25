@@ -4,7 +4,7 @@ compatibility_date = "2026-09-28"
 workers_dev = true
 
 [vars]
-COMMENTS_ALLOWED_ORIGINS = "https://catrix.net"
+COMMENTS_ALLOWED_ORIGINS = "https://catrix.net,http://localhost:1313,http://127.0.0.1:1313"
 COMMENTS_RATE_LIMIT = "20"
 
 [[d1_databases]]

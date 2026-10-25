@@ -1,0 +1,400 @@
+{{ define "main" }}
+{{ $apiURL := replaceRE "/comments/?$" "" (.Site.Params.comments.apiURL | default "") }}
+<article class="admin container-narrow" id="feedback-admin-app" data-api="{{ $apiURL }}">
+  <header class="page-header">
+    <p class="page-eyebrow">Catrix · Admin</p>
+    <h1 class="page-title">{{ .Title }}</h1>
+    <div class="page-divider" aria-hidden="true"></div>
+  </header>
+
+  <div class="admin-nav-tabs" style="display: flex; gap: 18px; margin-bottom: 24px; font-size: .85rem;">
+    <a href="{{ "/admin/" | relURL }}" style="color: var(--color-text-secondary); text-decoration: none; padding-bottom: 4px;">← 投稿审阅</a>
+    <span style="font-weight: 600; border-bottom: 2px solid var(--color-text); padding-bottom: 4px;">网站反馈</span>
+    <a href="https://comments-api.catrix.net/admin/comments" target="_blank" rel="noopener" style="color: var(--color-text-secondary); text-decoration: none; padding-bottom: 4px;">评论管理 ↗</a>
+  </div>
+
+  <!-- Login Gate (未登录时显示) -->
+  <section id="admin-gate-section" class="admin-gate-wrap">
+    <p class="admin-gate-desc">私密管理页 · 请输入评论管理凭证（Secret Key）以查看并管理访客建议：</p>
+    <form id="admin-gate-form" class="admin-gate">
+      <input id="admin-pass" type="password" autocomplete="current-password" placeholder="管理凭证" aria-label="管理凭证" required>
+      <button id="admin-enter" type="submit" class="admin-btn admin-btn-primary">进入管理 →</button>
+      <p id="admin-gate-hint" class="admin-hint" role="status"></p>
+    </form>
+  </section>
+
+  <!-- Main Management Panel (验证成功后显示) -->
+  <section id="admin-panel-section" class="admin-panel" hidden>
+    <div class="admin-toolbar">
+      <div class="admin-toolbar-info">
+        <span id="feedback-summary">正在读取建议…</span>
+      </div>
+      <div class="admin-toolbar-actions">
+        <button id="btn-refresh" class="admin-btn" type="button">刷新</button>
+        <button id="btn-logout" class="admin-btn" type="button">退出管理</button>
+      </div>
+    </div>
+
+    <p id="admin-status" class="admin-feedback-status" role="status" aria-live="polite"></p>
+
+    <!-- Feedback Cards List -->
+    <div id="feedback-cards-list" class="feedback-cards"></div>
+
+    <!-- Pagination -->
+    <nav id="feedback-pagination" class="admin-pagination" aria-label="反馈分页" hidden>
+      <button id="btn-prev-page" class="admin-btn" type="button">← 上一页</button>
+      <span id="page-num-display" class="page-num">第 1 页</span>
+      <button id="btn-next-page" class="admin-btn" type="button">下一页 →</button>
+    </nav>
+  </section>
+</article>
+
+<style>
+  .admin { padding-bottom: var(--spacing-xl); }
+  
+  /* 登录区域 */
+  .admin-gate-wrap { text-align: center; padding: 5vh 0 10vh; }
+  .admin-gate-desc { font-size: .88rem; color: var(--color-text-secondary); margin-bottom: 24px; }
+  .admin-gate { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .admin-gate input {
+    width: 280px; max-width: 80%; padding: 10px 14px;
+    border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text); font: inherit; font-size: .875rem; text-align: center;
+    transition: border-color var(--transition-fast);
+  }
+  .admin-gate input:focus { outline: none; border-color: var(--color-text); }
+  .admin-hint { margin-top: 14px; font-size: .8rem; overflow-wrap: anywhere; width: 100%; }
+  .admin-hint:empty { margin: 0; }
+  .admin-hint[data-error="true"] { color: #a33434; }
+  .admin-hint[data-success="true"] { color: #356148; }
+
+  /* 顶部工具栏 */
+  .admin-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 14px; padding-bottom: 16px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+  .admin-toolbar-info { font-size: .88rem; color: var(--color-text-secondary); }
+  .admin-toolbar-actions { display: flex; gap: 10px; }
+
+  /* 按钮通用 */
+  .admin-btn {
+    padding: 8px 16px; border: 1px solid var(--color-border); background: var(--color-bg);
+    color: var(--color-text-secondary); font: inherit; font-size: .78rem; font-weight: 500;
+    cursor: pointer; transition: all var(--transition-fast); border-radius: 0;
+  }
+  .admin-btn:hover { border-color: var(--color-text); color: var(--color-text); }
+  .admin-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .admin-btn-primary {
+    background: var(--color-text); color: var(--color-bg); border-color: var(--color-text);
+  }
+  .admin-btn-primary:hover:not(:disabled) {
+    background: var(--color-link); border-color: var(--color-link); color: #fff;
+  }
+  .admin-btn-danger {
+    color: #a33434; border-color: rgba(163, 52, 52, 0.3);
+  }
+  .admin-btn-danger:hover:not(:disabled) {
+    background: #a33434; border-color: #a33434; color: #fff;
+  }
+
+  /* 状态播报 */
+  .admin-feedback-status { margin-bottom: 18px; font-size: .85rem; }
+  .admin-feedback-status:empty { display: none; }
+  .admin-feedback-status[data-state="success"] { color: #356148; }
+  .admin-feedback-status[data-state="error"] { color: #a33434; }
+
+  /* 反馈卡片列表 */
+  .feedback-cards { display: flex; flex-direction: column; gap: 16px; }
+  .feedback-card {
+    border: 1px solid var(--color-border); padding: 22px 24px;
+    background: var(--color-bg); transition: border-color var(--transition-fast);
+  }
+  .feedback-card:hover { border-color: #bbb; }
+  .feedback-card-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+  }
+  .feedback-card-author {
+    font-weight: 600; font-size: .95rem; color: var(--color-text);
+  }
+  .feedback-card-meta {
+    font-size: .75rem; color: var(--color-text-muted); display: flex; gap: 12px; align-items: center;
+  }
+  .feedback-badge {
+    display: inline-block; padding: 2px 6px; font-size: .7rem;
+    background: var(--color-bg-alt); border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+  }
+  .feedback-card-body {
+    font-size: .92rem; line-height: 1.8; color: var(--color-text);
+    white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 16px;
+  }
+  .feedback-card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--color-border-light);
+    padding-top: 14px;
+  }
+  .feedback-likes {
+    font-size: .78rem; color: var(--color-text-secondary);
+  }
+  
+  /* 分页导航 */
+  .admin-pagination {
+    display: flex; justify-content: center; align-items: center;
+    gap: 16px; margin-top: 36px; padding-top: 20px;
+    border-top: 1px solid var(--color-border-light);
+  }
+  .page-num { font-size: .82rem; color: var(--color-text-secondary); }
+
+  /* 空状态 */
+  .feedback-empty {
+    text-align: center; padding: 48px 20px; color: var(--color-text-muted);
+    font-size: .9rem; border: 1px dashed var(--color-border);
+  }
+</style>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const app = $('feedback-admin-app');
+  const apiBase = String(app.dataset.api || '').replace(/\/$/, '');
+
+  const gateSection = $('admin-gate-section');
+  const gateForm = $('admin-gate-form');
+  const passInput = $('admin-pass');
+  const enterBtn = $('admin-enter');
+  const hintEl = $('admin-gate-hint');
+
+  const panelSection = $('admin-panel-section');
+  const summaryEl = $('feedback-summary');
+  const statusEl = $('admin-status');
+  const listEl = $('feedback-cards-list');
+  const paginationNav = $('feedback-pagination');
+  const prevBtn = $('btn-prev-page');
+  const nextBtn = $('btn-next-page');
+  const pageNumDisplay = $('page-num-display');
+  const refreshBtn = $('btn-refresh');
+  const logoutBtn = $('btn-logout');
+
+  let adminKey = sessionStorage.getItem('catrixFeedbackKey') || '';
+  let currentPage = 1;
+  let busy = false;
+
+  function escapeHTML(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatDate(raw) {
+    if (!raw) return '';
+    const num = Number(raw);
+    const ms = (!isNaN(num) && num < 1e11) ? num * 1000 : raw;
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) return String(raw);
+    return d.toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+  }
+
+  function setStatus(text, state = '') {
+    statusEl.textContent = text;
+    statusEl.dataset.state = state;
+  }
+
+  async function checkKey(key) {
+    const res = await fetch(apiBase + '/community/admin/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Comments-Key': key
+      },
+      body: '{}'
+    });
+    if (res.status === 401) return false;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || '验证服务异常（HTTP ' + res.status + '）');
+    }
+    return true;
+  }
+
+  async function loadFeedback(page = 1) {
+    if (busy) return;
+    busy = true;
+    currentPage = page;
+    summaryEl.textContent = '正在读取第 ' + page + ' 页建议…';
+    listEl.replaceChildren();
+
+    try {
+      const res = await fetch(apiBase + '/community/feedback?page=' + page, {
+        headers: { 'Cache-Control': 'no-store' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '获取建议失败。');
+
+      const items = data.items || [];
+      if (items.length === 0) {
+        summaryEl.textContent = '暂无反馈建议。';
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'feedback-empty';
+        emptyDiv.textContent = '当前没有找到任何访客建议。';
+        listEl.append(emptyDiv);
+        paginationNav.hidden = true;
+        return;
+      }
+
+      summaryEl.textContent = '共显示本页 ' + items.length + ' 条建议（按热度与时间排序）：';
+      for (const item of items) {
+        const card = document.createElement('div');
+        card.className = 'feedback-card';
+        card.id = 'feedback-card-' + item.id;
+
+        card.innerHTML = `
+          <div class="feedback-card-header">
+            <span class="feedback-card-author">${escapeHTML(item.nickname || '访客')}</span>
+            <div class="feedback-card-meta">
+              <span class="feedback-badge">#${item.id}</span>
+              <time datetime="${escapeHTML(item.created_at)}">${formatDate(item.created_at)}</time>
+            </div>
+          </div>
+          <div class="feedback-card-body">${escapeHTML(item.body)}</div>
+          <div class="feedback-card-footer">
+            <span class="feedback-likes">❤️ ${item.likes || 0} 次赞同</span>
+            <button type="button" class="admin-btn admin-btn-danger" data-id="${item.id}">删除建议</button>
+          </div>
+        `;
+
+        const delBtn = card.querySelector('.admin-btn-danger');
+        delBtn.addEventListener('click', async () => {
+          if (!confirm('确定删除反馈 #' + item.id + '？删除后正文和昵称将被清空，无法恢复。')) return;
+          delBtn.disabled = true;
+          try {
+            const delRes = await fetch(apiBase + '/community/admin/delete-feedback', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Comments-Key': adminKey
+              },
+              body: JSON.stringify({ id: item.id })
+            });
+            const delData = await delRes.json().catch(() => ({}));
+            if (!delRes.ok) throw new Error(delData.error || '删除失败。');
+
+            card.style.opacity = '0.3';
+            setTimeout(() => card.remove(), 200);
+            setStatus('反馈 #' + item.id + ' 已成功删除。', 'success');
+          } catch (err) {
+            setStatus(err.message, 'error');
+            delBtn.disabled = false;
+          }
+        });
+
+        listEl.append(card);
+      }
+
+      paginationNav.hidden = false;
+      prevBtn.disabled = (currentPage === 1);
+      nextBtn.disabled = !data.more;
+      pageNumDisplay.textContent = '第 ' + currentPage + ' 页';
+    } catch (err) {
+      summaryEl.textContent = '读取反馈失败。';
+      setStatus(err.message, 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  function showPanel() {
+    gateSection.hidden = true;
+    panelSection.hidden = false;
+    loadFeedback(1);
+  }
+
+  function showGate() {
+    panelSection.hidden = true;
+    gateSection.hidden = false;
+    listEl.replaceChildren();
+    passInput.value = '';
+    hintEl.textContent = '';
+  }
+
+  gateForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (enterBtn.disabled) return;
+    const key = passInput.value.trim();
+    if (!key) return;
+
+    enterBtn.disabled = true;
+    hintEl.textContent = '正在验证管理凭证…';
+    hintEl.dataset.error = 'false';
+
+    try {
+      const valid = await checkKey(key);
+      if (valid) {
+        adminKey = key;
+        sessionStorage.setItem('catrixFeedbackKey', key);
+        hintEl.textContent = '';
+        showPanel();
+      } else {
+        hintEl.textContent = '管理凭证不正确，请重新输入。';
+        hintEl.dataset.error = 'true';
+        passInput.focus();
+      }
+    } catch (err) {
+      hintEl.textContent = err.message || '网络连接失败，请确认 Worker 已部署。';
+      hintEl.dataset.error = 'true';
+    } finally {
+      enterBtn.disabled = false;
+    }
+  });
+
+  refreshBtn.addEventListener('click', () => {
+    setStatus('');
+    loadFeedback(currentPage);
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    adminKey = '';
+    sessionStorage.removeItem('catrixFeedbackKey');
+    showGate();
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (currentPage > 1) {
+      setStatus('');
+      loadFeedback(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    setStatus('');
+    loadFeedback(currentPage + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // 页面初次加载时检查 sessionStorage 是否已有可用凭证
+  if (adminKey) {
+    checkKey(adminKey).then(valid => {
+      if (valid) {
+        showPanel();
+      } else {
+        sessionStorage.removeItem('catrixFeedbackKey');
+        adminKey = '';
+        showGate();
+      }
+    }).catch(() => {
+      showGate();
+    });
+  } else {
+    showGate();
+  }
+})();
+</script>
+{{ end }}

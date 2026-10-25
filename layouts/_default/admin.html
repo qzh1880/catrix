@@ -6,6 +6,12 @@
     <div class="page-divider" aria-hidden="true"></div>
   </header>
 
+  <div class="admin-nav-tabs" style="display: flex; gap: 18px; margin-bottom: 24px; font-size: .85rem;">
+    <span style="font-weight: 600; border-bottom: 2px solid var(--color-text); padding-bottom: 4px;">投稿审阅</span>
+    <a href="{{ "/admin/feedback/" | relURL }}" style="color: var(--color-text-secondary); text-decoration: none; padding-bottom: 4px;">网站反馈 →</a>
+    <a href="https://comments-api.catrix.net/admin/comments" target="_blank" rel="noopener" style="color: var(--color-text-secondary); text-decoration: none; padding-bottom: 4px;">评论管理 ↗</a>
+  </div>
+
   <p id="admin-status" class="admin-feedback" role="status" aria-live="polite"></p>
   <div id="panel">正在读取投稿…</div>
 

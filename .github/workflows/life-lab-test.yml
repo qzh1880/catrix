@@ -1,0 +1,21 @@
+# 生命游戏实验台的引擎与界面冒烟测试；不需要浏览器、时钟或网络。
+name: Life lab tests
+on:
+  pull_request:
+    paths: ['static/games/life-lab/**', '.github/workflows/life-lab-test.yml']
+  push:
+    branches: [main]
+    paths: ['static/games/life-lab/**', '.github/workflows/life-lab-test.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test static/games/life-lab/tests/engine.test.mjs static/games/life-lab/tests/ui.test.mjs
+      - run: node --check static/games/life-lab/engine.mjs
+      - run: node --check static/games/life-lab/game.mjs

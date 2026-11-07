@@ -1,5 +1,5 @@
 {{/* 仅在已开启评论的文章页渲染；单篇可设置 comments: false 隐藏。 */}}
-{{ if and (eq .Section "posts") .Site.Params.comments.enabled (ne .Params.comments false) }}
+{{ if and (in (slice "posts" "opinions" "opinion") .Section) .Site.Params.comments.enabled (ne .Params.comments false) }}
   {{ with .Site.Params.comments.apiURL }}
     {{/* 内容指纹随资源修改而变化，让浏览器能获取更新后的脚本和样式。 */}}
     {{ $css := resources.Get "css/comments.css" | minify | fingerprint }}

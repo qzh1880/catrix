@@ -1,0 +1,66 @@
+{{ define "main" }}
+<section class="page-header">
+  <div class="container">
+    <p class="page-eyebrow">{{ .Section | upper }}</p>
+    <h1 class="page-title">{{ or .Title (.Section | humanize) }}</h1>
+    {{ with .Description }}
+    <p class="page-desc">{{ . }}</p>
+    {{ end }}
+    <div class="page-divider"></div>
+  </div>
+</section>
+
+<section class="post-list-section">
+  <div class="container">
+    {{ $pages := .RegularPages }}
+    {{ if eq .Section "" }}{{ $pages = where .Site.RegularPages "Section" "posts" }}{{ end }}
+    {{ $paginator := .Paginate $pages }}
+    <div class="post-list">
+      {{ range $paginator.Pages }}
+      <a href="{{ .Permalink }}" class="post-list-item">
+        {{ if .Params.cover }}
+        {{ $coverUrl := .Params.cover }}
+        {{ if and (not (hasPrefix $coverUrl "http://")) (not (hasPrefix $coverUrl "https://")) }}
+          {{ if hasPrefix $coverUrl "/" }}
+            {{ $coverUrl = relURL $coverUrl }}
+          {{ else if fileExists (printf "static/%s" $coverUrl) }}
+            {{ $coverUrl = relURL $coverUrl }}
+          {{ else }}
+            {{ $coverUrl = printf "https://media.catrix.net/%s" $coverUrl }}
+          {{ end }}
+        {{ end }}
+        <div class="post-list-cover">
+          <img src="{{ $coverUrl }}" alt="{{ .Title }}" loading="lazy">
+        </div>
+        {{ end }}
+        <div class="post-list-content">
+          <div class="post-list-meta">
+            <time>{{ .Date.Format "January 2, 2006" }}</time>
+            {{ with .Params.categories }}<span class="dot">·</span>{{ range first 1 . }}<span class="cat">{{ . }}</span>{{ end }}{{ end }}
+          </div>
+          <h3 class="post-list-title">{{ .Title }}</h3>
+          {{ with .Params.author }}
+          {{ $authors := . }}
+          {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+          <p class="post-list-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+          {{ end }}
+          {{ with .Description }}
+          <p class="post-list-excerpt">{{ . | plainify | truncate 120 }}</p>
+          {{ else }}
+          <p class="post-list-excerpt">{{ .Summary | plainify | truncate 120 }}</p>
+          {{ end }}
+          {{ if .Params.tags }}
+          <div class="post-list-tags">
+            {{ range first 3 .Params.tags }}
+            <span>#{{ . }}</span>
+            {{ end }}
+          </div>
+          {{ end }}
+        </div>
+      </a>
+      {{ end }}
+    </div>
+    {{ partial "pagination.html" . }}
+  </div>
+</section>
+{{ end }}

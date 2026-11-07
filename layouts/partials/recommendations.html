@@ -1,7 +1,7 @@
 {{/* 推荐使用明确的编辑元数据，不根据正文猜测主题；排除当前文章。 */}}
-{{ if and (eq .Section "posts") (ne .Params.recommendations false) }}
+{{ if and (in (slice "posts" "opinions" "opinion") .Section) (ne .Params.recommendations false) }}
 {{ $current := . }}{{ $ranked := slice }}
-{{ range where .Site.RegularPages "Section" "posts" }}
+{{ range where .Site.RegularPages "Section" "in" (slice "posts" "opinions" "opinion") }}
   {{ if ne .RelPermalink $current.RelPermalink }}
     {{ $score := 0 }}{{ $reason := "继续阅读" }}
     {{ if intersect (.Params.categories | default slice) ($current.Params.categories | default slice) }}{{ $score = 1 }}{{ $reason = "同一期内容" }}{{ end }}

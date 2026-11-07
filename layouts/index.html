@@ -2,6 +2,8 @@
 
 <!-- Featured Post & NYTimes Style Hero Section -->
 {{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ $opinions := where .Site.RegularPages "Section" "in" (slice "opinions" "opinion") }}
+{{ $recentOpinions := first 2 $opinions.ByDate.Reverse }}
 {{ $featured := where $posts "Params.featured" true }}
 {{ $lead := false }}
 {{ if $featured }}
@@ -29,8 +31,18 @@
       <div class="home-hero-main">
         <a href="{{ $lead.Permalink }}" class="featured-card feature-cover">
           {{ if $lead.Params.cover }}
+          {{ $leadCover := $lead.Params.cover }}
+          {{ if and (not (hasPrefix $leadCover "http://")) (not (hasPrefix $leadCover "https://")) }}
+            {{ if hasPrefix $leadCover "/" }}
+              {{ $leadCover = relURL $leadCover }}
+            {{ else if fileExists (printf "static/%s" $leadCover) }}
+              {{ $leadCover = relURL $leadCover }}
+            {{ else }}
+              {{ $leadCover = printf "https://media.catrix.net/%s" $leadCover }}
+            {{ end }}
+          {{ end }}
           <div class="featured-cover">
-            <img src="{{ $lead.Params.cover }}" alt="{{ $lead.Title }}">
+            <img src="{{ $leadCover }}" alt="{{ $lead.Title }}">
           </div>
           {{ end }}
           <div class="featured-info">
@@ -56,73 +68,165 @@
         </a>
       </div>
 
-      <!-- Right Column: Sidebar (Other Articles in Chronological Order) -->
-      {{ if gt (len $sidebarPosts) 0 }}
+      <!-- Right Column: Sidebar (Opinions + Other Articles) -->
+      {{ if or (gt (len $sidebarPosts) 0) (gt (len $recentOpinions) 0) }}
       <aside class="home-hero-sidebar">
-        <div class="sidebar-header">
-          <span class="sidebar-header-label">LATEST · 最新文章</span>
-        </div>
-        <div class="sidebar-post-list">
-          {{ range $sidebarPosts }}
-          <a href="{{ .Permalink }}" class="sidebar-post-item">
-            <div class="sidebar-post-info">
-              <div class="sidebar-post-meta">
-                <time>{{ .Date.Format "January 2, 2006" }}</time>
-                {{ with .Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+        {{ if gt (len $recentOpinions) 0 }}
+        <!-- WSJ Opinions Section -->
+        <div class="sidebar-section sidebar-opinion-section">
+          <div class="sidebar-header">
+            <span class="sidebar-header-label">OPINION · 观点</span>
+          </div>
+          <div class="sidebar-opinion-list">
+            {{ range $recentOpinions }}
+            <a href="{{ .Permalink }}" class="sidebar-opinion-item">
+              <div class="sidebar-opinion-info">
+                {{ with .Params.author }}
+                {{ $authors := . }}
+                {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+                <div class="sidebar-opinion-author">
+                  <span class="author-name">{{ delimit $authors ", " }}</span>
+                </div>
+                {{ end }}
+                <h3 class="sidebar-opinion-quote">
+                  {{ with .Description }}
+                    {{ . }}
+                  {{ else }}
+                    {{ .Title }}
+                  {{ end }}
+                </h3>
               </div>
-              <h3 class="sidebar-post-title">{{ .Title }}</h3>
-              {{ with .Params.author }}
-              {{ $authors := . }}
-              {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
-              <p class="sidebar-post-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+              {{ if .Params.cover }}
+              {{ $coverUrl := .Params.cover }}
+              {{ if and (not (hasPrefix $coverUrl "http://")) (not (hasPrefix $coverUrl "https://")) }}
+                {{ if hasPrefix $coverUrl "/" }}
+                  {{ $coverUrl = relURL $coverUrl }}
+                {{ else if fileExists (printf "static/%s" $coverUrl) }}
+                  {{ $coverUrl = relURL $coverUrl }}
+                {{ else }}
+                  {{ $coverUrl = printf "https://media.catrix.net/%s" $coverUrl }}
+                {{ end }}
               {{ end }}
-              {{ with .Description }}
-              <p class="sidebar-post-excerpt">{{ . | plainify | truncate 70 }}</p>
-              {{ else }}
-              <p class="sidebar-post-excerpt">{{ .Summary | plainify | truncate 70 }}</p>
+              {{ if not (hasPrefix $coverUrl "http") }}
+                {{ $coverUrl = absURL $coverUrl }}
               {{ end }}
-            </div>
-            {{ if .Params.cover }}
-            {{ $coverUrl := .Params.cover }}
-            {{ if not (hasPrefix $coverUrl "http") }}
-              {{ $coverUrl = absURL $coverUrl }}
-            {{ end }}
-            {{ $thumbUrl := $coverUrl }}
-            {{ $cdnConf := site.Params.sidebarThumb }}
+              {{ $thumbUrl := $coverUrl }}
+              {{ $cdnConf := site.Params.sidebarThumb }}
 
-            {{/* 方案一：Hugo 构建期自动拉取原图并生成本地 200px WebP 缩略图（随 Cloudflare Pages 静态托管） */}}
-            {{ $imgRes := false }}
-            {{ if or (hasPrefix $coverUrl "http://") (hasPrefix $coverUrl "https://") }}
-              {{ with try (resources.GetRemote $coverUrl) }}
-                {{ with .Err }}
-                  {{/* 远端图片拉取失败，将回退原图链接 */}}
-                {{ else with .Value }}
+              {{ $imgRes := false }}
+              {{ if or (hasPrefix $coverUrl "http://") (hasPrefix $coverUrl "https://") }}
+                {{ with try (resources.GetRemote $coverUrl) }}
+                  {{ with .Err }}
+                  {{ else with .Value }}
+                    {{ $imgRes = . }}
+                  {{ end }}
+                {{ end }}
+              {{ else }}
+                {{ with resources.Get .Params.cover }}
                   {{ $imgRes = . }}
                 {{ end }}
               {{ end }}
-            {{ else }}
-              {{ with resources.Get .Params.cover }}
-                {{ $imgRes = . }}
-              {{ end }}
-            {{ end }}
 
-            {{ if $imgRes }}
-              {{ with $imgRes.Process "resize 200x webp q80" }}
-                {{ $thumbUrl = .RelPermalink }}
+              {{ if $imgRes }}
+                {{ with $imgRes.Process "resize 200x webp q80" }}
+                  {{ $thumbUrl = .RelPermalink }}
+                {{ end }}
+              {{ else if and $cdnConf $cdnConf.enabled $cdnConf.template }}
+                {{ $thumbUrl = printf $cdnConf.template $coverUrl }}
               {{ end }}
-            {{ else if and $cdnConf $cdnConf.enabled $cdnConf.template }}
-              {{ $thumbUrl = printf $cdnConf.template $coverUrl }}
+              <div class="sidebar-opinion-thumb">
+                <img src="{{ $thumbUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" onerror="if(this.src!=='{{ $coverUrl }}'){this.onerror=null;this.src='{{ $coverUrl }}';}">
+              </div>
+              {{ end }}
+            </a>
             {{ end }}
-            <div class="sidebar-post-thumb">
-              <img src="{{ $thumbUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" onerror="if(this.src!=='{{ $coverUrl }}'){this.onerror=null;this.src='{{ $coverUrl }}';}">
-            </div>
-            {{ end }}
-          </a>
+          </div>
+          {{ if gt (len $opinions) 2 }}
+          <div class="sidebar-footer">
+            <a href="{{ "/opinions/" | relURL }}" class="sidebar-more-link">查看全部观点 →</a>
+          </div>
           {{ end }}
         </div>
-        <div class="sidebar-footer">
-          <a href="{{ "/posts/" | relURL }}" class="sidebar-more-link">查看全部文章 →</a>
+        {{ end }}
+
+        {{ if gt (len $sidebarPosts) 0 }}
+        <!-- Latest Articles in Chronological Order -->
+        <div class="sidebar-section sidebar-latest-section">
+          <div class="sidebar-header">
+            <span class="sidebar-header-label">LATEST · 最新文章</span>
+          </div>
+          <div class="sidebar-post-list">
+            {{ range $sidebarPosts }}
+            <a href="{{ .Permalink }}" class="sidebar-post-item">
+              <div class="sidebar-post-info">
+                <div class="sidebar-post-meta">
+                  <time>{{ .Date.Format "January 2, 2006" }}</time>
+                  {{ with .Params.categories }}<span class="dot">·</span><span class="cat">{{ range first 1 . }}{{ . }}{{ end }}</span>{{ end }}
+                </div>
+                <h3 class="sidebar-post-title">{{ .Title }}</h3>
+                {{ with .Params.author }}
+                {{ $authors := . }}
+                {{ if not (reflect.IsSlice $authors) }}{{ $authors = slice $authors }}{{ end }}
+                <p class="sidebar-post-author"><span class="by-line">By </span>{{ delimit $authors ", " }}</p>
+                {{ end }}
+                {{ with .Description }}
+                <p class="sidebar-post-excerpt">{{ . | plainify | truncate 70 }}</p>
+                {{ else }}
+                <p class="sidebar-post-excerpt">{{ .Summary | plainify | truncate 70 }}</p>
+                {{ end }}
+              </div>
+              {{ if .Params.cover }}
+              {{ $coverUrl := .Params.cover }}
+              {{ if and (not (hasPrefix $coverUrl "http://")) (not (hasPrefix $coverUrl "https://")) }}
+                {{ if hasPrefix $coverUrl "/" }}
+                  {{ $coverUrl = relURL $coverUrl }}
+                {{ else if fileExists (printf "static/%s" $coverUrl) }}
+                  {{ $coverUrl = relURL $coverUrl }}
+                {{ else }}
+                  {{ $coverUrl = printf "https://media.catrix.net/%s" $coverUrl }}
+                {{ end }}
+              {{ end }}
+              {{ if not (hasPrefix $coverUrl "http") }}
+                {{ $coverUrl = absURL $coverUrl }}
+              {{ end }}
+              {{ $thumbUrl := $coverUrl }}
+              {{ $cdnConf := site.Params.sidebarThumb }}
+
+              {{/* 方案一：Hugo 构建期自动拉取原图并生成本地 200px WebP 缩略图（随 Cloudflare Pages 静态托管） */}}
+              {{ $imgRes := false }}
+              {{ if or (hasPrefix $coverUrl "http://") (hasPrefix $coverUrl "https://") }}
+                {{ with try (resources.GetRemote $coverUrl) }}
+                  {{ with .Err }}
+                    {{/* 远端图片拉取失败，将回退原图链接 */}}
+                  {{ else with .Value }}
+                    {{ $imgRes = . }}
+                  {{ end }}
+                {{ end }}
+              {{ else }}
+                {{ with resources.Get .Params.cover }}
+                  {{ $imgRes = . }}
+                {{ end }}
+              {{ end }}
+
+              {{ if $imgRes }}
+                {{ with $imgRes.Process "resize 200x webp q80" }}
+                  {{ $thumbUrl = .RelPermalink }}
+                {{ end }}
+              {{ else if and $cdnConf $cdnConf.enabled $cdnConf.template }}
+                {{ $thumbUrl = printf $cdnConf.template $coverUrl }}
+              {{ end }}
+              <div class="sidebar-post-thumb">
+                <img src="{{ $thumbUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" onerror="if(this.src!=='{{ $coverUrl }}'){this.onerror=null;this.src='{{ $coverUrl }}';}">
+              </div>
+              {{ end }}
+            </a>
+            {{ end }}
+          </div>
+          <div class="sidebar-footer">
+            <a href="{{ "/posts/" | relURL }}" class="sidebar-more-link">查看全部文章 →</a>
+          </div>
         </div>
+        {{ end }}
       </aside>
       {{ end }}
     </div>

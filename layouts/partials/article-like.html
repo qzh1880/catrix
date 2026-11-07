@@ -1,4 +1,4 @@
-{{ if and (eq .Section "posts") (ne .Params.likes false) .Site.Params.comments.apiURL }}
+{{ if and (in (slice "posts" "opinions" "opinion") .Section) (ne .Params.likes false) .Site.Params.comments.apiURL }}
 {{ $js := resources.Get "js/article-like.js" | minify | fingerprint }}
 <section class="article-appreciation" data-article-like data-api="{{ replaceRE "/comments/?$" "" .Site.Params.comments.apiURL }}" data-article="{{ strings.TrimPrefix .Site.Home.RelPermalink .RelPermalink | printf "/%s" }}">
   <div><p>喜欢这篇文章？</p><small>给作者一点鼓励。</small></div>

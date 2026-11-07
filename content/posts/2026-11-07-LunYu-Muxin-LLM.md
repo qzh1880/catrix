@@ -9,6 +9,6 @@ description:
 featured: true
 showRelated: false
 cover: 'https://media.catrix.net/berger-et-bergère.webp'
-coverSource: Berger et bergère - François Boucher (1703 - 1770)
+coverSource: 
 firstLarge: false
 ---

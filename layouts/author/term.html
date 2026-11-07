@@ -131,8 +131,20 @@
       {{ range $paginator.Pages }}
       <a href="{{ .Permalink }}" class="post-list-item">
         {{ if .Params.cover }}
+        {{ $coverUrl := .Params.cover }}
+        {{ if and (not (hasPrefix $coverUrl "http://")) (not (hasPrefix $coverUrl "https://")) }}
+          {{ if hasPrefix $coverUrl "/" }}
+            {{ $coverUrl = relURL $coverUrl }}
+          {{ else if fileExists (printf "static/%s" $coverUrl) }}
+            {{ $coverUrl = relURL $coverUrl }}
+          {{ else if .Resources.GetMatch .Params.cover }}
+            {{ $coverUrl = (.Resources.GetMatch .Params.cover).RelPermalink }}
+          {{ else }}
+            {{ $coverUrl = printf "https://media.catrix.net/%s" $coverUrl }}
+          {{ end }}
+        {{ end }}
         <div class="post-list-cover">
-          <img src="{{ .Params.cover }}" alt="{{ .Title }}" loading="lazy">
+          <img src="{{ $coverUrl }}" alt="{{ .Title }}" loading="lazy">
         </div>
         {{ end }}
         <div class="post-list-content">

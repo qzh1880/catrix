@@ -11,7 +11,7 @@ export async function publishArticle(env, { submission, body, files }) {
     path: `${directory}/index.md`,
     mode: "100644",
     type: "blob",
-    content: renderIndexMd(submission, body),
+    content: renderIndexMd(submission, body, files),
   }];
   for (const file of files) {
     const object = await env.IMAGES.get(submission.r2_prefix + file.filename);

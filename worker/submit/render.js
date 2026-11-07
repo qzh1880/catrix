@@ -12,12 +12,24 @@ export function postPath(createdAt, title) {
   return "/" + directory.split("/").map(encodeURIComponent).join("/") + "/";
 }
 
+export function findCoverFilename(files = []) {
+  const filenames = files.map(file => (typeof file === "string" ? file : file?.filename || file?.name || ""));
+  const images = filenames.filter(name => /\.(jpe?g|png|webp|gif)$/i.test(name));
+  if (images.length === 1) return images[0];
+  const cover = images.find(name => {
+    const stem = name.replace(/\.[^/.]+$/, "").toLowerCase();
+    return stem === "cover";
+  });
+  return cover || images[0] || "cover.png";
+}
+
 // Build the article file included in the ZIP download.
-export function renderIndexMd(submission, body) {
+export function renderIndexMd(submission, body, files = []) {
   const beijingDate = new Date(
     Date.parse(submission.created_at.replace(" ", "T") + "Z") + 8 * 3600 * 1000
   );
   const quote = value => JSON.stringify(String(value));
+  const cover = findCoverFilename(files);
 
   return [
     "---",
@@ -30,7 +42,7 @@ export function renderIndexMd(submission, body) {
     `tags: ${submission.tags || "[]"}`,
     `description: ${quote(submission.description || "")}`,
     "showRelated: false",
-    'cover: "cover.png"',
+    `cover: ${quote(cover)}`,
     "---",
     "",
     body,

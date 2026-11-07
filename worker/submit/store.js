@@ -1,22 +1,37 @@
 export async function saveSubmission(env, data) {
-  if (data.files.some(file => !(file instanceof File) || file.size === 0 || !/\.(md|jpe?g|png|webp)$/i.test(file.name))) {
-    throw new Error("只支持非空的 Markdown、JPG、PNG 或 WebP 文件。");
+  if (data.files.some(file => !(file instanceof File) || file.size === 0 || !/\.(md|docx?|jpe?g|png|webp|gif)$/i.test(file.name))) {
+    throw new Error("只支持非空的 Markdown、Word（.doc / .docx）及图片（PNG、JPG、JPEG、WebP、GIF）文件。");
   }
-  if (data.files.length > 5 || data.files.reduce((size, file) => size + file.size, 0) > 3 * 1024 * 1024) {
-    throw new Error("最多上传 5 个文件，合计不超过 3 MB。");
+  if (data.files.length > 20 || data.files.reduce((size, file) => size + file.size, 0) > 20 * 1024 * 1024) {
+    throw new Error("最多上传 20 个文件，合计不超过 20 MB。");
   }
   if (data.files.some(file => !file.name || /[\\/]/.test(file.name))) {
     throw new Error("文件名不能包含目录路径。");
   }
-  const filenames = data.files.map(file => file.name.toLowerCase() === "cover.png" ? "cover.png" : file.name);
+  const filenames = data.files.map(file => file.name);
   if (new Set(filenames.map(name => name.toLowerCase())).size !== filenames.length) {
     throw new Error("文件名不能重复。");
   }
-  if (filenames.filter(name => name.toLowerCase().endsWith(".md")).length !== 1) {
-    throw new Error("请上传一个 Markdown 正文文件。");
+  const docFiles = filenames.filter(name => /\.(md|docx?)$/i.test(name));
+  if (docFiles.length !== 1) {
+    throw new Error("请上传一个 Markdown 或 Word（.doc / .docx）正文文件。");
   }
-  if (!filenames.includes("cover.png")) {
-    throw new Error("请上传 cover.png 封面。");
+  const isWord = /\.(docx?)$/i.test(docFiles[0]);
+  const imageFiles = filenames.filter(name => /\.(jpe?g|png|webp|gif)$/i.test(name));
+  if (!isWord && imageFiles.length === 0) {
+    throw new Error("最少上传一张照片作为封面。");
+  }
+  if (imageFiles.length > 1) {
+    const coverImages = imageFiles.filter(name => {
+      const stem = name.replace(/\.[^/.]+$/, "").toLowerCase();
+      return stem === "cover";
+    });
+    if (coverImages.length === 0) {
+      throw new Error("多张照片时，请将封面图片命名为 cover。");
+    }
+    if (coverImages.length > 1) {
+      throw new Error("只能有一张封面图片命名为 cover。");
+    }
   }
 
   const prefix = `submissions/${crypto.randomUUID()}/`;
@@ -55,14 +70,24 @@ export async function getSubmission(env, id) {
     size: file.size,
   }));
   const markdownFile = files.find(file => file.filename.toLowerCase().endsWith(".md"));
-  if (!markdownFile) return null;
-  const markdown = await env.IMAGES.get(submission.r2_prefix + markdownFile.filename);
-  if (!markdown) return null;
+  let body = "";
+  if (markdownFile) {
+    const markdown = await env.IMAGES.get(submission.r2_prefix + markdownFile.filename);
+    if (markdown) {
+      body = await markdown.text();
+    }
+  }
+
+  const wordFile = files.find(file => /\.(docx?)$/i.test(file.filename));
 
   return {
     submission,
-    body: await markdown.text(),
-    files: files.filter(file => file !== markdownFile),
+    hasMarkdown: Boolean(markdownFile),
+    hasWord: Boolean(wordFile),
+    markdownFile: markdownFile ? markdownFile.filename : null,
+    wordFile: wordFile ? wordFile.filename : null,
+    body: markdownFile ? body : null,
+    files: markdownFile ? files.filter(file => file !== markdownFile) : files,
   };
 }
 

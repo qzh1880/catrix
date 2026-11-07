@@ -110,7 +110,9 @@
     posts.forEach(p => {
       let tags = '';
       try { tags = (JSON.parse(p.tags) || []).join('、'); } catch { tags = p.tags; }
-      const meta = el('p', 'admin-meta', '#' + p.id + ' · ' + p.name + ' · ' + p.created_at + ' UTC · ' + (tags || '无标签'));
+      const isWordDoc = p.hasWord && !p.hasMarkdown;
+      const formatBadge = isWordDoc ? ' · [Word 稿件]' : '';
+      const meta = el('p', 'admin-meta', '#' + p.id + ' · ' + p.name + ' · ' + p.created_at + ' UTC · ' + (tags || '无标签') + formatBadge);
       if (p.approved) meta.append(el('span', 'admin-ok', ' ✓ 已发布'));
 
       // 已发布的文章显示提交和文章链接，待发布的文章显示发布按钮。
@@ -133,7 +135,7 @@
       if (p.approved) {
         if (p.commit_url) addLink('GitHub 提交', p.commit_url);
         addLink('查看文章', p.page_url);
-      } else {
+      } else if (!isWordDoc) {
         add('发布', () => openPublish(p)).classList.add('admin-publish');
       }
 
@@ -228,9 +230,11 @@
     const d = await res.json();
     const zip = new JSZip();
     const folder = zip.folder(d.dir);
-    folder.file('index.md', d.indexMd);
+    if (d.indexMd) {
+      folder.file('index.md', d.indexMd);
+    }
     for (const f of d.files) {
-      if (f.filename.toLowerCase().endsWith('.md')) continue;
+      if (f.filename.toLowerCase() === 'index.md') continue;
       const r = await api('/admin/file?id=' + p.id + '&name=' + encodeURIComponent(f.filename));
       if (!r.ok) return alert('打包失败 ' + r.status);
       folder.file(f.filename, await r.arrayBuffer());

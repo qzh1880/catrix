@@ -87,12 +87,20 @@ function doShare() {
       const ex = q('.single-excerpt');
       if (d.meta.desc) ex.textContent = d.meta.desc; else ex.remove();
 
-      const cover = (d.files || []).find(f => f.filename.toLowerCase() === 'cover.png');
+      const isImg = f => /\.(jpe?g|png|webp|gif)$/i.test(f.filename || '');
+      const imgFiles = (d.files || []).filter(isImg);
+      const cover = imgFiles.length === 1
+        ? imgFiles[0]
+        : (imgFiles.find(f => f.filename.replace(/\.[^/.]+$/, '').toLowerCase() === 'cover') || imgFiles[0]);
       if (cover) q('.single-cover img').src = cover.filename;
       else q('.single-cover').remove();
 
-      // markdown 先渲染再消毒，防投稿里夹带脚本
-      q('.post-content').innerHTML = DOMPurify.sanitize(marked.parse(d.body));
+      // markdown 先渲染再消毒，防投稿里夹带脚本；Word 投稿成品预览留空
+      if (!d.hasMarkdown && !d.body) {
+        q('.post-content').innerHTML = '<p style="text-align:center;padding:60px 0;color:var(--color-text-muted);font-size:.9rem;">（此投稿为 Word 文档，成品预览留空。请在管理后台下载 ZIP 稿件）</p>';
+      } else {
+        q('.post-content').innerHTML = DOMPurify.sanitize(marked.parse(d.body || ''));
+      }
 
       const cn = q('.container-narrow');
       if (d.meta.tags && d.meta.tags.length) {

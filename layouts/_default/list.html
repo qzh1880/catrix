@@ -25,6 +25,8 @@
             {{ $coverUrl = relURL $coverUrl }}
           {{ else if fileExists (printf "static/%s" $coverUrl) }}
             {{ $coverUrl = relURL $coverUrl }}
+          {{ else if .Resources.GetMatch .Params.cover }}
+            {{ $coverUrl = (.Resources.GetMatch .Params.cover).RelPermalink }}
           {{ else }}
             {{ $coverUrl = printf "https://media.catrix.net/%s" $coverUrl }}
           {{ end }}

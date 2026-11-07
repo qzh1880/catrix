@@ -50,8 +50,8 @@
         <div class="submission-drop" id="submission-drop">
           <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true"><path d="M16 21V5m-6 6 6-6 6 6M6 21v6h20v-6"/></svg>
           <p>将文件拖到这里，或 <span class="submission-choose">点击选择</span></p>
-          <span class="submission-hint" id="submission-file-hint">请上传 .md 主文件以及配套文件（必须含一张 cover.png 封面图）· 不超过 5 个文件，合计不超过 3 MB</span>
-          <input id="submission-files" type="file" multiple accept=".md,.jpg,.jpeg,.png" aria-describedby="submission-file-hint submission-file-status">
+          <span class="submission-hint" id="submission-file-hint">请上传 .md 或 Word (.docx/.doc) 主文件及图片（最少上传一张照片作为封面，如有多张照片，把封面图片命名为”cover“）· 不超过 20 个文件，合计不超过 20 MB</span>
+          <input id="submission-files" type="file" multiple accept=".md,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif" aria-describedby="submission-file-hint submission-file-status">
         </div>
         <p class="submission-sr-only" id="submission-file-status" role="status"></p>
         <ul class="submission-files" id="submission-file-list" aria-label="已选择的文件"></ul>
@@ -175,8 +175,8 @@
   const fileStatus = document.getElementById('submission-file-status');
   const status = document.getElementById('submission-status');
   const send = document.getElementById('submission-send');
-  const allowed = /\.(md|jpe?g|png|webp)$/i;
-  const maxBytes = 3 * 1024 * 1024;
+  const allowed = /\.(md|docx?|jpe?g|png|webp|gif)$/i;
+  const maxBytes = 20 * 1024 * 1024;
   let files = [];
   let busy = false;
   let dragDepth = 0;
@@ -316,7 +316,7 @@
     if (busy) return;
     for (const file of incoming) {
       if (!allowed.test(file.name)) {
-        announce('请选择 .md、JPG或PNG文件。', 'error');
+        announce('只支持 .md、Word（.doc / .docx）及图片（PNG、JPG、JPEG、WebP、GIF）文件。', 'error');
         return;
       }
       if (!file.size) {
@@ -330,12 +330,12 @@
       announce('存在同名文件：同名只能保留一个，请改名后重试。', 'error');
       return;
     }
-    if (names.filter(name => name.endsWith('.md')).length > 1) {
-      announce('正文 .md 主文件只能有一个。', 'error');
+    if (names.filter(name => /\.(md|docx?)$/i.test(name)).length > 1) {
+      announce('正文主文件（.md 或 Word）只能有一个。', 'error');
       return;
     }
-    if (combined.length > 5 || combined.reduce((total, file) => total + file.size, 0) > maxBytes) {
-      announce('最多添加 5 个文件，合计不超过 3 MB。请减少文件后重试。', 'error');
+    if (combined.length > 20 || combined.reduce((total, file) => total + file.size, 0) > maxBytes) {
+      announce('最多添加 20 个文件，合计不超过 20 MB。请减少文件后重试。', 'error');
       return;
     }
     files = combined;
@@ -375,15 +375,40 @@
       picker.focus();
       return;
     }
-    if (!files.some(file => file.name.toLowerCase() === 'cover.png')) {
-      announce('请附一张命名为 cover.png 的封面图。', 'error');
+    const docFiles = files.filter(file => /\.(md|docx?)$/i.test(file.name));
+    if (docFiles.length === 0) {
+      announce('请附一个 .md 或 Word（.doc / .docx）正文主文件。', 'error');
       picker.focus();
       return;
     }
-    if (!files.some(file => file.name.toLowerCase().endsWith('.md'))) {
-      announce('请附一个 .md 正文主文件。', 'error');
+    if (docFiles.length > 1) {
+      announce('正文主文件只能有一个。', 'error');
       picker.focus();
       return;
+    }
+    const isWord = /\.(docx?)$/i.test(docFiles[0].name);
+    const isImage = file => /\.(jpe?g|png|webp|gif)$/i.test(file.name);
+    const imageFiles = files.filter(isImage);
+    if (!isWord && imageFiles.length === 0) {
+      announce('最少上传一张照片作为封面。', 'error');
+      picker.focus();
+      return;
+    }
+    if (imageFiles.length > 1) {
+      const coverImages = imageFiles.filter(file => {
+        const stem = file.name.replace(/\.[^/.]+$/, '').toLowerCase();
+        return stem === 'cover';
+      });
+      if (coverImages.length === 0) {
+        announce('检测到多张照片，请把封面图片命名为“cover”（如 cover.jpg、cover.png）。', 'error');
+        picker.focus();
+        return;
+      }
+      if (coverImages.length > 1) {
+        announce('只能有一张封面图片命名为“cover”，请检查后重试。', 'error');
+        picker.focus();
+        return;
+      }
     }
     const body = new FormData(form);
     body.set('name', String(body.get('name')).trim());

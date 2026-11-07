@@ -430,7 +430,7 @@
       if (!response.ok || result?.ok !== true) {
         const message = response.status === 429 ? '提交过于频繁，请稍后再试。'
           : response.status === 413 ? '文件超过接收限制，请减少文件后重试。'
-          : '暂未确认接收成功，作品已保留在页面中，请稍后重试或通过邮箱联系。';
+          : (result?.error || '暂未确认接收成功，作品已保留在页面中，请稍后重试或通过邮箱联系。');
         announce(message, 'error');
         return;
       }

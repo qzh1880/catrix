@@ -16,10 +16,10 @@ function origins(env) {
 }
 
 // 以文章路径关联留言，不使用域名、查询参数或锚点。
-// 此处只校验默认的单层 /posts/<slug>/ 格式及讨论区 /discuss/，不验证文章是否真实存在。
+// 此处校验单层 /posts/<slug>/、/opinions/<slug>/、/opinion/<slug>/ 格式及讨论区 /discuss/，不验证文章是否真实存在。
 export function validArticle(value) {
   return typeof value === "string" && value.length <= 500 &&
-    (/^\/posts\/(?:[A-Za-z0-9_~-]|%[A-Fa-f0-9]{2})+\/$/.test(value) || value === "/discuss/" || value === "/discuss");
+    (/^\/(?:posts|opinions|opinion)\/(?:[A-Za-z0-9_~-]|%[A-Fa-f0-9]{2})+\/$/.test(value) || value === "/discuss/" || value === "/discuss");
 }
 
 async function readJson(request) {

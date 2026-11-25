@@ -8,7 +8,7 @@ categories: ["Nov.2026"]
 tags: ["社会","ai"]
 description: "从技术变化开始，到对学术的变化，最后主要讨论关于闭源模型是否会导致学术垄断的问题，给出笔者的浅薄之见"
 showRelated: false
-cover: "submissions/efc30acc-dd34-4e87-97b5-c2b8280b675a/演示文稿1.png"
+cover: "https://media.catrix.net/impact-of-ai-on-academic-research.png"
 ---
 
 # 浅谈近年AI对学术研究的冲击

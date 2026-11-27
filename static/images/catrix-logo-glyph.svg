@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Left Bracket Ear [ -->
+  <path d="M 190 148 
+           L 136 84 
+           A 6 6 0 0 0 126 89 
+           L 112 210 
+           C 110 240 108 270 114 316 
+           C 120 360 148 404 204 424 
+           L 226 424
+           C 232 424 236 419 236 413
+           C 236 407 232 402 226 402
+           L 208 402
+           C 166 386 142 352 136 312
+           C 132 276 134 246 136 214
+           L 146 122
+           L 182 166
+           C 186 170 192 170 196 166
+           C 200 162 198 156 190 148 Z" 
+        fill="currentColor"/>
+
+  <!-- Right Bracket Ear ] -->
+  <path d="M 322 148 
+           L 376 84 
+           A 6 6 0 0 1 386 89 
+           L 400 210 
+           C 402 240 404 270 398 316 
+           C 392 360 364 404 308 424 
+           L 286 424
+           C 280 424 276 419 276 413
+           C 276 407 280 402 286 402
+           L 294 402
+           C 346 386 370 352 376 312
+           C 380 276 378 246 376 214
+           L 366 122
+           L 330 166
+           C 326 170 320 170 316 166
+           C 312 162 314 156 322 148 Z" 
+        fill="currentColor"/>
+
+  <!-- Top Crown Arc -->
+  <path d="M 192 168 Q 256 196 320 168" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="10" 
+        stroke-linecap="round"/>
+
+  <!-- Editorial Spark ✦ -->
+  <path d="M 256 190 
+           C 257 210 263 216 283 217 
+           C 263 218 257 224 256 244 
+           C 255 224 249 218 229 217 
+           C 249 216 255 210 256 190 Z" 
+        fill="currentColor"/>
+
+  <!-- Eyes -->
+  <polygon points="172,258 226,268 220,282 178,274" fill="currentColor"/>
+  <polygon points="340,258 286,268 292,282 334,274" fill="currentColor"/>
+
+  <!-- 3x3 Conway Matrix Dots -->
+  <rect x="251" y="296" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="231" y="320" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="251" y="320" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="271" y="320" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="211" y="344" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="251" y="344" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="291" y="344" width="10" height="10" rx="3" fill="currentColor"/>
+  <rect x="251" y="368" width="10" height="10" rx="3" fill="currentColor"/>
+
+  <!-- Whiskers -->
+  <line x1="146" y1="332" x2="200" y2="336" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  <line x1="140" y1="352" x2="194" y2="350" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  <line x1="366" y1="332" x2="312" y2="336" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  <line x1="372" y1="352" x2="318" y2="350" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+</svg>

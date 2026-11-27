@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="catrixBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+
+    <!-- Cyber / Editorial Accent Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+
+    <!-- Star Glow Gradient -->
+    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+
+    <!-- Outer Glow Filter -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle Outer Shell (iOS / Modern App Icon curvature) -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#catrixBg)"/>
+  
+  <!-- Subtle Matrix Circuit Grid lines (faint background) -->
+  <g opacity="0.08" stroke="#ffffff" stroke-width="1.5">
+    <line x1="80" y1="120" x2="432" y2="120"/>
+    <line x1="80" y1="200" x2="432" y2="200"/>
+    <line x1="80" y1="280" x2="432" y2="280"/>
+    <line x1="80" y1="360" x2="432" y2="360"/>
+    <line x1="136" y1="80" x2="136" y2="432"/>
+    <line x1="216" y1="80" x2="216" y2="432"/>
+    <line x1="296" y1="80" x2="296" y2="432"/>
+    <line x1="376" y1="80" x2="376" y2="432"/>
+  </g>
+
+  <!-- Left Bracket Ear [ Structure -->
+  <path d="M 190 148 
+           L 136 84 
+           A 6 6 0 0 0 126 89 
+           L 112 210 
+           C 110 240 108 270 114 316 
+           C 120 360 148 404 204 424 
+           L 226 424
+           C 232 424 236 419 236 413
+           C 236 407 232 402 226 402
+           L 208 402
+           C 166 386 142 352 136 312
+           C 132 276 134 246 136 214
+           L 146 122
+           L 182 166
+           C 186 170 192 170 196 166
+           C 200 162 198 156 190 148 Z" 
+        fill="url(#accentGrad)"/>
+
+  <!-- Right Bracket Ear ] Structure (Perfect Mirror) -->
+  <path d="M 322 148 
+           L 376 84 
+           A 6 6 0 0 1 386 89 
+           L 400 210 
+           C 402 240 404 270 398 316 
+           C 392 360 364 404 308 424 
+           L 286 424
+           C 280 424 276 419 276 413
+           C 276 407 280 402 286 402
+           L 294 402
+           C 346 386 370 352 376 312
+           C 380 276 378 246 376 214
+           L 366 122
+           L 330 166
+           C 326 170 320 170 316 166
+           C 312 162 314 156 322 148 Z" 
+        fill="url(#accentGrad)"/>
+
+  <!-- Top Crown Architectural Arc connecting the two brackets subtly -->
+  <path d="M 192 168 Q 256 196 320 168" 
+        fill="none" 
+        stroke="url(#accentGrad)" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        opacity="0.85"/>
+
+  <!-- Forehead: Editorial Spark ✦ (The Catrix Spark of Insight) -->
+  <path d="M 256 190 
+           C 257 210 263 216 283 217 
+           C 263 218 257 224 256 244 
+           C 255 224 249 218 229 217 
+           C 249 216 255 210 256 190 Z" 
+        fill="url(#starGrad)" 
+        filter="url(#softGlow)"/>
+
+  <!-- Left Eye: Geometric Tech Slit / Alert Cat Eye -->
+  <polygon points="172,258 226,268 220,282 178,274" fill="#ffffff" opacity="0.95"/>
+  <circle cx="204" cy="271" r="3" fill="#38bdf8"/>
+
+  <!-- Right Eye: Geometric Tech Slit / Alert Cat Eye -->
+  <polygon points="340,258 286,268 292,282 334,274" fill="#ffffff" opacity="0.95"/>
+  <circle cx="308" cy="271" r="3" fill="#38bdf8"/>
+
+  <!-- Conway's Life Game: 3x3 Matrix Grid (Whisker / Nose constellation) -->
+  <!-- Row 1 -->
+  <rect x="252" y="296" width="8" height="8" rx="2" fill="#818cf8"/>
+  <!-- Row 2 -->
+  <rect x="232" y="320" width="8" height="8" rx="2" fill="#67e8f9" opacity="0.7"/>
+  <rect x="252" y="320" width="8" height="8" rx="2" fill="#c084fc"/>
+  <rect x="272" y="320" width="8" height="8" rx="2" fill="#67e8f9" opacity="0.7"/>
+  <!-- Row 3 (Whisker spread) -->
+  <rect x="212" y="344" width="8" height="8" rx="2" fill="#38bdf8" opacity="0.5"/>
+  <rect x="252" y="344" width="8" height="8" rx="2" fill="#ffffff"/>
+  <rect x="292" y="344" width="8" height="8" rx="2" fill="#38bdf8" opacity="0.5"/>
+  <!-- Row 4 (Lower chin point) -->
+  <rect x="252" y="368" width="8" height="8" rx="2" fill="#818cf8" opacity="0.8"/>
+
+  <!-- Whisker Horizon Rays (Subtle minimalist vector beams) -->
+  <line x1="152" y1="332" x2="204" y2="336" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="146" y1="352" x2="198" y2="350" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="360" y1="332" x2="308" y2="336" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="366" y1="352" x2="314" y2="350" stroke="#818cf8" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+</svg>

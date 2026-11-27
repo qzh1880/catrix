@@ -81,7 +81,7 @@
     {{ end }}
     {{ $isFirstLarge := not (or (eq $firstlarge false) (eq $firstlarge "false") (eq $firstlarge 0) (eq $firstlarge "0")) }}
     <div class="post-content{{ if not $isFirstLarge }} no-first-large{{ end }}">
-      {{ .Content }}
+      {{ partial "render-content.html" . }}
     </div>
   </div>
 

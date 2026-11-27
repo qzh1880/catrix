@@ -1,0 +1,38 @@
+{{- /*
+  修复 CommonMark/Goldmark 在中文标点（如引号、括号）紧邻加粗标记 **...** 时无法正确识别边界的问题：
+  先展开短代码，保护代码块、行内代码、数学公式、HTML 标签与转义星号后，
+  将单行成对的 **...** 转为 <strong>...</strong>，再交由 .RenderString 渲染。
+*/ -}}
+{{- $s := .RenderShortcodes | string -}}
+{{- $patterns := slice
+  `(?is)<script\b[^>]*>.*?</script>`
+  `(?is)<style\b[^>]*>.*?</style>`
+  `(?is)<pre\b[^>]*>.*?</pre>`
+  `(?is)<code\b[^>]*>.*?</code>`
+  `<!--[\s\S]*?-->`
+  "(?ms)^[ \\t]*```[^\\n]*\\n[\\s\\S]*?^[ \\t]*```[ \\t\\r]*$"
+  "(?ms)^[ \\t]*~~~[^\\n]*\\n[\\s\\S]*?^[ \\t]*~~~[ \\t\\r]*$"
+  `(?m)^[ \t]*\*{3,}[ \t\r]*$`
+  `\\\*`
+  "`[^`\\r\\n]+`"
+  `\$\$[\s\S]*?\$\$`
+  `\$[^$\r\n]+\$`
+  `\*\*\*[^\s*\r\n](?:[^\r\n]*?[^\s*\r\n])?\*\*\*`
+  `<[a-zA-Z][^>\r\n]*>`
+-}}
+{{- $tokens := slice -}}
+{{- $idx := 0 -}}
+{{- range $patterns -}}
+  {{- $matches := findRE . $s -}}
+  {{- range $matches -}}
+    {{- $tok := printf "CATRIXPROT%dTOKEN" $idx -}}
+    {{- $tokens = $tokens | append (dict "tok" $tok "val" .) -}}
+    {{- $s = replace $s . $tok 1 -}}
+    {{- $idx = add $idx 1 -}}
+  {{- end -}}
+{{- end -}}
+{{- $s = replaceRE `\*\*([^\s*\r\n](?:(?:[^*\r\n]|\*[^*\r\n])*?[^\s*\r\n])?)\*\*` `<strong>$1</strong>` $s -}}
+{{- range $tokens -}}
+  {{- $s = replace $s .tok .val 1 -}}
+{{- end -}}
+{{- .RenderString (dict "display" "block") $s -}}

@@ -99,7 +99,30 @@ function doShare() {
       if (!d.hasMarkdown && !d.body) {
         q('.post-content').innerHTML = '<p style="text-align:center;padding:60px 0;color:var(--color-text-muted);font-size:.9rem;">（此投稿为 Word 文档，成品预览留空。请在管理后台下载 ZIP 稿件）</p>';
       } else {
-        q('.post-content').innerHTML = DOMPurify.sanitize(marked.parse(d.body || ''));
+        const fixCjkBold = md => {
+          const tokens = [];
+          const keep = s => {
+            const tok = 'CATRIXPROT' + tokens.length + 'TOKEN';
+            tokens.push([tok, s]);
+            return tok;
+          };
+          let s = String(md || '');
+          const patterns = [
+            /^[ \t]*```[^\n]*\n[\s\S]*?^[ \t]*```[ \t\r]*$/gm,
+            /^[ \t]*~~~[^\n]*\n[\s\S]*?^[ \t]*~~~[ \t\r]*$/gm,
+            /^[ \t]*\*{3,}[ \t\r]*$/gm,
+            /\\\*/g,
+            /`[^`\r\n]+`/g,
+            /\$\$[\s\S]*?\$\$/g,
+            /\$[^$\r\n]+\$/g,
+            /\*\*\*[^\s*\r\n](?:[^\r\n]*?[^\s*\r\n])?\*\*\*/g
+          ];
+          patterns.forEach(re => { s = s.replace(re, keep); });
+          s = s.replace(/\*\*([^\s*\r\n](?:(?:[^*\r\n]|\*[^*\r\n])*?[^\s*\r\n])?)\*\*/g, '<strong>$1</strong>');
+          tokens.forEach(([tok, val]) => { s = s.replace(tok, () => val); });
+          return s;
+        };
+        q('.post-content').innerHTML = DOMPurify.sanitize(marked.parse(fixCjkBold(d.body || '')));
       }
 
       const cn = q('.container-narrow');

@@ -1,0 +1,93 @@
+{{- $publisher := dict
+  "@type" "Organization"
+  "name" "CATRIX 杂志社"
+  "url" .Site.BaseURL
+-}}
+
+{{- if .IsHome -}}
+  {{- $recent := where .Site.RegularPages "Section" "in" (slice "posts" "opinions" "opinion") -}}
+  {{- $itemList := slice -}}
+  {{- range $idx, $page := first 20 $recent.ByDate.Reverse -}}
+    {{- $itemList = $itemList | append (dict
+      "@type" "ListItem"
+      "position" (add $idx 1)
+      "name" $page.Title
+      "url" $page.Permalink
+    ) -}}
+  {{- end -}}
+  {{- $website := dict
+    "@context" "https://schema.org"
+    "@type" "WebSite"
+    "name" .Site.Title
+    "alternateName" "CATRIX"
+    "url" .Site.BaseURL
+    "description" .Site.Params.description
+    "inLanguage" "zh-CN"
+    "publisher" $publisher
+  -}}
+  {{- $collection := dict
+    "@context" "https://schema.org"
+    "@type" "CollectionPage"
+    "name" .Site.Title
+    "url" .Site.BaseURL
+    "description" .Site.Params.description
+    "inLanguage" "zh-CN"
+    "mainEntity" (dict
+      "@type" "ItemList"
+      "itemListElement" $itemList
+    )
+  -}}
+<script type="application/ld+json">{{ $website | jsonify | safeJS }}</script>
+<script type="application/ld+json">{{ $collection | jsonify | safeJS }}</script>
+{{- else if and .IsPage (in (slice "posts" "opinions" "opinion") .Section) -}}
+  {{- $desc := .Description | default (.Summary | plainify | truncate 160) | replaceRE `\s+` " " | strings.TrimSpace -}}
+  {{- $authorsRaw := .Params.author | default "CATRIX 杂志社" -}}
+  {{- if not (reflect.IsSlice $authorsRaw) }}{{ $authorsRaw = slice $authorsRaw }}{{ end -}}
+  {{- $authorList := slice -}}
+  {{- range $authorsRaw -}}
+    {{- $authorList = $authorList | append (dict
+      "@type" "Person"
+      "name" .
+      "url" (printf "%sauthor/%s/" $.Site.BaseURL (. | urlize))
+    ) -}}
+  {{- end -}}
+  {{- $article := dict
+    "@context" "https://schema.org"
+    "@type" "Article"
+    "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
+    "url" .Permalink
+    "headline" .Title
+    "description" $desc
+    "datePublished" (.Date.Format "2006-01-02T15:04:05Z07:00")
+    "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00")
+    "inLanguage" "zh-CN"
+    "author" $authorList
+    "publisher" $publisher
+    "isPartOf" (dict "@type" "WebSite" "name" .Site.Title "url" .Site.BaseURL)
+  -}}
+  {{- $coverUrl := partial "resolve-cover.html" . -}}
+  {{- if $coverUrl -}}
+    {{- $article = merge $article (dict "image" (slice $coverUrl)) -}}
+  {{- end -}}
+  {{- with .Params.tags -}}
+    {{- $article = merge $article (dict "keywords" .) -}}
+  {{- end -}}
+  {{- with .Params.categories -}}
+    {{- $article = merge $article (dict "articleSection" (index . 0)) -}}
+  {{- else -}}
+    {{- $article = merge $article (dict "articleSection" .Section) -}}
+  {{- end -}}
+  {{- $sectionName := cond (eq .Section "posts") "全部文章" "观点专栏" -}}
+  {{- $sectionUrl := cond (eq .Section "posts") ("posts/" | absURL) ("opinions/" | absURL) -}}
+  {{- $breadcrumbs := dict
+    "@context" "https://schema.org"
+    "@type" "BreadcrumbList"
+    "itemListElement" (slice
+      (dict "@type" "ListItem" "position" 1 "name" "首页" "item" .Site.BaseURL)
+      (dict "@type" "ListItem" "position" 2 "name" $sectionName "item" $sectionUrl)
+      (dict "@type" "ListItem" "position" 3 "name" .Title "item" .Permalink)
+    )
+  -}}
+<script type="application/ld+json">{{ $article | jsonify | safeJS }}</script>
+<script type="application/ld+json">{{ $breadcrumbs | jsonify | safeJS }}</script>
+{{- end -}}

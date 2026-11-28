@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /test/
+Disallow: /community-config/
+
+Sitemap: {{ "sitemap.xml" | absURL }}

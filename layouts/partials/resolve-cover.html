@@ -1,0 +1,16 @@
+{{- $cover := "" -}}
+{{- with .Params.cover -}}
+  {{- $cover = . -}}
+  {{- if and (not (hasPrefix $cover "http://")) (not (hasPrefix $cover "https://")) -}}
+    {{- if hasPrefix $cover "/" -}}
+      {{- $cover = absURL $cover -}}
+    {{- else if fileExists (printf "static/%s" $cover) -}}
+      {{- $cover = absURL $cover -}}
+    {{- else if $.Resources.GetMatch $cover -}}
+      {{- $cover = ($.Resources.GetMatch $cover).Permalink -}}
+    {{- else -}}
+      {{- $cover = printf "https://media.catrix.net/%s" $cover -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $cover -}}

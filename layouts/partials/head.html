@@ -1,0 +1,72 @@
+{{- $pageTitle := cond .IsHome .Site.Title (printf "%s · %s" .Title .Site.Title) -}}
+{{- $ogTitle := cond .IsHome .Site.Title .Title -}}
+{{- $desc := .Description | default (.Summary | plainify | truncate 160) | default .Site.Params.description | replaceRE `\s+` " " | strings.TrimSpace -}}
+{{- if not .IsPage }}{{ $desc = .Description | default .Site.Params.description }}{{ end -}}
+{{- $isNoindex := or (eq .Kind "404") .Params.noindex (eq .Section "admin") -}}
+{{- $authorRaw := .Params.author | default .Site.Params.author | default "CATRIX 杂志社" -}}
+{{- $authors := cond (reflect.IsSlice $authorRaw) $authorRaw (slice $authorRaw) -}}
+{{- $coverUrl := partial "resolve-cover.html" . -}}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ $pageTitle }}</title>
+<meta name="description" content="{{ $desc }}">
+<meta name="author" content="{{ delimit $authors ", " }}">
+{{- if $isNoindex }}
+<meta name="robots" content="noindex, nofollow">
+{{- else }}
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+{{- end }}
+
+<!-- Open Graph -->
+<meta property="og:site_name" content="{{ .Site.Title }}">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="{{ $ogTitle }}">
+<meta property="og:description" content="{{ $desc }}">
+<meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
+<meta property="og:url" content="{{ .Permalink }}">
+{{- with $coverUrl }}
+<meta property="og:image" content="{{ . }}">
+{{- end }}
+{{- if and .IsPage (in (slice "posts" "opinions" "opinion") .Section) }}
+<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+<meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
+{{- range $authors }}
+<meta property="article:author" content="{{ . }}">
+{{- end }}
+{{- with .Params.categories }}
+<meta property="article:section" content="{{ index . 0 }}">
+{{- end }}
+{{- range .Params.tags }}
+<meta property="article:tag" content="{{ . }}">
+{{- end }}
+{{- end }}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $ogTitle }}">
+<meta name="twitter:description" content="{{ $desc }}">
+{{- with $coverUrl }}
+<meta name="twitter:image" content="{{ . }}">
+{{- end }}
+
+{{- if ne .Kind "404" }}
+<link rel="canonical" href="{{ .Permalink }}">
+{{- end }}
+<link rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" href="{{ "index.xml" | absURL }}">
+<link rel="alternate" type="text/plain" title="LLMs.txt" href="{{ "llms.txt" | absURL }}">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@300;400;500;60&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!-- Styles -->
+<link rel="stylesheet" href="{{ "css/style.css" | relURL }}?v={{ now.Unix }}">
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+
+{{ partial "structured-data.html" . }}

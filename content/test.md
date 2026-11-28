@@ -2,6 +2,9 @@
 title: "测试页"
 date: 2026-09-26T12:00:00+08:00
 draft: false
+noindex: true
+sitemap:
+  disable: true
 ---
 
 $$\nabla \cdot \mathbf{E} = \frac{\rho}{\varepsilon_0}$$

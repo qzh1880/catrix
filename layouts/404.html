@@ -5,12 +5,25 @@
     <h1 class="page-title">页面不存在</h1>
     <p class="page-desc">你访问的链接可能已移动或拼写有误，可以通过下方入口或站内搜索直达文章。</p>
     <div class="page-divider"></div>
-    <p style="margin-top:24px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">
+    <p style="margin-top:24px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:baseline;">
       <a href="{{ "/" | relURL }}" class="more-link">返回首页 →</a>
       <a href="{{ "/posts/" | relURL }}" class="more-link">全部文章 →</a>
       <a href="{{ "/categories/" | relURL }}" class="more-link">往期目录 →</a>
-      <button type="button" class="more-link" onclick="openSearch()" style="background:none;border:none;cursor:pointer;font:inherit;">站内搜索 →</button>
+      <button type="button" class="more-link more-link-btn" onclick="openSearch()">站内搜索 →</button>
     </p>
   </div>
 </section>
+<style>
+  .more-link-btn {
+    appearance: none;
+    background: none;
+    border-top: 0;
+    border-left: 0;
+    border-right: 0;
+    padding: 0 0 2px;
+    margin: 0;
+    line-height: inherit;
+    cursor: pointer;
+  }
+</style>
 {{ end }}
